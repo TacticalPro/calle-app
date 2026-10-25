@@ -3,10 +3,12 @@
 
     tools/caratula.py            las tres propuestas → tools/out/caratulas.png (hoja para elegir)
                                  y tools/out/caratula_<X>.png / icono_<X>.png
-    tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png y el icono
-                                 del lanzador, resources/drawables/launcher_icon.png (de todas las apps CALLE)
+    tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png,
+                                 docs/tienda/portada_500.png (Madrid) y el icono del lanzador,
+                                 resources/drawables/launcher_icon.png (de todas las apps CALLE)
 
-El fondo es el callejero real del casco de Santiago (tools/out/geom-galicia.json, ODbL), dibujado tenue.
+El fondo es el callejero real de cada app (tools/out/geom-<región>.json, ODbL), dibujado tenue: el casco de
+Santiago en Galicia y la Puerta del Sol en Madrid.
 La pantalla del reloj sale de tools/mockup.py (la escena «Santiago: Rúa do Franco», datos reales).
 """
 import json
@@ -24,6 +26,7 @@ NEGRO, FONDO = (0, 0, 0), (17, 17, 17)
 BLANCO, GRIS, GRIS_OSC = (255, 255, 255), (0xAA, 0xAA, 0xAA), (0x55, 0x55, 0x55)
 AMBAR, AZUL_PLACA = (0xFF, 0xAA, 0x00), (0x1F, 0x3B, 0x73)
 CENTRO = (42.8792, -8.5446)   # casco de Santiago, entre el Obradoiro y la Quintana
+CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035)}   # Madrid: la Puerta del Sol
 LADO_M = 900                  # metros de mapa que caben en la carátula
 
 
@@ -33,10 +36,10 @@ def fuente(px, peso=700):
     return f
 
 
-def mapa(lado, color, ancho, centro=CENTRO, lado_m=LADO_M, esc=4):
+def mapa(lado, color, ancho, centro=CENTRO, lado_m=LADO_M, esc=4, region="galicia"):
     """El callejero real alrededor de centro, lado_m metros en lado px (dibujado a esc× y reducido)."""
-    meta = json.loads((OUT / "meta-galicia.json").read_text("utf-8"))
-    geom = json.loads((OUT / "geom-galicia.json").read_text("utf-8"))
+    meta = json.loads((OUT / f"meta-{region}.json").read_text("utf-8"))
+    geom = json.loads((OUT / f"geom-{region}.json").read_text("utf-8"))
     cx = (centro[1] - meta["lon_min"]) * meta["kx"]
     cy = (centro[0] - meta["lat_min"]) * meta["ky"]
     g = lado * esc
@@ -128,9 +131,9 @@ def icono_a(lado=40, esc=8):
 
 # ---------------------------------------------------------------- B: el marcador en el cruce
 
-def caratula_b():
+def caratula_b(region="galicia"):
     img = Image.new("RGBA", (500, 500), FONDO + (255,))
-    img.alpha_composite(mapa(500, (0x4A, 0x4A, 0x4A), 2.6))
+    img.alpha_composite(mapa(500, (0x4A, 0x4A, 0x4A), 2.6, centro=CENTROS[region], region=region))
     velo = Image.new("RGBA", (500, 500), (0, 0, 0, 0))
     ImageDraw.Draw(velo).rectangle((0, 330, 500, 500), fill=(10, 10, 10, 235))
     img.alpha_composite(velo)
@@ -138,7 +141,7 @@ def caratula_b():
     d.ellipse((250 - 60, 175 - 60, 250 + 60, 175 + 60), outline=AMBAR + (255,), width=3)
     marcador(d, 250, 140, 38, AMBAR + (255,), hueco=FONDO + (255,))
     texto(d, (250, 382), "CALLE", fuente(78), BLANCO, espacio=8)
-    texto(d, (250, 432), "GALICIA", fuente(28, 500), AMBAR, espacio=12)
+    texto(d, (250, 432), region.upper(), fuente(28, 500), AMBAR, espacio=12)
     texto(d, (250, 470), "LA CALLE Y EL PORTAL, SIN COBERTURA", fuente(21, 500), GRIS, espacio=1)
     return img.convert("RGB")
 
@@ -203,8 +206,10 @@ def main():
     import sys
     if "--instalar" in sys.argv:
         caratula_b().save(ROOT / "docs" / "tienda" / "galicia" / "portada_500.png", optimize=True)
+        caratula_b("madrid").save(ROOT / "docs" / "tienda" / "portada_500.png", optimize=True)
         icono_b().save(ROOT / "resources" / "drawables" / "launcher_icon.png")
-        print("escrito docs/tienda/galicia/portada_500.png y resources/drawables/launcher_icon.png")
+        print("escrito docs/tienda/galicia/portada_500.png, docs/tienda/portada_500.png "
+              "y resources/drawables/launcher_icon.png")
         return
     OUT.mkdir(exist_ok=True)
     props = [("A", "El reloj sobre el mapa", caratula_a(), icono_a()),

@@ -14,6 +14,11 @@ comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -s
 misma app. El `.iq` pesa 52,5 MB: lo sube el autor a mano, porque el navegador automatizado no pasa de 10 MB.
 La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 
+**3.4.0 (2026-10-25): la interfaz de CALLE Galicia (P73).** Mismos relojes y mismos datos que la 3.2.0; cambian la
+pantalla, la carátula (el marcador ámbar sobre el callejero de Sol, `tools/caratula.py --instalar`) y el icono.
+Las cinco imágenes, regeneradas (`mockup.py --ficha`). El `.iq` (`bin/calle-madrid.iq`, 52,5 MB, firma verificada)
+lo sube el autor a mano con *Upload New Version*, cuando la 3.2.0 salga de revisión.
+
 **Título «CALLE Madrid (offline)»** (decisión del autor, 2026-10-25: que no usa red es su punto fuerte). Se cambia
 con *Edit Details* en cuanto Garmin apruebe la 3.2.0: no se toca mientras esté en revisión.
 
@@ -47,6 +52,9 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
+**Novedades (3.4.0):** pantalla nueva: hora grande, calidad del GPS en un arco, número de portal en una pastilla
+ámbar y rótulos en mayúsculas, más legibles con un vistazo. Icono nuevo.
+
 **Novedades (3.2.0):** Madrid entero, también en el fēnix 6X, y llega la familia fēnix 7 (7, 7S, 7X y Pro).
 Datos más compactos.
 
@@ -75,6 +83,9 @@ First release: please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
+
+**What's new (3.4.0):** new screen: large clock, GPS quality as an arc, the door number on an amber badge and
+upper-case labels, easier to read at a glance. New icon.
 
 **What's new (3.2.0):** all of Madrid, now on the fēnix 6X too, and the fēnix 7 family (7, 7S, 7X and Pro).
 Smaller data.

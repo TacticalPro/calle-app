@@ -600,7 +600,7 @@ ESCENAS_GALICIA = [
                                               destino=145, i=1, n=8))),
 ]
 FICHAS = {
-    "madrid": ("", ESCENARIOS, "Madrid: Gran Vía", (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
+    "madrid": ("", ESCENARIOS, None, (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
                                                    ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
                                                    ("Nearest hospital: arrow and distance", "Ir: hospital"),
                                                    ("Nearest police station", "Ir: comisaría"))),
@@ -620,7 +620,7 @@ def ficha(app="madrid"):
     out = ROOT / "docs" / "tienda" / sub
     out.mkdir(parents=True, exist_ok=True)
     esc = dict(escenas)
-    if portada_de:   # Galicia: la portada es la carátula de tools/caratula.py --instalar
+    if portada_de:   # si no, la portada es la carátula de tools/caratula.py --instalar (Galicia y Madrid)
         portada = Image.new("RGB", (500, 500), (24, 24, 24))
         portada.paste(render(esc[portada_de]).resize((440, 440), Image.LANCZOS), (30, 30))
         portada.save(out / "portada_500.png")

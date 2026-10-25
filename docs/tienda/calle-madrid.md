@@ -2,6 +2,10 @@
 
 Primera app del catálogo por zonas (`tools/catalogo.json`): `APP=madrid ./ciq.sh tienda` → `bin/calle-madrid.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `cc8abcb6…`.
+**Subida el 2026-10-25** como 3.1.0: [ficha en la tienda](https://apps.garmin.com/apps/f37fdd3d-8c12-435a-b5fd-9a0e967434ca),
+pendiente de aprobación (el portal da hasta 3 días). Categoría Navigation, sin migración automática a relojes nuevos.
+El portal avisa «Signature check failed» en la primera subida de una app nueva: es un fallo conocido suyo; la firma se
+comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2 manifest.xml`.
 
 **Primera versión (3.1.0): solo el fēnix 6X**, con una parte de Madrid. Imágenes: `portada_500.png`,
 `ficha_1.png`, `ficha_3.png` y `ficha_4.png`. La `ficha_2.png` (Argüelles) se queda fuera, porque el 6X no

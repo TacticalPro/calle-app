@@ -6,7 +6,8 @@ import Toybox.Position;
 import Toybox.WatchUi;
 
 // Hospitales y comisarías de la región activa (recurso <prefijo>poi, tools/build_callejero.py):
-// [FORMATO, nombres, direcciones, x, y, tipo], con x, y en metros enteros de región. Se carga al
+// [FORMATO, SN, ON, SD, OD, XY, T]: nombres y direcciones en una cadena cada uno, con sus inicios (como en las
+// teselas); XY = x | y << 16, en metros enteros de región; T, el tipo, 4 por número. Se carga al
 // abrir la lista y se suelta al cerrarla: no vive en memoria mientras se ve la calle.
 // La guía es en línea recta (rumbo y distancia): el reloj no lleva la red de calles para calcular rutas.
 module Ir {
@@ -38,18 +39,16 @@ module Ir {
     // Los n más cercanos a (lat, lon) de los tipos pedidos, del más cercano al más lejano:
     // [[nombre, dirección, lat, lon, tipo, metros], …].
     function cercanos(d as Array, lat as Double, lon as Double, tipos as Array<Number>, n as Number) as Array<Array> {
-        var N = d[1] as Array<String>;
-        var D = d[2] as Array<String>;
-        var X = d[3] as Array<Number>;
-        var Y = d[4] as Array<Number>;
-        var T = d[5] as Array<Number>;
+        var XY = d[5] as Array<Number>;
+        var T = d[6] as Array<Number>;
         var out = [] as Array<Array>;
-        for (var i = 0; i < N.size(); i++) {
-            if (tipos.indexOf(T[i]) < 0) {
+        for (var i = 0; i < XY.size(); i++) {
+            var ti = (T[i >> 2] >> ((i & 3) * 8)) & 0xFF;
+            if (tipos.indexOf(ti) < 0) {
                 continue;
             }
-            var la = Callejero.LAT_MIN + Y[i].toDouble() / Callejero.KY;
-            var lo = Callejero.LON_MIN + X[i].toDouble() / Callejero.KX;
+            var la = Callejero.LAT_MIN + ((XY[i] >> 16) & 0xFFFF).toDouble() / Callejero.KY;
+            var lo = Callejero.LON_MIN + (XY[i] & 0xFFFF).toDouble() / Callejero.KX;
             var m = distancia(lat, lon, la, lo);
             // Inserción ordenada en una lista de como mucho n (no hay Array.sort en la API 3.4).
             var k = out.size();
@@ -57,7 +56,8 @@ module Ir {
                 k--;
             }
             if (k < n) {
-                var e = [N[i], D[i], la, lo, T[i], m];
+                var e = [Zonas.nombre(d[1] as String, d[2] as Array<Number>, i),
+                    Zonas.nombre(d[3] as String, d[4] as Array<Number>, i), la, lo, ti, m];
                 out.add(e);
                 for (var j = out.size() - 1; j > k; j--) {
                     out[j] = out[j - 1];

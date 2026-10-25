@@ -16,7 +16,7 @@ function memoriaTeselaMayor(logger as Test.Logger) as Boolean {
         var indices = System.getSystemStats().usedMemory - a0;
         var s0 = System.getSystemStats().usedMemory;
         var t0 = System.getTimer();
-        var t = new Tesela(0, WatchUi.loadResource(Callejero.T_MAYOR as ResourceId) as Array);
+        var t = new Tesela(0, WatchUi.loadResource(Callejero.T_MAYOR as ResourceId) as Array, Teselas.caja(0));
         var carga = System.getTimer() - t0;
         var s1 = System.getSystemStats().usedMemory;
         t0 = System.getTimer();
@@ -34,10 +34,10 @@ function memoriaTeselaMayor(logger as Test.Logger) as Boolean {
         }
         var buscaZ = (System.getTimer() - t0) / 10;
         logger.debug("MEMORIA " + Callejero.ETIQUETA + ": índices " + indices + " B; tesela mayor " + (s1 - s0) + " B, carga "
-            + carga + " ms, búsqueda " + busca + " ms (simulador), " + t.nombres.size() + " calles, " + (t.R.size() / 4)
-            + " tiradas, " + t.V.size() + " vértices, " + t.P.size() + " portales");
+            + carga + " ms, búsqueda " + busca + " ms (simulador), " + t.nc + " calles, " + t.R.size()
+            + " números de tiradas, " + t.V.size() + " de vértices, " + t.P.size() + " portales, " + t.S.length() + " letras");
         logger.debug("MEMORIA " + Callejero.ETIQUETA + ": zona mayor " + (s2 - s1) + " B, carga " + cargaZ + " ms, búsqueda "
-            + buscaZ + " ms, " + (z[3] as Array).size() + " lugares; las dos: " + (s2 - s0) + " B; en uso "
+            + buscaZ + " ms, " + (z[5] as Array).size() + " lugares; las dos: " + (s2 - s0) + " B; en uso "
             + System.getSystemStats().usedMemory / 1024 + " de " + System.getSystemStats().totalMemory / 1024 + " KB");
         ok = ok && s2 - s0 < 200 * 1024;
         t = null;

@@ -136,6 +136,11 @@
         "lat": 40.25,
         "lon": -3.7
       }
-    ]
+    ],
+    "c": {
+      "zona": 10000,
+      "tope_kb": 26,
+      "nota": "relojes de 128 KB (fēnix 5/5S, 6/6S): Madrid entero en teselas adaptativas de ≤ tope_kb de heap estimado y zonas de 10 km. Cargar un recurso pide el doble de su tamaño (medido en el fēnix 6, 2026-10-25): con ~55 KB libres, la tesela no puede pasar de ~27 KB"
+    }
   }
 }

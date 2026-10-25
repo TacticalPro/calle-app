@@ -40,7 +40,7 @@ function geomClaseYPoda(logger as Test.Logger) as Boolean {
     var t = Sintetica.tesela(["Calle", "Senda", "Lejana"], [
         [0, 0, 0, [0, 100, 600, 100]],
         [1, 2, 0, [0, 110, 600, 110]],
-        [2, 0, 0, [0, 600, 600, 600]]
+        [2, 0, 0, [0, 600, 200, 600]]     // 200 m: con cota de extensión, la caja la descarta
     ] as Array<Array>, [] as Array<Array>);
     var s = Buscador.buscar(t, Sintetica.x(300), Sintetica.x(106));
     // La senda está a 4 m pero penaliza 4: gana la calle, a 6 m.
@@ -105,7 +105,36 @@ function geomTramoModelo(logger as Test.Logger) as Boolean {
 
 (:test)
 function geomTextoNumero(logger as Test.Logger) as Boolean {
-    Activa.poner(Regiones.IDS[0]);
-    return Buscador.textoNumero(12).equals("12") && Buscador.textoNumero(0).equals(Callejero.SUF[0])
-        && Buscador.textoNumero(3 | 1 << 12).equals("3" + Callejero.SUF[1]);
+    // Por número dentro de la calle: el 0 BIS, el 12, el 14A (sufijo de la tesela) y el 100 (salto de 86: escape).
+    // La tesela junta 8 sufijos: A y BIS (calle A) y de B a G (calle B). Los dos últimos no caben en los 6 del portal.
+    var t = Sintetica.tesela(["A", "B"], [
+        [0, 0, 0, [0, 100, 600, 100]],
+        [1, 0, 0, [0, 300, 600, 300]]
+    ] as Array<Array>, [
+        [200, 110, 0, 12, ""],
+        [240, 110, 0, 14, "A"],
+        [260, 110, 0, 100, ""],
+        [180, 110, 0, 0, "BIS"],
+        [10, 310, 1, 1, "B"], [20, 310, 1, 1, "C"], [30, 310, 1, 1, "D"], [40, 310, 1, 1, "E"],
+        [50, 310, 1, 1, "F"], [60, 310, 1, 3, "G"]
+    ] as Array<Array>);
+    var a = ["BIS", "12", "14A", "100"] as Array<String>;
+    var ok = true;
+    for (var j = 0; j < a.size(); j++) {
+        var txt = Buscador.textoNumero(t, 0, j);
+        if (!txt.equals(a[j])) {
+            logger.debug("portal " + j + ": " + txt + " ≠ " + a[j]);
+            ok = false;
+        }
+    }
+    // B: 1B, 1C, 1D y 1E (sufijos 3..6 de la tesela); 1F y 3G van a la tabla de escapes.
+    var b = ["1B", "1C", "1D", "1E", "1F", "3G"] as Array<String>;
+    for (var j = 0; j < b.size(); j++) {
+        var txt = Buscador.textoNumero(t, 4, 4 + j);
+        if (!txt.equals(b[j])) {
+            logger.debug("portal B " + j + ": " + txt + " ≠ " + b[j]);
+            ok = false;
+        }
+    }
+    return ok && t.E.size() == 6 && t.indiceDe("B") == 1 && t.indiceDe("A") == 0 && t.indiceDe("Z") == -1;
 }

@@ -14,3 +14,6 @@ source-gen/
 source-gen-6x/
 test-gen/
 test-gen-6x/
+resources-gen-c/
+source-gen-c/
+test-gen-c/

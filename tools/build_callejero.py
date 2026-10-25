@@ -16,18 +16,33 @@ Solo biblioteca estándar (más curl para la descarga). Escribe:
 Portales del Catastro: si la región tiene caja "catastro", sus direcciones (WFS INSPIRE, en caché como
 Overpass) rellenan los números que OSM no tiene; el nombre lo pone siempre la vía de OSM.
 
-Formato de una tesela (FORMATO 3), una lista plana para no pagar objetos de Monkey C:
-    [FORMATO, N, R, V, P, H]
-    N  nombres de calle, con los de las calles que cruzan aunque no tengan tirada aquí;
-       el índice es el id local (≤ 1023)
-    R  4 números por tirada: h = nVert | calle<<12 | clase<<22 | area<<24, bbMin = x|y<<12, bbMax,
-       tramo = (A+1) | (B+1)<<12, las calles que cruzan en cada extremo de su trozo (0 = ninguna)
-    V  vértices de todas las tiradas seguidos, x|y<<12, en metros enteros desde la esquina SO
-       de la tesela con su margen (0..TESELA+2·BUF, < 4096)
-    P  portales x|y<<12, ordenados por calle (la calle va en H)
-    H  paralelo a P: número | sufijo<<12 | calle<<21 (número ≤ 4095; sufijo indexa Callejero.SUF, < 512)
-El FORMATO 3 (2026-10-24) amplía el 2 para las teselas grandes del fēnix 6X: 1.023 calles por tesela
-(antes 255) y coordenadas de 12 bits (teselas de hasta 3,9 km; antes 1,9).
+Formato de una tesela (FORMATO 4, 2026-10-25), una lista plana de enteros empaquetados: en el reloj un
+número de un array cuesta 5 B y una cadena su longitud más ~20 B (medido en el fēnix 6), así que se guarda
+lo justo en bits y todos los nombres en una sola cadena. Es lo que deja meter Madrid entero en los relojes
+de 128 KB (fēnix 5 y 6). Coordenadas en metros enteros desde la esquina SO de la tesela con su margen.
+    [FORMATO, NC, PB, S, O, C, CB, R, V, P, E]
+    NC nombres de calle de la tesela, con los de las calles que cruzan aunque no tengan tirada aquí
+       (índice local ≤ 1021)
+    PB bits por coordenada de portal: 12, o 13 si la tesela con su margen pasa de 4.095 m
+    S  "\n" + cada nombre + "\n": primero las NC calles, después los sufijos de portal de la tesela
+    O  dónde empieza en S cada nombre (más uno final): 2 por número, 16 bits cada uno
+    C  por calle, más una final: offset en R de su primera tirada | índice en P de su primer portal << 16
+       (las tiradas y los portales van ordenados por calle; la siguiente entrada marca el final)
+    CB caja de las tiradas de cada calle, x0 | y0 << 8 | x1 << 16 | y1 << 24 en unidades de CB_U m (hacia
+       fuera); sin tiradas, x0 = y0 = 255 y x1 = y1 = 0. La búsqueda salta de un golpe las calles lejanas
+    R  por tirada, 2 números (3 si es un área de más de 63 vértices):
+         x0 | y0 << 13 | ext << 26 | área << 31   primer vértice; ext: todos los vértices están a ≤ ext·EXT_U m
+                                                 de él en x y en y (EXT_SIN = sin cota: no se descarta)
+         w | clase << 4 | (A+1) << 6 | (B+1) << 16 | nv << 26   A, B: calles que cruzan en los extremos de su
+                                                 trozo (0 = ninguna); nv = 0: la cuenta va en el número siguiente
+    V  flujo de bits (bit k = bit k%32 del número k/32) con los vértices de todas las tiradas desde el
+       segundo: dx en w bits y dy en w bits, en complemento a dos, relativos al anterior
+    P  por portal: x | y << PB | salto << 2·PB | suf << 29 (salto de 5 bits con PB 12, de 3 con PB 13); salto =
+       número − el del anterior de su calle (el primero, desde 0); suf 1..6 = sufijo NC+suf−1 de S. Escape: salto
+       con todos sus bits a 1 y suf 7
+    E  escapes, 2 números cada uno: índice en P, número | (sufijo + 1, o 0) << 12
+Las tiradas lineales se parten en trozos de ≤ 63 vértices y ≤ 240 m de extensión desde su primer vértice.
+El FORMATO 3 (2026-10-24) guardaba cada número entero en su propio número de JSON y cada nombre aparte.
 
 Variantes del nombre: OSM etiqueta a veces trozos de una misma calle con y sin partículas o con el tipo en
 otra lengua («Calle de Alcalá» / «Calle Alcalá»; en Madrid, 368 pares que se tocan, 2026-10-24). Sin
@@ -40,14 +55,17 @@ nombre distinto, calzada o peatonal; sendas y áreas no cruzan). Un extremo que 
 intersección sigue la calle por nodos de grado 2 hasta la siguiente; en una bifurcación o un
 fondo de saco no hay cruce. Cada trozo se simplifica por separado, conservando sus extremos.
 
-Formato de una zona (celda de ZONA m), [FORMATO, N, RASTER, L, LN]:
-    N       parroquias de la zona primero, luego los lugares
-    RASTER  RN×RN celdas de RCEL m, fila a fila desde el sur, 4 por número (8 bits cada una):
-            índice en N de la parroquia que contiene el centro de la celda, +1 (0 = ninguna)
-    L       lugares de la zona y ZMARGEN m alrededor, x | y<<13 | tipo<<26, en metros desde la
+Formato de una zona (celda de ZONA m; FORMATO 4), [FORMATO, S, O, F, RL, L, LN]:
+    S, O    nombres como en las teselas: las parroquias de la zona primero, luego los lugares
+    F       por fila del raster (RN filas de RCEL m desde el sur, más una final), su primer tramo en RL;
+            2 por número, 16 bits
+    RL      el raster por tramos: valor | largo << 8 (celdas seguidas de la fila con la misma parroquia; valor =
+            índice en N + 1, 0 = ninguna); 2 por número, 16 bits. Con tramos, Madrid entero cabe en ~25 zonas
+            de 8 km sin perder los 50 m de celda (la rejilla de 1 byte por celda pesaba 8 KB por zona de 4 km)
+    L       lugares de la zona y ZMARGEN m alrededor, x | y<<14 | tipo<<28, en metros desde la
             esquina SO de la zona menos ZMARGEN; tipo: bit 0 = lugar poblado, bit 1 = barrio,
             bit 2 = paraje (solo cuenta como lugar si no hay poblado a LUGAR_R)
-    LN      paralelo a L: índice en N del nombre
+    LN      paralelo a L: índice en N del nombre; 2 por número, 16 bits
 
 Garantía (la comprueba ref.py por fuerza bruta): para un punto a menos de BUF−MAXD de la
 tesela, toda vía o portal a menos de MAXD de él está en la tesela. Los recortes caen en el
@@ -82,6 +100,13 @@ CACHE = TOOLS / "cache"
 # tengan. Tiene 1,25 MB de memoria (el 7X Pro, 768 KB): las teselas grandes caben.
 VARIANTE = "normal"
 TOPE_RECURSOS_6X = 250     # el compilador corta en 254; margen para cadenas o iconos que se añadan
+# Variante c (fēnix 5/5S y 6/6S: 128 KB por app, API 3.1 o 3.4, el mismo tope de recursos): teselas
+# adaptativas (teselar_kd) que caben en KD_TOPE bytes de heap estimado.
+KD_TOPE = 30 * 1024
+KD_LADO_MAX = 7800     # m: las coordenadas de tirada son de 13 bits con el margen
+KD_LADO_MIN = 300      # m: más pequeña no se parte aunque pese más (no debería pasar)
+KD_PASO = 10           # m: los cortes caen en múltiplos de esto
+KD_LLENADO = 0.92      # al contar cuántas teselas necesita una caja, cada una se llena hasta aquí
 
 
 def sufijo():
@@ -95,7 +120,7 @@ def res_gen():
 def src_gen():
     return ROOT / ("source-gen" + sufijo())
 
-FORMATO = 3
+FORMATO = 4
 TESELA = 500        # m (la variante compacta del fēnix 6X la cambia por región: VARIANTE)
 BUF = 75            # m de margen alrededor de cada tesela
 MAXD = 50           # m: más lejos no hay "calle cercana"
@@ -109,9 +134,13 @@ PESO_NOMBRE = {"calzada": 1.0, "peatonal": 0.5, "senda": 0.1, "area": 0.05}
 UNIR_M = 20.0       # m: dos vías de la misma clave (p. ej. «Calle de Alcalá» y «Calle Alcalá») a esta distancia
                     # son la misma calle mal etiquetada: unificar_variantes() les pone un solo nombre
 PEN = [0, 0, 4]     # m de penalización por clase: calzada, peatonal, senda
-MAX_VERT_RUN = 4095
-MAX_NOMBRES = 1023
-MAX_SUFIJOS = 511         # Madrid junta 423 (letras del Ayuntamiento y rangos y restos de OSM)
+MAX_NOMBRES = 1022        # las calles que cruzan van en 10 bits como índice + 1
+RUN_EXT_U = 8             # m por unidad de la extensión de una tirada
+CB_U = 32                 # m por unidad de la caja gruesa de cada calle (8 bits: hasta 8.160 m)
+RUN_EXT_MAX = 30          # unidades (240 m): las tiradas lineales se parten para no pasar de aquí
+RUN_EXT_SIN = 31          # extensión de un área mayor: la búsqueda no la descarta por caja
+RUN_NV_MAX = 63           # vértices por tirada en su cabecera (6 bits); un área con más lleva la cuenta aparte
+PORTAL_SUF_ESC = 7        # sufijos 1..6: los 6 más frecuentes de la tesela; 7: el sufijo va en el escape
 assert BUF >= MAXD + 25, "el margen debe cubrir MAXD más 25 m de holgura"
 
 ZONA = 2000         # m: celda de zonas
@@ -121,7 +150,7 @@ LUGAR_R = 1500      # m: el lugar más cercano, si está a menos de esto
 BARRIO_R = 800      # m: el barrio más cercano, si está a menos de esto…
 BARRIO_FRAC = 0.8   # …y a menos de esta fracción de la distancia al segundo: en la frontera no se adivina
 ZMARGEN = LUGAR_R   # m de margen de lugares alrededor de la zona
-assert RN * RN % 4 == 0 and ZMARGEN >= max(LUGAR_R, BARRIO_R / BARRIO_FRAC) and ZONA + 2 * ZMARGEN < 1 << 13
+assert RN < 256 and ZMARGEN >= max(LUGAR_R, BARRIO_R / BARRIO_FRAC) and ZONA + 2 * ZMARGEN < 1 << 14
 # El lugar es el poblado más cercano; un paraje (locality: montes, cotos, agras) solo si no hay
 # poblado a LUGAR_R. En la radio se da la aldea, no el nombre del monte (2026-10-23).
 LUGAR_TIPOS = {"hamlet", "village", "isolated_dwelling", "neighbourhood"}
@@ -1319,148 +1348,435 @@ def int32(v):
     return v - (1 << 32) if v >= 1 << 31 else v
 
 
+def cadena_nombres(entradas):
+    """Nombres → (S, O): "\\n" + cada uno + "\\n", y dónde empieza cada uno (más uno final), 2 por número."""
+    S = "\n" + "".join(e + "\n" for e in entradas)
+    offs, pos = [], 1
+    for e in entradas:
+        offs.append(pos)
+        pos += len(e) + 1
+    offs.append(pos)
+    assert pos < 1 << 16
+    if len(offs) % 2:
+        offs.append(0)
+    return S, [int32(offs[j] | offs[j + 1] << 16) for j in range(0, len(offs), 2)]
+
+
+def pares16(vs):
+    """Enteros < 65536, 2 por número."""
+    vs = list(vs) + ([0] if len(vs) % 2 else [])
+    assert all(0 <= v < 1 << 16 for v in vs)
+    return [int32(vs[j] | vs[j + 1] << 16) for j in range(0, len(vs), 2)]
+
+
 def empaquetar_zona(zc, zf, G, parroquias, lugares):
-    """Zona → lista JSON [FORMATO, N, RASTER, L, LN], o None si no tiene nada."""
+    """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada."""
     zx0, zy0 = zc * ZONA, zf * ZONA
-    celdas = [G[zf * RN + r][zc * RN + c] for r in range(RN) for c in range(RN)]
-    presentes = sorted({g for g in celdas if g}, key=lambda g: orden_alfa(parroquias[g - 1]["nombre"]))
+    filas = [[G[zf * RN + r][zc * RN + c] for c in range(RN)] for r in range(RN)]
+    presentes = sorted({g for fila in filas for g in fila if g}, key=lambda g: orden_alfa(parroquias[g - 1]["nombre"]))
     ox, oy = zx0 - ZMARGEN, zy0 - ZMARGEN
     aqui = sorted((l for l in lugares if ox <= l["x"] <= zx0 + ZONA + ZMARGEN and oy <= l["y"] <= zy0 + ZONA + ZMARGEN),
                   key=lambda l: (l["x"], l["y"]))
     if not presentes and not aqui:
         return None, None
     N = [parroquias[g - 1]["nombre"] for g in presentes]
-    assert len(N) < 127, f"zona {zc},{zf}: {len(N)} parroquias"
+    assert len(N) < 255, f"zona {zc},{zf}: {len(N)} parroquias"
     local = {g: i + 1 for i, g in enumerate(presentes)}
     for l in aqui:
         if l["nombre"] not in N:
             N.append(l["nombre"])
     ids = {n: i for i, n in enumerate(N)}
-    vals = [local.get(g, 0) for g in celdas]
-    RASTER = [int32(vals[k] | vals[k + 1] << 8 | vals[k + 2] << 16 | vals[k + 3] << 24) for k in range(0, len(vals), 4)]
-    L = [int(round(l["x"] - ox)) | int(round(l["y"] - oy)) << 13 | l["tipo"] << 26 for l in aqui]
+    # Raster por tramos: cada fila, desde el sur, como tramos (valor | largo << 8) de celdas seguidas iguales.
+    F, RL = [], []
+    for fila in filas:
+        F.append(len(RL))
+        c = 0
+        while c < RN:
+            v, n = local.get(fila[c], 0), 1
+            while c + n < RN and local.get(fila[c + n], 0) == v:
+                n += 1
+            RL.append(v | n << 8)
+            c += n
+    F.append(len(RL))
+    S, O = cadena_nombres(N)
+    L = [int(round(l["x"] - ox)) | int(round(l["y"] - oy)) << 14 | l["tipo"] << 28 for l in aqui]
     LN = [ids[l["nombre"]] for l in aqui]
-    lista = [FORMATO, N, RASTER, L, LN]
-    nums = len(RASTER) + len(L) + len(LN)
-    est = dict(parroquias=len(presentes), lugares=len(aqui), nombres=len(N), nums=nums,
-               heap=int(11 * nums + 60 * len(N)), con_parroquia=sum(1 for v in vals if v))
+    lista = [FORMATO, S, O, pares16(F), pares16(RL), L, pares16(LN)]
+    nums = sum(len(x) for x in lista[2:])
+    est = dict(parroquias=len(presentes), lugares=len(aqui), nombres=len(N), nums=nums, tramos=len(RL),
+               heap=int(5 * (nums + 7) + len(S.encode()) + 20),
+               con_parroquia=sum(1 for fila in filas for v in fila if v))
     return lista, est
 
 
 # ---------------------------------------------------------------- teselas
 
 
+def recortar(vias, portales, cajas, candidatas):
+    """Las tiradas y portales de cada caja. cajas: {clave: (x0, y0, x1, y1)}, ya con su margen;
+    candidatas(x0, y0, x1, y1): las claves cuyas cajas pueden tocar ese rectángulo."""
+    teselas = defaultdict(lambda: {"runs": [], "portales": []})
+    for v in vias:
+        x0, y0, x1, y1 = v["bb"]
+        if v["area"]:
+            for k in candidatas(x0, y0, x1, y1):
+                poli = sutherland_hodgman(v["pts"], *cajas[k])
+                if len(poli) >= 3:
+                    teselas[k]["runs"].append((v["nombre"], v["clase"], 1, poli + [poli[0]], v["tramo"]))
+            continue
+        abiertas = {}  # caja -> lista de puntos de la tirada abierta
+        pts = v["pts"]
+        for i in range(len(pts) - 1):
+            (ax, ay), (bx, by) = pts[i], pts[i + 1]
+            sx0, sy0, sx1, sy1 = min(ax, bx), min(ay, by), max(ax, bx), max(ay, by)
+            vistas = set()
+            for k in candidatas(sx0, sy0, sx1, sy1):
+                r = liang_barsky(ax, ay, bx, by, *cajas[k])
+                if r is None:
+                    continue
+                t0, t1 = r
+                pa = (ax, ay) if t0 == 0.0 else (ax + t0 * (bx - ax), ay + t0 * (by - ay))
+                pb = (bx, by) if t1 == 1.0 else (ax + t1 * (bx - ax), ay + t1 * (by - ay))
+                run = abiertas.get(k)
+                if run is not None and t0 == 0.0 and run[-1] == pa:
+                    run.append(pb)
+                else:
+                    if run is not None:
+                        teselas[k]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
+                    run = [pa, pb]
+                abiertas[k] = run
+                if t1 < 1.0:
+                    teselas[k]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
+                    del abiertas[k]
+                vistas.add(k)
+            for k in list(abiertas):
+                if k not in vistas:
+                    teselas[k]["runs"].append((v["nombre"], v["clase"], 0, abiertas.pop(k), v["tramo"]))
+        for k, run in abiertas.items():
+            teselas[k]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
+
+    for p in portales:
+        for k in candidatas(p["x"], p["y"], p["x"], p["y"]):
+            x0, y0, x1, y1 = cajas[k]
+            if x0 <= p["x"] <= x1 and y0 <= p["y"] <= y1:
+                teselas[k]["portales"].append(p)
+    return teselas
+
+
 def teselar(vias, portales, proy):
+    """Rejilla fija de TESELA m (variantes normal y 6x): claves (col, fila)."""
     cols = math.ceil(proy.ancho / TESELA)
     filas = math.ceil(proy.alto / TESELA)
-    teselas = defaultdict(lambda: {"runs": [], "portales": []})
-
-    def caja(col, fila):
-        return (col * TESELA - BUF, fila * TESELA - BUF, (col + 1) * TESELA + BUF, (fila + 1) * TESELA + BUF)
+    cajas = {(c, f): (c * TESELA - BUF, f * TESELA - BUF, (c + 1) * TESELA + BUF, (f + 1) * TESELA + BUF)
+             for c in range(cols) for f in range(filas)}
 
     def celdas(x0, y0, x1, y1):
         for c in range(max(0, int((x0 - BUF) // TESELA)), min(cols - 1, int((x1 + BUF) // TESELA)) + 1):
             for f in range(max(0, int((y0 - BUF) // TESELA)), min(filas - 1, int((y1 + BUF) // TESELA)) + 1):
                 yield c, f
 
+    return recortar(vias, portales, cajas, celdas), cols, filas
+
+
+class Rejilla:
+    """Índice espacial grueso de cajas (para recortar() con cajas arbitrarias)."""
+
+    def __init__(self, cajas, paso=500.0):
+        self.paso, self.g = paso, defaultdict(list)
+        for k, (x0, y0, x1, y1) in cajas.items():
+            for gx in range(int(x0 // paso), int(x1 // paso) + 1):
+                for gy in range(int(y0 // paso), int(y1 // paso) + 1):
+                    self.g[(gx, gy)].append(k)
+
+    def __call__(self, x0, y0, x1, y1):
+        vistas = set()
+        for gx in range(int(x0 // self.paso), int(x1 // self.paso) + 1):
+            for gy in range(int(y0 // self.paso), int(y1 // self.paso) + 1):
+                for k in self.g.get((gx, gy), ()):
+                    if k not in vistas:
+                        vistas.add(k)
+                        yield k
+
+
+def teselar_kd(vias, portales, proy, tope):
+    """Teselas adaptativas (variante c): se parte la región por la mitad del peso del eje largo hasta que
+    cada tesela, empaquetada de verdad, cabe en tope bytes (heap estimado) y mide ≤ KD_LADO_MAX.
+    Devuelve ({i: tesela}, [caja sin margen por i])."""
+    # Peso aproximado para elegir dónde cortar: cada tirada cuesta su cabecera y cada portal, un número.
+    pesos = [((v["bb"][0] + v["bb"][2]) / 2, (v["bb"][1] + v["bb"][3]) / 2, 3.0 + 0.4 * len(v["pts"])) for v in vias]
+    pesos += [(p["x"], p["y"], 1.0) for p in portales]
+    gv = defaultdict(list)
     for v in vias:
-        x0, y0, x1, y1 = v["bb"]
-        if v["area"]:
-            for c, f in celdas(x0, y0, x1, y1):
-                poli = sutherland_hodgman(v["pts"], *caja(c, f))
-                if len(poli) >= 3:
-                    teselas[(c, f)]["runs"].append((v["nombre"], v["clase"], 1, poli + [poli[0]], v["tramo"]))
-            continue
-        abiertas = {}  # celda -> lista de puntos de la tirada abierta
-        pts = v["pts"]
-        for i in range(len(pts) - 1):
-            (ax, ay), (bx, by) = pts[i], pts[i + 1]
-            sx0, sy0, sx1, sy1 = min(ax, bx), min(ay, by), max(ax, bx), max(ay, by)
-            vistas = set()
-            for c, f in celdas(sx0, sy0, sx1, sy1):
-                r = liang_barsky(ax, ay, bx, by, *caja(c, f))
-                if r is None:
-                    continue
-                t0, t1 = r
-                pa = (ax, ay) if t0 == 0.0 else (ax + t0 * (bx - ax), ay + t0 * (by - ay))
-                pb = (bx, by) if t1 == 1.0 else (ax + t1 * (bx - ax), ay + t1 * (by - ay))
-                run = abiertas.get((c, f))
-                if run is not None and t0 == 0.0 and run[-1] == pa:
-                    run.append(pb)
-                else:
-                    if run is not None:
-                        teselas[(c, f)]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
-                    run = [pa, pb]
-                abiertas[(c, f)] = run
-                if t1 < 1.0:
-                    teselas[(c, f)]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
-                    del abiertas[(c, f)]
-                vistas.add((c, f))
-            for cf in list(abiertas):
-                if cf not in vistas:
-                    teselas[cf]["runs"].append((v["nombre"], v["clase"], 0, abiertas.pop(cf), v["tramo"]))
-        for cf, run in abiertas.items():
-            teselas[cf]["runs"].append((v["nombre"], v["clase"], 0, run, v["tramo"]))
-
+        for gx in range(int((v["bb"][0] - BUF) // 500), int((v["bb"][2] + BUF) // 500) + 1):
+            for gy in range(int((v["bb"][1] - BUF) // 500), int((v["bb"][3] + BUF) // 500) + 1):
+                gv[(gx, gy)].append(v)
+    gp = defaultdict(list)
     for p in portales:
-        for c, f in celdas(p["x"], p["y"], p["x"], p["y"]):
-            x0, y0, x1, y1 = caja(c, f)
-            if x0 <= p["x"] <= x1 and y0 <= p["y"] <= y1:
-                teselas[(c, f)]["portales"].append(p)
-    return teselas, cols, filas
+        gp[(int(p["x"] // 500), int(p["y"] // 500))].append(p)
+
+    def contenido(caja):
+        x0, y0, x1, y1 = caja[0] - BUF, caja[1] - BUF, caja[2] + BUF, caja[3] + BUF
+        vs, ps, vistas = [], [], set()
+        for gx in range(int(x0 // 500), int(x1 // 500) + 1):
+            for gy in range(int(y0 // 500), int(y1 // 500) + 1):
+                for v in gv.get((gx, gy), ()):
+                    if id(v) not in vistas and not (v["bb"][2] < x0 or v["bb"][0] > x1 or v["bb"][3] < y0
+                                                    or v["bb"][1] > y1):
+                        vistas.add(id(v))
+                        vs.append(v)
+                ps += [p for p in gp.get((gx, gy), ()) if x0 <= p["x"] <= x1 and y0 <= p["y"] <= y1]
+        t = recortar(vs, ps, {0: (x0, y0, x1, y1)}, lambda *_: (0,))
+        return t[0] if 0 in t else {"runs": [], "portales": []}
+
+    def cabe(caja, t):
+        nombres = len({r[0] for r in t["runs"]} | {n for r in t["runs"] for n in r[4] if n})
+        if nombres > MAX_NOMBRES or max(caja[2] - caja[0], caja[3] - caja[1]) > KD_LADO_MAX:
+            return math.inf
+        return empaquetar(caja, t, {})[1]["heap"]
+
+    def partir(caja, ps):
+        """Hojas [(caja, contenido)] de la caja."""
+        x0, y0, x1, y1 = caja
+        t = contenido(caja)
+        if not t["runs"]:
+            return []
+        ancho, alto = x1 - x0, y1 - y0
+        est = {"heap": cabe(caja, t)}
+        if est["heap"] <= tope or max(ancho, alto) <= KD_LADO_MIN:
+            return [(caja, t)]
+        # Cuántas teselas harán falta (con un margen, porque el margen de cada una repite datos), y el
+        # corte que deja a cada lado su parte: con 3, un tercio y dos tercios, no la mitad.
+        n = max(2, math.ceil(est["heap"] / (KD_LLENADO * tope))) if est["heap"] != math.inf else 2
+        frac = (n // 2) / n
+        eje = 0 if ancho >= alto else 1
+        lo, hi = caja[eje], caja[eje + 2]
+        orden = sorted(ps, key=lambda p: p[eje])
+        total, acum, corte = sum(p[2] for p in orden), 0.0, (lo + hi) / 2
+        for p in orden:
+            acum += p[2]
+            if acum >= total * frac:
+                corte = p[eje]
+                break
+        corte = round(corte / KD_PASO) * KD_PASO
+        minimo = KD_LADO_MIN / 2
+        corte = min(max(corte, lo + minimo), hi - minimo)
+        corte = round(corte / KD_PASO) * KD_PASO
+
+        def mitades(c):
+            return ((x0, y0, c, y1), (c, y0, x1, y1)) if eje == 0 else ((x0, y0, x1, c), (x0, c, x1, y1))
+
+        if n <= 3 and est["heap"] != math.inf:
+            # Pocas teselas: el corte que llena la primera hasta el tope, por bisección con el coste real
+            # (el peso aproximado deja las hojas a medias).
+            a_, b_ = lo + minimo, hi - minimo
+            mejor = None
+            for _ in range(10):
+                c = round((a_ + b_) / 2 / KD_PASO) * KD_PASO
+                if not a_ <= c <= b_:
+                    break
+                if cabe(mitades(c)[0], contenido(mitades(c)[0])) <= tope:
+                    mejor, a_ = c, c + KD_PASO
+                else:
+                    b_ = c - KD_PASO
+            if mejor is not None:
+                corte = mejor
+        a, b = mitades(corte)
+        ha = partir(a, [p for p in ps if p[eje] < corte])
+        hb = partir(b, [p for p in ps if p[eje] >= corte])
+        return ha + hb
+
+    hojas = partir((0, 0, math.ceil(proy.ancho / KD_PASO) * KD_PASO, math.ceil(proy.alto / KD_PASO) * KD_PASO), pesos)
+    # Fusión de vecinas: dos hojas que comparten un lado entero forman un rectángulo; si cabe, se juntan.
+    juntas = True
+    while juntas:
+        juntas = False
+        hojas.sort(key=lambda h: (h[0][1], h[0][0]))
+        for i in range(len(hojas)):
+            (a0, b0, a1, b1), _ = hojas[i]
+            for j in range(len(hojas)):
+                if i == j:
+                    continue
+                (c0, d0, c1, d1), _ = hojas[j]
+                if (b0, b1) == (d0, d1) and a1 == c0:
+                    u = (a0, b0, c1, b1)
+                elif (a0, a1) == (c0, c1) and b1 == d0:
+                    u = (a0, b0, a1, d1)
+                else:
+                    continue
+                t = contenido(u)
+                if cabe(u, t) <= tope:
+                    hojas = [h for k, h in enumerate(hojas) if k not in (i, j)] + [(u, t)]
+                    juntas = True
+                    break
+            if juntas:
+                break
+    hojas.sort(key=lambda h: (h[0][1], h[0][0]))
+    return {i: t for i, (_, t) in enumerate(hojas)}, [c for c, _ in hojas]
 
 
-def q(v, origen):
-    return max(0, min(TESELA + 2 * BUF, int(round(v - origen))))
+def q(v, origen, lado):
+    return max(0, min(lado, int(round(v - origen))))
 
 
-def empaquetar(c, f, t, sufijos):
-    """Tesela → lista JSON del FORMATO 2. Devuelve (lista, estadísticas)."""
-    ox, oy = c * TESELA - BUF, f * TESELA - BUF
+class Bits:
+    """Flujo de bits sobre enteros de 32: el bit k del flujo es el bit k % 32 del número k // 32."""
+
+    def __init__(self):
+        self.palabras, self.n = [], 0
+
+    def poner(self, v, k):
+        assert 0 <= v < 1 << k, (v, k)
+        while k:
+            i, s = divmod(self.n, 32)
+            if i == len(self.palabras):
+                self.palabras.append(0)
+            cabe = min(k, 32 - s)
+            self.palabras[i] |= (v & ((1 << cabe) - 1)) << s
+            v >>= cabe
+            k -= cabe
+            self.n += cabe
+
+    def lista(self):
+        return [int32(w) for w in self.palabras]
+
+
+def ancho_con_signo(*vs):
+    """Bits para guardar cada v en complemento a dos (mínimo 1)."""
+    w = 1
+    while any(not -(1 << (w - 1)) <= v < 1 << (w - 1) for v in vs):
+        w += 1
+    return w
+
+
+def partir_tirada(qp):
+    """Tirada lineal → trozos de ≤ RUN_NV_MAX vértices y extensión ≤ RUN_EXT_MAX·RUN_EXT_U m desde su
+    primer vértice (los trozos comparten el vértice de corte). Un segmento más largo que eso va solo, con
+    extensión RUN_EXT_SIN."""
+    trozos, i = [], 0
+    lim = RUN_EXT_MAX * RUN_EXT_U
+    while True:
+        x0, y0 = qp[i]
+        j = i + 1
+        while j < len(qp) and j - i < RUN_NV_MAX and max(abs(qp[j][0] - x0), abs(qp[j][1] - y0)) <= lim:
+            j += 1
+        if j == i + 1 and j < len(qp):
+            j += 1
+        trozos.append(qp[i:j])
+        if j >= len(qp):
+            return trozos
+        i = j - 1
+
+
+def empaquetar(caja, t, sufijos):
+    """Tesela (caja sin margen: x0, y0, x1, y1) → lista JSON del FORMATO 4 (ver la cabecera del módulo).
+    Devuelve (lista, estadísticas)."""
+    ox, oy = caja[0] - BUF, caja[1] - BUF
+    lado = max(caja[2] - caja[0], caja[3] - caja[1]) + 2 * BUF
+    assert lado < 1 << 13, "las coordenadas de tirada son de 13 bits"
+    # Bits por coordenada de portal: 12 (salto de 5 bits) o, si la tesela pasa de 4.095 m, 13 (salto de 3).
+    pb = 12 if lado <= 4095 else 13
+    salto_esc = (1 << (29 - 2 * pb)) - 1
     # Orden de cadena de Python: el mismo con el que se ordenan los portales por calle.
     calles_runs = sorted({r[0] for r in t["runs"]} | {n for r in t["runs"] for n in r[4] if n})
     if len(calles_runs) > MAX_NOMBRES:
-        sys.exit(f"tesela {c},{f}: {len(calles_runs)} nombres (> {MAX_NOMBRES}); reduzca TESELA")
+        sys.exit(f"tesela {caja}: {len(calles_runs)} nombres (> {MAX_NOMBRES}); reduzca TESELA")
     ids = {n: i for i, n in enumerate(calles_runs)}
-    R, V = [], []
+    R, inicio_r = [], [None] * len(calles_runs)
+    cajas_c = [None] * len(calles_runs)   # caja de las tiradas de cada calle, en m de la tesela
+    V = Bits()
     lados = Counter()
+    nruns = nvert = 0
     for nombre, clase, area, pts, (ta, tb) in sorted(t["runs"], key=lambda r: (ids[r[0]], r[1], r[3][0])):
         qp = []
         for x, y in pts:
-            p = (q(x, ox), q(y, oy))
+            p = (q(x, ox, lado), q(y, oy, lado))
             if not qp or qp[-1] != p:
                 qp.append(p)
         if area and len(qp) < 4:
             continue
-        # Tiradas largas se parten compartiendo un vértice (no pasa en una tesela de 650 m, pero por si acaso).
-        trozos = [qp[i:i + MAX_VERT_RUN] for i in range(0, max(1, len(qp) - 1), MAX_VERT_RUN - 1)] if not area else [qp]
-        if area and len(qp) > MAX_VERT_RUN:
-            sys.exit(f"tesela {c},{f}: área {nombre} con {len(qp)} vértices")
-        tramo = (ids[ta] + 1 if ta else 0) | (ids[tb] + 1 if tb else 0) << 12
-        for tr in trozos:
+        a_, b_ = (ids[ta] + 1 if ta else 0), (ids[tb] + 1 if tb else 0)
+        for tr in ([qp] if area else partir_tirada(qp)):
+            k = ids[nombre]
+            if inicio_r[k] is None:
+                inicio_r[k] = len(R)
+            x0, y0 = tr[0]
+            ext = max(max(abs(x - x0), abs(y - y0)) for x, y in tr)
+            ext = -(-ext // RUN_EXT_U)
+            if ext > RUN_EXT_MAX:
+                ext = RUN_EXT_SIN
+            ds = [v for j in range(1, len(tr)) for v in (tr[j][0] - tr[j - 1][0], tr[j][1] - tr[j - 1][1])]
+            w = ancho_con_signo(*ds) if ds else 1
+            assert w <= 15
+            nv = len(tr) if len(tr) <= RUN_NV_MAX else 0
+            R.append(int32(x0 | y0 << 13 | ext << 26 | area << 31))
+            R.append(int32(w | clase << 4 | a_ << 6 | b_ << 16 | nv << 26))
+            if nv == 0:
+                R.append(len(tr))
+            for d in ds:
+                V.poner(d & ((1 << w) - 1), w)
             xs, ys = [p[0] for p in tr], [p[1] for p in tr]
-            R += [len(tr) | ids[nombre] << 12 | clase << 22 | area << 24,
-                  min(xs) | min(ys) << 12, max(xs) | max(ys) << 12, tramo]
-            V += [x | y << 12 for x, y in tr]
+            cc = cajas_c[k]
+            cajas_c[k] = (min(xs), min(ys), max(xs), max(ys)) if cc is None else \
+                (min(cc[0], *xs), min(cc[1], *ys), max(cc[2], *xs), max(cc[3], *ys))
+            nruns += 1
+            nvert += len(tr)
             if not area:
                 lados[2 if ta and tb else 1 if ta or tb else 0] += 1
-    P, H = [], []
-    for p in sorted(t["portales"], key=lambda p: (p["calle"], p["x"], p["y"])):
-        if p["calle"] not in ids:
-            continue  # su calle no pasa por esta tesela: el reloj nunca lo pediría aquí
-        if p["suf"] not in sufijos:
-            sufijos[p["suf"]] = len(sufijos)
-            if len(sufijos) > MAX_SUFIJOS + 1:
-                sys.exit(f"más de {MAX_SUFIJOS} sufijos de portal distintos en la región")
-        P.append(q(p["x"], ox) | q(p["y"], oy) << 12)
-        H.append(min(p["num"], 0xFFF) | sufijos[p["suf"]] << 12 | ids[p["calle"]] << 21)
-    lista = [FORMATO, calles_runs, R, V, P, H]
-    est = dict(runs=len(R) // 4, vert=len(V), portales=len(P), nombres=len(calles_runs), lados=lados,
-               nums=len(R) + len(V) + len(P) + len(H),
-               bytes_nombres=sum(len(n.encode()) for n in calles_runs))
-    # Calibrado con la tesela más pesada real (MemoriaTest, 2026-10-23: 50.000 B para 3.819 números
-    # y 119 nombres): ~11 B por número y ~60 B por nombre. La espiga de la fase 0 daba la mitad.
-    est["heap"] = int(11 * est["nums"] + 60 * len(calles_runs))
+    # Portales: por calle y número; el número va como salto desde el anterior de su calle.
+    aqui = sorted((p for p in t["portales"] if p["calle"] in ids),
+                  key=lambda p: (ids[p["calle"]], p["num"], p["suf"], p["x"], p["y"]))
+    cuenta_suf = Counter(p["suf"] for p in aqui if p["suf"])
+    sufs = [s_ for s_, _ in sorted(cuenta_suf.items(), key=lambda kv: (-kv[1], kv[0]))]
+    for s_ in sufs:
+        sufijos.setdefault(s_, len(sufijos))
+    P, E, inicio_p = [], [], [None] * len(calles_runs)
+    prev_calle, prev = None, 0
+    for p in aqui:
+        k = ids[p["calle"]]
+        if k != prev_calle:
+            prev_calle, prev = k, 0
+            inicio_p[k] = len(P)
+        x = q(p["x"], ox, lado)
+        y = q(p["y"], oy, lado)
+        salto = p["num"] - prev
+        sc = sufs.index(p["suf"]) + 1 if p["suf"] else 0
+        if 0 <= salto < salto_esc and sc < PORTAL_SUF_ESC:
+            P.append(int32(x | y << pb | salto << 2 * pb | sc << 29))
+        else:
+            E += [len(P), p["num"] | sc << 12]
+            P.append(int32(x | y << pb | salto_esc << 2 * pb | PORTAL_SUF_ESC << 29))
+        prev = p["num"]
+    # Inicio de las tiradas (offset en R) y de los portales de cada calle; la siguiente marca el final.
+    C = []
+    fin_r, fin_p = len(R), len(P)
+    for k in range(len(calles_runs) - 1, -1, -1):
+        fin_r = inicio_r[k] if inicio_r[k] is not None else fin_r
+        fin_p = inicio_p[k] if inicio_p[k] is not None else fin_p
+        C.append(int32(fin_r | fin_p << 16))
+    C.reverse()
+    C.append(int32(len(R) | len(P) << 16))
+    assert len(R) < 1 << 16 and len(P) < 1 << 16
+    # Nombres: las calles y luego los sufijos, en una sola cadena "\n"-separada (una cadena por nombre
+    # costaba ~34 B de cabecera en el reloj). O: dónde empieza cada uno, 2 por número, 16 bits.
+    S, O = cadena_nombres(calles_runs + sufs)
+    # Caja gruesa de cada calle (unidades de CB_U m, hacia fuera): la búsqueda descarta de un golpe las calles
+    # lejanas. Sin ella, el fēnix 5/6 (watchdog de 120.000 instrucciones) no terminaba en las teselas grandes.
+    CB = []
+    for cc in cajas_c:
+        if cc is None:
+            CB.append(int32(0xFF | 0xFF << 8))      # sin tiradas: una caja vacía, que nunca está cerca
+        else:
+            a0, b0 = cc[0] // CB_U, cc[1] // CB_U
+            a1, b1 = min(255, -(-cc[2] // CB_U)), min(255, -(-cc[3] // CB_U))
+            CB.append(int32(a0 | b0 << 8 | a1 << 16 | b1 << 24))
+    Vl = V.lista()
+    lista = [FORMATO, len(calles_runs), pb, S, O, C, CB, R, Vl, P, E]
+    nums = len(O) + len(C) + len(CB) + len(R) + len(Vl) + len(P) + len(E)
+    est = dict(runs=nruns, vert=nvert, portales=len(P), nombres=len(calles_runs), lados=lados, escapes=len(E) // 2,
+               nums=nums, bytes_nombres=len(S.encode()))
+    # Medido en el simulador del fēnix 6 (2026-10-25): 5 B por número de un array de JSON; una cadena, su
+    # longitud más ~20 B. Las tablas por calle de la búsqueda (mejor, mejorRun) añaden 10 B por calle.
+    est["heap"] = int(5 * (nums + 10) + len(S.encode()) + 20 + 10 * len(calles_runs))
     return lista, est
 
 
@@ -1476,7 +1792,7 @@ def nombre_modulo(region):
 
 
 def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm, cuenta, sin_pareja, por_lugar,
-             parroquias, lugares, fecha_zonas, fuentes, pois):
+             parroquias, lugares, fecha_zonas, fuentes, pois, cajas=None):
     """Todo lo de la región bajo resources-gen/<region>/ (ids de recurso con su prefijo, para que convivan
     varias en la app) y su módulo source-gen/Region<Nombre>.mc. Luego rehace lo común a todas."""
     pref = cfg["prefijo"]
@@ -1487,16 +1803,23 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
             viejo.unlink()
     sufijos = {"": 0}
     xml = ["<jsonDataResources>"]
-    idx = [None] * (cols * filas)
     stats = {}
-    for (c, f) in sorted(teselas, key=lambda cf: (cf[1], cf[0])):
-        t = teselas[(c, f)]
+    if cajas is None:
+        idx = [None] * (cols * filas)
+        claves = [(f * cols + c, (c * TESELA, f * TESELA, (c + 1) * TESELA, (f + 1) * TESELA), teselas[(c, f)])
+                  for (c, f) in sorted(teselas, key=lambda cf: (cf[1], cf[0]))]
+    else:
+        # Teselas adaptativas: una por caja y, al final, un null para el punto que no cae en ninguna.
+        idx = [None] * (len(cajas) + 1)
+        claves = [(i, cajas[i], teselas[i]) for i in range(len(cajas))]
+    for i, caja, t in claves:
         if not t["runs"]:
             continue
-        lista, est = empaquetar(c, f, t, sufijos)
-        if not lista[2]:
+        lista, est = empaquetar(caja, t, sufijos)
+        if not lista[7]:
+            assert cajas is None, "teselar_kd no deja cajas sin tiradas"
             continue
-        i = f * cols + c
+        est["caja"] = caja
         (rdir / "t" / f"t{i}.json").write_text(json.dumps(lista, ensure_ascii=False, separators=(",", ":")), "utf-8")
         est["json"] = (rdir / "t" / f"t{i}.json").stat().st_size
         xml.append(f'    <jsonData id="{pref}t{i}" filename="t/t{i}.json"/>')
@@ -1521,11 +1844,19 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
             zstats[i] = est
     zmayor = max(zstats, key=lambda i: zstats[i]["heap"])
 
-    # Hospitales y comisarías: [FORMATO, N, D, X, Y, T] en metros enteros de región.
-    poi = [FORMATO, [p[0] for p in pois], [p[1] for p in pois], [p[2] for p in pois], [p[3] for p in pois],
-           [p[4] for p in pois]]
+    # Hospitales y comisarías: [FORMATO, SN, ON, SD, OD, XY, T]. Nombres y direcciones en una cadena cada uno
+    # (como los de las teselas); XY = x | y << 16 en metros enteros de región; T, el tipo, 4 por número.
+    # Así son ~13 KB en el reloj y no ~30: en los de 128 KB no cabían con la tesela cargada (2026-10-25).
+    sn, on = cadena_nombres([p[0] for p in pois])
+    sd, od = cadena_nombres([p[1] for p in pois])
+    assert all(0 <= p[2] < 1 << 16 and 0 <= p[3] < 1 << 16 and 0 <= p[4] < 256 for p in pois)
+    ts = [p[4] for p in pois] + [0] * (-len(pois) % 4)
+    poi = [FORMATO, sn, on, sd, od, [int32(p[2] | p[3] << 16) for p in pois],
+           [int32(ts[k] | ts[k + 1] << 8 | ts[k + 2] << 16 | ts[k + 3] << 24) for k in range(0, len(ts), 4)]]
     (rdir / "poi.json").write_text(json.dumps(poi, ensure_ascii=False, separators=(",", ":")), "utf-8")
     xml.append(f'    <jsonData id="{pref}poi" filename="poi.json"/>')
+    if cajas is not None:
+        xml.append(f'    <jsonData id="{pref}cajas" filename="cajas.json"/>')
     xml.append("</jsonDataResources>")
     (rdir / f"{region}.xml").write_text("\n".join(xml) + "\n", "utf-8")
 
@@ -1533,7 +1864,8 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
     meta = dict(region=region, id=cfg["id"], prefijo=pref, etiqueta=cfg["etiqueta"], datos=fecha_osm, formato=FORMATO,
                 fuentes=fuentes, bbox=cfg["bbox"],
                 lat_min=proy.lat_min, lon_min=proy.lon_min, kx=proy.kx, ky=proy.ky, tesela=TESELA, buf=BUF,
-                maxd=MAXD, portal_r=PORTAL_R, cols=cols, filas=filas, pen=PEN, suf=suf, idx=idx, t_mayor=f"t{mayor}",
+                maxd=MAXD, portal_r=PORTAL_R, cols=cols, filas=filas, pen=PEN, ext_u=RUN_EXT_U, ext_sin=RUN_EXT_SIN, cb_u=CB_U, idx=idx,
+                cajas=cajas, t_mayor=f"t{mayor}",
                 zonas=fecha_zonas, zona=ZONA, rcel=RCEL, rn=RN, zmargen=ZMARGEN, lugar_r=LUGAR_R, barrio_r=BARRIO_R,
                 barrio_frac=BARRIO_FRAC, zbarrio=zbarrio,
                 zcols=zcols, zfilas=zfilas, zidx=zidx, z_mayor=f"z{zmayor}", npoi=len(pois),
@@ -1553,6 +1885,27 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
         return ("," + chr(10)).join("            " + ", ".join(
             f"Rez.JsonData.{pref}{ix[f * nc + c]}" if ix[f * nc + c] else "null" for c in range(nc)) for f in range(nf))
 
+    if cajas is None:
+        lista_idx = f"""// Una entrada por celda de {TESELA} m, fila a fila desde el sur; null = sin calles.
+            [
+{filas_de(idx, cols, filas)}
+            ]"""
+        cajas_mc = "null"
+        (rdir / "cajas.json").unlink(missing_ok=True)
+    else:
+        filas_idx = ("," + chr(10)).join("            " + ", ".join(
+            f"Rez.JsonData.{pref}{v}" if v else "null" for v in idx[k:k + 8]) for k in range(0, len(idx), 8))
+        lista_idx = f"""// Una entrada por tesela adaptativa (Callejero.CAJAS) y un null final (ninguna caja).
+            [
+{filas_idx}
+            ]"""
+        u = TESELA
+        assert all(v % u == 0 for c in cajas for v in c) and max(v for c in cajas for v in c) // u < 1 << 16
+        # En un recurso, no en el código: un array literal de 440 números eran ~9 KB de código (2026-10-25).
+        cj = [int32(v) for c in cajas for v in (c[0] // u | (c[1] // u) << 16, c[2] // u | (c[3] // u) << 16)]
+        (rdir / "cajas.json").write_text(json.dumps(cj, separators=(",", ":")), "utf-8")
+        cajas_mc = f"Rez.JsonData.{pref}cajas"
+
     mod = nombre_modulo(region)
     mc = f"""import Toybox.Lang;
 
@@ -1565,11 +1918,7 @@ module {mod} {{
             {mc_str(region)}, {mc_str(cfg["etiqueta"])}, {mc_str(fecha_osm)}, {mc_str(fuentes)},
             {proy.lat_min!r}d, {proy.lon_min!r}d, {proy.kx:.6f}d, {proy.ky:.6f}d,
             {TESELA}, {cols}, {filas}, {len(stats)},
-            [{", ".join(mc_str(s) for s in suf)}] as Array<String>,
-            // Una entrada por celda de {TESELA} m, fila a fila desde el sur; null = sin calles.
-            [
-{filas_de(idx, cols, filas)}
-            ] as Array<ResourceId or Null>,
+            {lista_idx} as Array<ResourceId or Null>,
             Rez.JsonData.{pref}t{mayor},
             {zcols}, {zfilas},
             // Zonas de {ZONA} m: {"barrio oficial (polígono) y lugar" if zbarrio else "parroquia (polígono), lugar y barrio (nodos)"}.
@@ -1578,7 +1927,10 @@ module {mod} {{
             ] as Array<ResourceId or Null>,
             Rez.JsonData.{pref}z{zmayor},
             Rez.JsonData.{pref}poi,
-            {"true" if zbarrio else "false"}
+            {"true" if zbarrio else "false"},
+            // Teselas adaptativas (variante c): recurso con x0 | y0 << 16, x1 | y1 << 16 de cada una, en unidades
+            // de TESELA m (Geo.celda lo carga al cambiar de tesela); null = rejilla fija.
+            {cajas_mc}
         ] as Array;
     }}
 }}
@@ -1609,14 +1961,15 @@ def escribir_comun(recien=None, solo=None, salida=None):
             metas.append(json.loads(f.read_text("utf-8")))
     metas.sort(key=lambda m: m["id"])
     assert len({m["id"] for m in metas}) == len(metas), "dos regiones con el mismo id"
-    recursos = sum(sum(1 for v in m["idx"] if v) + sum(1 for v in m["zidx"] if v) + 1 for m in metas)
+    recursos = sum(sum(1 for v in m["idx"] if v) + sum(1 for v in m["zidx"] if v) + 1 + bool(m.get("cajas"))
+                   for m in metas)
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
-          + (f" de {TOPE_RECURSOS_6X} posibles en el fēnix 6X" if VARIANTE == "6x" else ""))
+          + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c") else ""))
     zonas = {(m["zona"], m["rn"]) for m in metas}
     if len(zonas) > 1:
         sys.exit(f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una.")
     zona, rn = zonas.pop() if zonas else (ZONA, RN)
-    if VARIANTE == "6x" and recursos > TOPE_RECURSOS_6X:
+    if VARIANTE in ("6x", "c") and recursos > TOPE_RECURSOS_6X:
         if recien:
             # Se retira lo que se acaba de escribir: con ello dentro, el 6X no compilaría.
             import shutil
@@ -1637,6 +1990,9 @@ module Callejero {{
     const MAXD = {MAXD};
     const PORTAL_R = {PORTAL_R};
     const PEN = {PEN} as Array<Number>;
+    const EXT_U = {RUN_EXT_U};
+    const EXT_SIN = {RUN_EXT_SIN};
+    const CB_U = {CB_U};
     const ZONA = {zona};
     const RCEL = {RCEL};
     const RN = {rn};
@@ -1658,7 +2014,6 @@ module Callejero {{
     var COLS as Number = 0;
     var FILAS as Number = 0;
     var NTESELAS as Number = 0;
-    var SUF as Array<String> = [""] as Array<String>;
     var IDX as Array<ResourceId or Null> = [] as Array<ResourceId or Null>;
     var T_MAYOR as ResourceId or Null = null;
     var ZCOLS as Number = 0;
@@ -1667,11 +2022,13 @@ module Callejero {{
     var Z_MAYOR as ResourceId or Null = null;
     var POI as ResourceId or Null = null;
     var ZBARRIO as Boolean = false;       // el polígono de las zonas es el barrio (Madrid), no la parroquia
+    var CAJAS as ResourceId or Null = null;   // teselas adaptativas (Geo.celda); null = rejilla fija
 
     // Sin región activa (los tests miden así lo que ocupan los índices de cada una).
     function soltar() as Void {{
         IDX = [] as Array<ResourceId or Null>;
         ZIDX = [] as Array<ResourceId or Null>;
+        CAJAS = null;
         ID = 0;
     }}
 
@@ -1691,15 +2048,15 @@ module Callejero {{
         COLS = d[9] as Number;
         FILAS = d[10] as Number;
         NTESELAS = d[11] as Number;
-        SUF = d[12] as Array<String>;
-        IDX = d[13] as Array<ResourceId or Null>;
-        T_MAYOR = d[14] as ResourceId;
-        ZCOLS = d[15] as Number;
-        ZFILAS = d[16] as Number;
-        ZIDX = d[17] as Array<ResourceId or Null>;
-        Z_MAYOR = d[18] as ResourceId;
-        POI = d[19] as ResourceId;
-        ZBARRIO = d[20] as Boolean;
+        IDX = d[12] as Array<ResourceId or Null>;
+        T_MAYOR = d[13] as ResourceId;
+        ZCOLS = d[14] as Number;
+        ZFILAS = d[15] as Number;
+        ZIDX = d[16] as Array<ResourceId or Null>;
+        Z_MAYOR = d[17] as ResourceId;
+        POI = d[18] as ResourceId;
+        ZBARRIO = d[19] as Boolean;
+        CAJAS = d[20] as ResourceId or Null;
     }}
 }}
 """
@@ -1763,7 +2120,8 @@ module Regiones {{
 def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta, sin_pareja, por_lugar, suf, mayor,
             zstats, zcols, zfilas, zmayor, parroquias, lugares, fecha_zonas, pois):
     L = [f"Callejero {region} — datos OSM {fecha_osm} — generado {date.today().isoformat()}",
-         f"Región {proy.ancho / 1000:.1f} × {proy.alto / 1000:.1f} km; rejilla {cols} × {filas} de {TESELA} m "
+         f"Región {proy.ancho / 1000:.1f} × {proy.alto / 1000:.1f} km; "
+         + (f"teselas adaptativas de ≤ {KD_TOPE // 1024} KB " if VARIANTE == "c" else f"rejilla {cols} × {filas} de {TESELA} m ") +
          f"(margen {BUF} m, MAXD {MAXD} m, portal {PORTAL_R} m)", ""]
     L.append("Recuento:")
     for k, v in sorted(cuenta.items()):
@@ -1798,13 +2156,14 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
           f"media {sum(zh) / len(zh) / 1024:.1f} KB; JSON total {sum(s['json'] for s in zstats.values()) / 1024:.0f} KB"]
     hs = sorted(s["heap"] for s in stats.values())
     js = sum(s["json"] for s in stats.values())
-    L += ["", f"Teselas con calles: {len(stats)} de {cols * filas}; JSON total {js / 1024:.0f} KB",
+    L += ["", f"Teselas con calles: {len(stats)}" + ("" if VARIANTE == "c" else f" de {cols * filas}")
+          + f"; JSON total {js / 1024:.0f} KB",
           f"Heap estimado por tesela: máx {hs[-1] / 1024:.1f} KB · p95 {hs[int(.95 * len(hs))] / 1024:.1f} KB · "
           f"media {sum(hs) / len(hs) / 1024:.1f} KB (T_MAYOR = t{mayor})", "", "Las 10 más pesadas:"]
     for i in sorted(stats, key=lambda i: -stats[i]["heap"])[:10]:
         s = stats[i]
-        c, f = i % cols, i // cols
-        lat, lon = proy.latlon((c + .5) * TESELA, (f + .5) * TESELA)
+        x0, y0, x1, y1 = s["caja"]
+        lat, lon = proy.latlon((x0 + x1) / 2, (y0 + y1) / 2)
         L.append(f"  t{i:<5} {lat:.5f},{lon:.5f}  heap~{s['heap'] / 1024:5.1f} KB  json {s['json'] / 1024:5.1f} KB  "
                  f"runs {s['runs']:>4} vért {s['vert']:>5} portales {s['portales']:>4} nombres {s['nombres']:>3}")
 
@@ -1813,6 +2172,8 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
           f"  sin dirección: {sum(1 for p in pois if not p[1])}"]
 
     def mapa(titulo, fn):
+        if VARIANTE == "c":
+            return   # teselas adaptativas: no hay rejilla que pintar
         L.extend(["", titulo + " (norte arriba):"])
         for f in range(filas - 1, -1, -1):
             L.append("  " + "".join(fn(stats.get(f * cols + c)) for c in range(cols)))
@@ -1866,10 +2227,11 @@ def main():
     ap.add_argument("--comun", action="store_true", help="solo rehace Callejero.mc, Regiones.mc y el ajuste")
     ap.add_argument("--solo", help="con --comun: solo estas regiones, separadas por comas (tools/tienda.py)")
     ap.add_argument("--salida", help="con --solo: carpeta donde escribir source/ y res/ajustes/")
-    ap.add_argument("--variante", choices=("normal", "6x"), default="normal",
-                    help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/)")
+    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal",
+                    help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/); c: teselas "
+                         "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -1887,11 +2249,20 @@ def main():
             sys.exit(f"La región {a.region} no tiene \"compacta\" en tools/regiones.json: no va en el fēnix 6X.")
         TESELA, ZONA = comp["tesela"], comp["zona"]
         RN = ZONA // RCEL
-        assert TESELA + 2 * BUF < 4096 and RN * RN % 4 == 0 and ZONA + 2 * ZMARGEN < 1 << 13
+        assert TESELA + 2 * BUF < 4096 and RN < 256 and ZONA + 2 * ZMARGEN < 1 << 14
         if comp.get("distritos"):
             cfg["bbox"] = caja_distritos(a.region, cfg, comp["distritos"], comp.get("margen_m", 500), a.refresh)
             cfg["etiqueta"] = comp.get("etiqueta", cfg["etiqueta"])
         print(f"Variante 6x de {a.region}: teselas de {TESELA} m, zonas de {ZONA} m, caja {cfg['bbox']}")
+    if VARIANTE == "c":
+        vc = cfg.get("c")
+        if not vc:
+            sys.exit(f"La región {a.region} no tiene \"c\" en tools/regiones.json: no va en los relojes de 128 KB.")
+        ZONA, KD_TOPE = vc["zona"], vc["tope_kb"] * 1024
+        TESELA = KD_PASO    # unidad de las cajas; COLS × FILAS es la región entera
+        RN = ZONA // RCEL
+        assert RN < 256 and ZONA + 2 * ZMARGEN < 1 << 14
+        print(f"Variante c de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m")
     proy = Proy(cfg["bbox"])
     d = (descargar_por_partes(a.region, bbox_datos, cfg["partes"], a.refresh) if cfg.get("partes")
          else descargar(a.region, consulta(bbox_datos, grande), a.refresh))
@@ -1931,9 +2302,14 @@ def main():
     dz = descargar(a.region, consulta_zonas(bbox_datos, tuple(cfg["zonas"]["admin_level"]), grande), a.refresh)
     fecha_zonas = (dz.get("osm3s", {}).get("timestamp_osm_base") or "")[:10] or date.today().isoformat()
     parroquias, lugares = extraer_zonas(dz["elements"], proy, overrides, cuenta, cfg["zonas"])
-    teselas, cols, filas = teselar(trozos, portales, proy)
+    cajas = None
+    if VARIANTE == "c":
+        teselas, cajas = teselar_kd(trozos, portales, proy, KD_TOPE)
+        cols, filas = math.ceil(proy.ancho / KD_PASO), math.ceil(proy.alto / KD_PASO)
+    else:
+        teselas, cols, filas = teselar(trozos, portales, proy)
     escribir(a.region, cfg, proy, trozos, portales, teselas, cols, filas, fecha_osm, cuenta, sin_pareja, por_lugar,
-             parroquias, lugares, fecha_zonas, fuentes, pois)
+             parroquias, lugares, fecha_zonas, fuentes, pois, cajas)
 
 
 if __name__ == "__main__":

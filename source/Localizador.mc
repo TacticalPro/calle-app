@@ -88,6 +88,7 @@ class Localizador {
             if (t == null || t.idx != i) {
                 _t = null;   // soltar la anterior antes de cargar: nunca dos en memoria
                 t = null;
+                Zonas.soltar();   // ni la zona: se vuelve a cargar después, y es pequeña
                 t = Teselas.cargar(i);
                 _t = t;
                 _reg = Callejero.ID;
@@ -110,6 +111,13 @@ class Localizador {
         m.ms = System.getTimer() - t0;
     }
 
+    // Suelta la tesela y la zona (la lista de hospitales y comisarías las necesita en los relojes de 128 KB).
+    // La siguiente posición, o forzar() al volver a la vista, las vuelve a cargar.
+    function soltar() as Void {
+        _t = null;
+        Zonas.soltar();
+    }
+
     // La búsqueda sobre una tesela ya elegida (los tests la llaman con teselas sintéticas).
     function calcularEn(t as Tesela, x as Float, y as Float) as Void {
         var m = modelo;
@@ -124,7 +132,7 @@ class Localizador {
         }
         // Histéresis: la calle que ya se ve se queda si la nueva no la mejora en más de HISTERESIS_M.
         var mostrada = m.calle1;
-        if (mostrada != null && !t.nombres[a].equals(mostrada)) {
+        if (mostrada != null && !t.nombre(a).equals(mostrada)) {
             var k = t.indiceDe(mostrada);
             if (k >= 0 && t.mejor[k] <= t.mejor[a] + L.HISTERESIS_M) {
                 b = a;

@@ -38,6 +38,8 @@ module MenuCalle {
 
     // Lista de los más cercanos a la última posición. Sin posición, lo dice; la guía la busca sola.
     function abrirIr(tipos as Array<Number>, titulo as String, otras as Boolean) as Void {
+        // Los puntos de la región no caben con la tesela cargada en un fēnix 5 o 6 (128 KB).
+        (Application.getApp() as CalleApp).localizador.soltar();
         var d = Ir.cargar();
         var pos = posicion();
         var hay = pos != null;

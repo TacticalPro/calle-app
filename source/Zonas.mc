@@ -12,6 +12,13 @@ module Zonas {
     // [parroquia, lugar, barrio] (String o null cada uno) del punto en metros de región;
     // null si cae fuera de la rejilla de zonas. Donde el polígono es el barrio oficial (Madrid,
     // Callejero.ZBARRIO), va en barrio y no hay parroquia.
+    // Suelta la zona cargada (el Localizador lo hace antes de cargar una tesela: cargar un recurso pide
+    // el doble de su tamaño, y en los relojes de 128 KB no sobra).
+    function soltar() as Void {
+        _z = null;
+        _idx = -1;
+    }
+
     function consultar(x as Float, y as Float) as Array<String or Null> or Null {
         var r = _consultar(x, y);
         if (r != null && Callejero.ZBARRIO) {
@@ -59,18 +66,33 @@ module Zonas {
     //   lugar: el poblado más cercano a menos de LUGAR_R; si no hay, el paraje más cercano;
     //   barrio: el más cercano a menos de BARRIO_R, si además está a menos de BARRIO_FRAC de
     //   la distancia al segundo (en la frontera entre dos no se adivina).
+    // z: [FORMATO, S, O, F, RL, L, LN] (tools/build_callejero.py).
     function buscar(z as Array, x as Float, y as Float) as Array<String or Null> {
-        var N = z[1] as Array<String>;
-        var RA = z[2] as Array<Number>;
-        var L = z[3] as Array<Number>;
-        var LN = z[4] as Array<Number>;
+        var S = z[1] as String;
+        var O = z[2] as Array<Number>;
+        var F = z[3] as Array<Number>;
+        var RL = z[4] as Array<Number>;
+        var L = z[5] as Array<Number>;
+        var LN = z[6] as Array<Number>;
         var rn = Callejero.RN;
         var c = (x / Callejero.RCEL).toNumber();
         var r = (y / Callejero.RCEL).toNumber();
         c = c >= rn ? rn - 1 : c;
         r = r >= rn ? rn - 1 : r;
-        var k = r * rn + c;
-        var v = (RA[k / 4] >> (8 * (k % 4))) & 0xFF;
+        // La fila r va de su primer tramo al de la siguiente; se avanza hasta el que cubre la columna c.
+        var k = par16(F, r);
+        var k1 = par16(F, r + 1);
+        var v = 0;
+        var col = 0;
+        while (k < k1) {
+            var t = par16(RL, k);
+            col += (t >> 8) & 0xFF;
+            if (c < col) {
+                v = t & 0xFF;
+                break;
+            }
+            k++;
+        }
 
         var px = x + Callejero.ZMARGEN;
         var py = y + Callejero.ZMARGEN;
@@ -84,10 +106,10 @@ module Zonas {
         var db2 = Buscador.LEJOS;
         for (var j = 0; j < L.size(); j++) {
             var p = L[j];
-            var dx = px - (p & 0x1FFF).toFloat();
-            var dy = py - ((p >> 13) & 0x1FFF).toFloat();
+            var dx = px - (p & 0x3FFF).toFloat();
+            var dy = py - ((p >> 14) & 0x3FFF).toFloat();
             var d2 = dx * dx + dy * dy;
-            var tipo = p >> 26;
+            var tipo = (p >> 28) & 7;
             if ((tipo & 1) != 0 && d2 <= rl2 && (jl < 0 || d2 < dl)) {
                 jl = j;
                 dl = d2;
@@ -108,10 +130,20 @@ module Zonas {
                 }
             }
         }
-        var lugar = jl >= 0 ? N[LN[jl]] : (jp >= 0 ? N[LN[jp]] : null);
+        var lugar = jl >= 0 ? nombre(S, O, par16(LN, jl)) : (jp >= 0 ? nombre(S, O, par16(LN, jp)) : null);
         var f2 = Callejero.BARRIO_FRAC * Callejero.BARRIO_FRAC;
         var barrio = jb >= 0 && db <= (Callejero.BARRIO_R * Callejero.BARRIO_R).toFloat() && db <= f2 * db2
-            ? N[LN[jb]] : null;
-        return [v > 0 ? N[v - 1] : null, lugar, barrio] as Array<String or Null>;
+            ? nombre(S, O, par16(LN, jb)) : null;
+        return [v > 0 ? nombre(S, O, v - 1) : null, lugar, barrio] as Array<String or Null>;
+    }
+
+    // El entero de 16 bits k de un array con 2 por número.
+    function par16(A as Array<Number>, k as Number) as Number {
+        return (A[k >> 1] >> ((k & 1) * 16)) & 0xFFFF;
+    }
+
+    // El nombre k de una cadena "\n"-separada con sus inicios O (como en las teselas).
+    function nombre(S as String, O as Array<Number>, k as Number) as String {
+        return S.substring(par16(O, k), par16(O, k + 1) - 1) as String;
     }
 }

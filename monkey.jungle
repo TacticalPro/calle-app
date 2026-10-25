@@ -5,3 +5,13 @@ base.resourcePath = resources;resources-gen
 # datos (tools/build_callejero.py, VARIANTE). Se generan con VARIANTE=6x ./ciq.sh datos.
 fenix6xpro.sourcePath = source;source-gen-6x;test;test-gen-6x
 fenix6xpro.resourcePath = resources;resources-gen-6x
+# fēnix 5/5S (API 3.1) y 6/6S (API 3.4): 128 KB por app. Madrid entero en teselas adaptativas (variante c,
+# tools/build_callejero.py): VARIANTE=c ./ciq.sh datos.
+fenix5.sourcePath = source;source-gen-c;test;test-gen-c
+fenix5.resourcePath = resources;resources-gen-c
+fenix5s.sourcePath = source;source-gen-c;test;test-gen-c
+fenix5s.resourcePath = resources;resources-gen-c
+fenix6.sourcePath = source;source-gen-c;test;test-gen-c
+fenix6.resourcePath = resources;resources-gen-c
+fenix6s.sourcePath = source;source-gen-c;test;test-gen-c
+fenix6s.resourcePath = resources;resources-gen-c

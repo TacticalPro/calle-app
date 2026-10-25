@@ -44,9 +44,75 @@ def dentro(px, py, pts):
     return c
 
 
-def texto_num(h, suf):
-    n, s = h & 0xFFF, suf[(h >> 12) & 0x1FF]
-    return s if n == 0 else f"{n}{s}"
+def bits(V, o, k):
+    """k bits del flujo V desde el bit o (como Buscador en el reloj)."""
+    i, s = o >> 5, o & 31
+    w = (V[i] & 0xFFFFFFFF) >> s
+    if s + k > 32:
+        w |= (V[i + 1] & 0xFFFFFFFF) << (32 - s)
+    return w & ((1 << k) - 1)
+
+
+def con_signo(v, w):
+    return v - (1 << w) if v >= 1 << (w - 1) else v
+
+
+class Tes:
+    """Una tesela del FORMATO 4 (tools/build_callejero.py), desempaquetada a la manera del reloj."""
+
+    def __init__(self, t):
+        fmt, self.nc, self.pb, self.S, O, self.C, self.CB, self.R, self.V, self.P, E = t
+        self.fmt = fmt
+        n = self.S.count("\n") - 1
+        offs = [(O[j // 2] >> (16 * (j % 2))) & 0xFFFF for j in range(n + 1)]
+        self.nombres = [self.S[offs[k]:offs[k + 1] - 1] for k in range(n)]
+        self.E = {E[j]: E[j + 1] for j in range(0, len(E), 2)}
+
+    def c(self, k):
+        v = self.C[k] & 0xFFFFFFFF
+        return v & 0xFFFF, v >> 16
+
+    def tiradas(self):
+        """(offset en R, calle, clase, área, ext, vértices, A, B) de cada tirada, en orden."""
+        R, k, o, r, out = self.R, 0, 0, 0, []
+        while r < len(R):
+            while self.c(k + 1)[0] <= r:
+                k += 1
+            h0, h1 = R[r] & 0xFFFFFFFF, R[r + 1] & 0xFFFFFFFF
+            x, y, ext, area = h0 & 0x1FFF, (h0 >> 13) & 0x1FFF, (h0 >> 26) & 0x1F, h0 >> 31
+            w, clase, a, b, nv = h1 & 0xF, (h1 >> 4) & 3, (h1 >> 6) & 0x3FF, (h1 >> 16) & 0x3FF, h1 >> 26
+            paso = 2
+            if nv == 0:
+                nv, paso = R[r + 2], 3
+            vs = [(x, y)]
+            for _ in range(nv - 1):
+                d = bits(self.V, o, 2 * w)
+                o += 2 * w
+                x += con_signo(d & ((1 << w) - 1), w)
+                y += con_signo(d >> w, w)
+                vs.append((x, y))
+            out.append((r, k, clase, area, ext, vs, a, b))
+            r += paso
+        return out
+
+    def portales(self, k):
+        """[(x, y, texto)] de los portales de la calle k."""
+        p0, p1 = self.c(k)[1], self.c(k + 1)[1]
+        out, num = [], 0
+        for j in range(p0, p1):
+            w = self.P[j] & 0xFFFFFFFF
+            pb = self.pb
+            esc = (1 << (29 - 2 * pb)) - 1
+            salto, sc = (w >> 2 * pb) & esc, w >> 29
+            if salto == esc and sc == 7:
+                e = self.E[j]
+                num, sc = e & 0xFFF, e >> 12
+            else:
+                num += salto
+            suf = self.nombres[self.nc + sc - 1] if sc else ""
+            m = (1 << pb) - 1
+            out.append((w & m, (w >> pb) & m, suf if num == 0 else f"{num}{suf}"))
+        return out
 
 
 class Ref:
@@ -75,12 +141,25 @@ class Ref:
         if x < 0 or y < 0:
             return -1
         c, f = int(x // m["tesela"]), int(y // m["tesela"])
-        return -1 if c >= m["cols"] or f >= m["filas"] else f * m["cols"] + c
+        if c >= m["cols"] or f >= m["filas"]:
+            return -1
+        if not m.get("cajas"):
+            return f * m["cols"] + c
+        # Teselas adaptativas (variante c): la caja que lo contiene; si ninguna, la entrada null del final.
+        return next((k for k, (x0, y0, x1, y1) in enumerate(m["cajas"]) if x0 <= x < x1 and y0 <= y < y1),
+                    len(m["cajas"]))
+
+    def caja(self, i):
+        m = self.m
+        if m.get("cajas"):
+            return m["cajas"][i]
+        T, cols = m["tesela"], m["cols"]
+        return ((i % cols) * T, (i // cols) * T, (i % cols + 1) * T, (i // cols + 1) * T)
 
     def tesela(self, i):
         if i not in self._t:
             nom = self.m["idx"][i]
-            self._t[i] = None if nom is None else json.loads((self.tdir / f"{nom}.json").read_text("utf-8"))
+            self._t[i] = None if nom is None else Tes(json.loads((self.tdir / f"{nom}.json").read_text("utf-8")))
         return self._t[i]
 
     def buscar(self, x, y, i=None):
@@ -93,24 +172,31 @@ class Ref:
         t = self.tesela(i)
         if t is None:
             return dict(estado="LEJOS", tesela=i)
-        fmt, N, R, V, P, H = t
-        assert fmt == m["formato"]
-        T, B, MAXD, cols = m["tesela"], m["buf"], m["maxd"], m["cols"]
-        px, py = x - ((i % cols) * T - B), y - ((i // cols) * T - B)
+        assert t.fmt == m["formato"]
+        N = t.nombres[:t.nc]
+        B, MAXD = m["buf"], m["maxd"]
+        caja = self.caja(i)
+        px, py = x - (caja[0] - B), y - (caja[1] - B)
         best = [math.inf] * len(N)
         brun = [-1] * len(N)          # la tirada más cercana de cada calle (la primera, si empatan)
+        tramos = {}                   # offset en R → (A, B)
         vistas = []                   # (calle, d, tramo) de cada tirada medida
-        k = 0
-        for r in range(len(R) // 4):
-            h, bmin, bmax = R[4 * r], R[4 * r + 1], R[4 * r + 2]
-            n, calle, clase, area = h & 0xFFF, (h >> 12) & 0x3FF, (h >> 22) & 3, (h >> 24) & 1
-            bx0, by0, bx1, by1 = bmin & 0xFFF, bmin >> 12, bmax & 0xFFF, bmax >> 12
-            dx = bx0 - px if px < bx0 else px - bx1 if px > bx1 else 0.0
-            dy = by0 - py if py < by0 else py - by1 if py > by1 else 0.0
-            if dx * dx + dy * dy > MAXD * MAXD:
-                k += n
+        pxi, pyi, M, U = int(px), int(py), MAXD + 1, m["cb_u"]
+        for r, calle, clase, area, ext, vs, a, b in t.tiradas():
+            tramos[r] = (a, b)
+            # Como el reloj: la caja gruesa de la calle descarta todas sus tiradas de un golpe.
+            cb = t.CB[calle] & 0xFFFFFFFF
+            if (pxi + M < (cb & 0xFF) * U or pxi - M > ((cb >> 16) & 0xFF) * U
+                    or pyi + M < ((cb >> 8) & 0xFF) * U or pyi - M > (cb >> 24) * U):
                 continue
-            vs = [(V[k + j] & 0xFFF, V[k + j] >> 12) for j in range(n)]
+            # El mismo descarte que el reloj: todos los vértices están a ≤ ext·EXT_U del primero.
+            if ext != m["ext_sin"]:
+                e = ext * m["ext_u"]
+                dx = max(0.0, abs(px - vs[0][0]) - e)
+                dy = max(0.0, abs(py - vs[0][1]) - e)
+                if dx * dx + dy * dy > MAXD * MAXD:
+                    continue
+            n = len(vs)
             if n == 1:
                 d2 = (px - vs[0][0]) ** 2 + (py - vs[0][1]) ** 2
             else:
@@ -118,8 +204,7 @@ class Ref:
             d = (0.0 if area and dentro(px, py, vs) else math.sqrt(d2)) + m["pen"][clase]
             if d < best[calle]:
                 best[calle], brun[calle] = d, r
-            vistas.append((calle, d, R[4 * r + 3]))
-            k += n
+            vistas.append((calle, d, (a, b)))
         orden = sorted(range(len(N)), key=lambda s: best[s])
         if not orden or best[orden[0]] > MAXD:
             return dict(estado="LEJOS", tesela=i, s1=N[orden[0]] if orden else None,
@@ -129,21 +214,18 @@ class Ref:
 
         def portal(s):
             mejor = None
-            for j, p in enumerate(P):
-                if (H[j] >> 21) & 0x3FF != s:
-                    continue
-                d = math.hypot(px - (p & 0xFFF), py - ((p >> 12) & 0xFFF))
+            for qx, qy, texto in t.portales(s):
+                d = math.hypot(px - qx, py - qy)
                 if d <= m["portal_r"] and (mejor is None or d < mejor[1]):
-                    mejor = (texto_num(H[j], m["suf"]), d)
+                    mejor = (texto, d)
             return mejor
 
         def tramo(s):
-            tr = R[4 * brun[s] + 3]
-            a, b = tr & 0xFFF, (tr >> 12) & 0xFFF
+            a, b = tramos[brun[s]]
             return (N[a - 1] if a else None, N[b - 1] if b else None)
 
-        t_s1 = R[4 * brun[s1] + 3]
-        t1_margen = min([d - best[s1] for c, d, t in vistas if c == s1 and t != t_s1] + [math.inf])
+        t_s1 = tramos[brun[s1]]
+        t1_margen = min([d - best[s1] for c, d, tr in vistas if c == s1 and tr != t_s1] + [math.inf])
         return dict(estado="OK", tesela=i, s1=N[s1], d1=best[s1], p1=portal(s1), t1=tramo(s1), t1_margen=t1_margen,
                     s2=N[s2] if s2 is not None else None, d2=best[s2] if s2 is not None else None,
                     p2=portal(s2) if s2 is not None else None)
@@ -171,20 +253,32 @@ class Ref:
             return (None, None, None)
         if nom not in self._z:
             self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
-        fmt, N, RA, L, LN = self._z[nom]
+        fmt, S, O, F, RL, L, LN = self._z[nom]
         assert fmt == m["formato"]
+
+        def par16(A, k):
+            return (A[k >> 1] >> (16 * (k & 1))) & 0xFFFF
+
+        n = S.count("\n") - 1
+        N = [S[par16(O, k):par16(O, k + 1) - 1] for k in range(n)]
+        LN = [par16(LN, j) for j in range(len(L))]
         ox, oy = zc * m["zona"], zf * m["zona"]
         c = min(m["rn"] - 1, int((x - ox) // m["rcel"]))
         r = min(m["rn"] - 1, int((y - oy) // m["rcel"]))
-        k = r * m["rn"] + c
-        v = (RA[k // 4] >> (8 * (k % 4))) & 0xFF
+        v, col = 0, 0
+        for k in range(par16(F, r), par16(F, r + 1)):
+            t = par16(RL, k)
+            col += t >> 8
+            if c < col:
+                v = t & 0xFF
+                break
         lx0, ly0 = ox - m["zmargen"], oy - m["zmargen"]
         mejor = {}   # bit → (d, nombre)
         d2b = math.inf   # el segundo barrio más cercano
         for j, p in enumerate(L):
-            d = math.hypot(x - (lx0 + (p & 0x1FFF)), y - (ly0 + ((p >> 13) & 0x1FFF)))
+            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
             for bit, radio in ((1, m["lugar_r"]), (2, math.inf), (4, m["lugar_r"])):
-                if (p >> 26) & bit and d <= radio:
+                if (p >> 28) & bit and d <= radio:
                     if d < mejor.get(bit, (math.inf,))[0]:
                         if bit == 2:
                             d2b = mejor.get(2, (math.inf,))[0]
@@ -201,9 +295,9 @@ class Ref:
         ms = [abs(fx - round(fx)) * m["rcel"], abs(fy - round(fy)) * m["rcel"]]
         ds = {1: [], 2: [], 4: []}
         for p in L:
-            d = math.hypot(x - (lx0 + (p & 0x1FFF)), y - (ly0 + ((p >> 13) & 0x1FFF)))
+            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
             for bit in ds:
-                if (p >> 26) & bit:
+                if (p >> 28) & bit:
                     ds[bit].append(d)
         for bit, radio in ((1, m["lugar_r"]), (2, m["barrio_r"]), (4, m["lugar_r"])):
             c = sorted(ds[bit])
@@ -377,12 +471,16 @@ def fuerza_bruta(ref, n, semilla=1):
         # La tesela propia y, si el punto cae en la holgura de una vecina, también la vecina:
         # el reloj conserva la tesela anterior mientras no se salga de esa holgura.
         cands = [i]
-        c0, f0 = i % m["cols"], i // m["cols"]
-        for dc, df in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)):
-            c1, f1 = c0 + dc, f0 + df
-            if 0 <= c1 < m["cols"] and 0 <= f1 < m["filas"]:
-                if c1 * T - SL <= x <= (c1 + 1) * T + SL and f1 * T - SL <= y <= (f1 + 1) * T + SL:
-                    cands.append(f1 * m["cols"] + c1)
+        if m.get("cajas"):
+            cands += [k for k, (x0, y0, x1, y1) in enumerate(m["cajas"])
+                      if k != i and x0 - SL <= x <= x1 + SL and y0 - SL <= y <= y1 + SL]
+        else:
+            c0, f0 = i % m["cols"], i // m["cols"]
+            for dc, df in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)):
+                c1, f1 = c0 + dc, f0 + df
+                if 0 <= c1 < m["cols"] and 0 <= f1 < m["filas"]:
+                    if c1 * T - SL <= x <= (c1 + 1) * T + SL and f1 * T - SL <= y <= (f1 + 1) * T + SL:
+                        cands.append(f1 * m["cols"] + c1)
         for ti in cands:
             r = ref.buscar(x, y, ti)
             g1 = best[orden[0]] if orden else math.inf
@@ -762,7 +860,7 @@ def main():
     ap.add_argument("--derivar", action="store_true")
     ap.add_argument("--gen-tests", action="store_true")
     ap.add_argument("--n", type=int, default=10000, help="puntos de la fuerza bruta")
-    ap.add_argument("--variante", choices=("normal", "6x"), default="normal")
+    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal")
     a = ap.parse_args()
     ref = Ref(a.region, a.variante)
     if a.punto:

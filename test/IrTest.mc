@@ -30,12 +30,11 @@ function irCuentas(logger as Test.Logger) as Boolean {
 function irCercanos(logger as Test.Logger) as Boolean {
     Activa.poner(Regiones.IDS[0]);
     // Cinco puntos en metros de región: tres hospitales y dos comisarías, a distintas distancias de (1000, 1000).
-    var d = [Callejero.FORMATO,
-        ["H lejos", "C cerca", "H cerca", "H medio", "C lejos"],
-        ["", "Calle A 1", "", "Calle B 2", ""],
-        [5000, 1100, 1050, 2000, 9000],
-        [1000, 1000, 1000, 1000, 1000],
-        [Ir.HOSPITAL, Ir.CNP, Ir.URGENCIAS, Ir.HOSPITAL, Ir.CNP]] as Array;
+    var d = Sintetica.puntos(["H lejos", "C cerca", "H cerca", "H medio", "C lejos"] as Array<String>,
+        ["", "Calle A 1", "", "Calle B 2", ""] as Array<String>,
+        [5000, 1100, 1050, 2000, 9000] as Array<Number>,
+        [1000, 1000, 1000, 1000, 1000] as Array<Number>,
+        [Ir.HOSPITAL, Ir.CNP, Ir.URGENCIAS, Ir.HOSPITAL, Ir.CNP] as Array<Number>);
     var lat = Callejero.LAT_MIN + 1000.0d / Callejero.KY;
     var lon = Callejero.LON_MIN + 1000.0d / Callejero.KX;
     var h = Ir.cercanos(d, lat, lon, Ir.HOSPITALES, 2);
@@ -49,7 +48,7 @@ function irCercanos(logger as Test.Logger) as Boolean {
     }
     // El recurso real de la región carga y tiene el formato.
     var real = Ir.cargar();
-    logger.debug("IR " + Callejero.ETIQUETA + ": " + (real == null ? "sin puntos" : (real[1] as Array).size() + " puntos"));
+    logger.debug("IR " + Callejero.ETIQUETA + ": " + (real == null ? "sin puntos" : (real[5] as Array).size() + " puntos"));
     return ok && real != null;
 }
 

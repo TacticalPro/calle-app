@@ -1,7 +1,8 @@
 #!/bin/bash
 # CALLE — compilar, probar, generar el callejero y empaquetar.
 #
-#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid; VARIANTE=6x para el fēnix 6X;
+#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid; VARIANTE=6x para el fēnix 6X,
+#                         VARIANTE=c para los de 128 KB: fēnix 5/5S y 6/6S;
 #                         --refresh vuelve a Overpass; --comun solo rehace Callejero/Regiones/ajuste)
 #   ./ciq.sh ref          autotest de la referencia Python y vectores para los tests de Monkey C
 #   ./ciq.sh build        .prg de depuración        → bin/calle.prg
@@ -18,13 +19,15 @@
 #                         (va antes de release/instalar/package)
 #   ./ciq.sh icon         regenera el icono (Python + Pillow)
 #
-# DEV=fenix7xpronowifi ./ciq.sh build   para la variante sin wifi; DEV=fenix6xpro para el 6X.
+# DEV=fenix7xpronowifi ./ciq.sh build   para la variante sin wifi; DEV=fenix6xpro para el 6X; DEV=fenix6 (o
+# fenix6s, fenix5, fenix5s) para los de 128 KB, con los datos de VARIANTE=c.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 DEV="${DEV:-fenix7xpro}"
 REGION="${REGION:-santiago}"
-VARIANTE="${VARIANTE:-normal}"     # 6x: datos compactos del fēnix 6X (resources-gen-6x/, source-gen-6x/)
+VARIANTE="${VARIANTE:-normal}"     # 6x: datos compactos del fēnix 6X (resources-gen-6x/, source-gen-6x/); c: Madrid
+                                   # entero en teselas adaptativas para los de 128 KB (resources-gen-c/, source-gen-c/)
 KEY="${KEY:-$HOME/.garmin/developer_key.der}"
 # Beta privada de la Connect IQ Store: id propio, distinto del de manifest.xml (el de las instalaciones
 # por USB, que guarda las anotaciones). Generado el 2026-10-24; no cambiarlo o la tienda la tratará como
@@ -85,7 +88,9 @@ case "${1:-build}" in
     beta)    privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
-             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /fenix7xpronowifi/d' manifest.xml > bin/beta/manifest.xml
+             # Ni los de 128 KB (fēnix 5/5S y 6/6S): la beta es la del 7X Pro y el 6X.
+             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /fenix7xpronowifi/d; /id="fenix(5|5s|6|6s)"/d' \
+                 manifest.xml > bin/beta/manifest.xml
              grep -q "id=\"$BETA_ID\"" bin/beta/manifest.xml || { echo "No pude poner el id de beta" >&2; exit 1; }
              awk -F' = ' '/^#/ || NF < 2 || $1 == "project.manifest" { print; next }
                  { n = split($2, a, ";"); s = ""; for (i = 1; i <= n; i++) s = s (i > 1 ? ";" : "") "../../" a[i]

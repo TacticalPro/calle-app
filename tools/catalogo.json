@@ -1,0 +1,10 @@
+{
+  "_nota": "Apps de la Connect IQ Store: una por zona. El id no se cambia nunca (la tienda trataría otro id como otra app). zonas: las de tools/regiones.json que lleva la app; relojes: ids de producto del SDK. APP=<clave> ./ciq.sh tienda → bin/calle-<clave>.iq",
+  "madrid": {
+    "id": "cc8abcb6d0d94381bbde363a92350945",
+    "nombre": "CALLE Madrid",
+    "zonas": ["madrid"],
+    "relojes": ["fenix6xpro"],
+    "relojes_nota": "2026-10-25: primera subida solo con el fēnix 6X (una parte de Madrid). El 7X Pro entra cuando el generador sepa sacar Madrid sola en la variante normal."
+  }
+}

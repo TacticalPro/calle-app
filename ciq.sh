@@ -9,6 +9,7 @@
 #   ./ciq.sh test         compila con los tests y los ejecuta en el simulador
 #   ./ciq.sh sim          abre el simulador con la app
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
+#   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
 #   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
 #   ./ciq.sh prg6x        .prg para un fēnix 6X → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
@@ -91,6 +92,12 @@ case "${1:-build}" in
                    print $1 " = " s }' monkey.jungle > bin/beta/monkey.jungle
              "$BIN/monkeyc" -e -f bin/beta/monkey.jungle -y "$KEY" -o bin/calle-beta.iq -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
              ls -la bin/calle-beta.iq ;;
+    tienda)  # App de la tienda pública: una por zona, con el id, el nombre y los relojes de tools/catalogo.json.
+             privacidad; sdk
+             dir="$($PY tools/tienda.py "${APP:?APP=<zona de tools/catalogo.json>}")"
+             "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP.iq" -r -O 2 -w 2>&1 \
+                 | { grep -v "is large (> 8kb)" || true; }
+             ls -la "bin/calle-$APP.iq" ;;
     prg6x)  # .prg firmado para un fēnix 6X, para copiarlo por cable a GARMIN/APPS (la beta solo la instala
              # el desarrollador). Con los datos compactos de resources-gen-6x/.
              privacidad; DEV=fenix6xpro; sdk; mkdir -p bin

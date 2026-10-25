@@ -59,9 +59,10 @@ Estos textos son los de la próxima subida (3.1.0: anillo de brújula e «Ir a u
   público obliga a ofrecerla o a ofrecer el método para obtenerla (apartado 4.6). La beta privada no es uso
   público. La vía elegida es ofrecer el método:
   - `README.md` y `LICENSE` (MIT) ya están preparados;
-  - falta publicar el repositorio y poner su URL en el campo «Source Code URL» de la ficha;
-  - en la descripción, una línea más: «Código y método de generación de los datos: <URL>» y, en inglés,
-    «Source code and how the data is built: <URL>».
+  - repositorio publicado (https://github.com/TacticalPro/calle-app); falta poner su URL en el campo
+    «Source Code URL» de la ficha;
+  - en la descripción, una línea más: «Código y método de generación de los datos: https://github.com/TacticalPro/calle-app» y, en inglés,
+    «Source code and how the data is built: https://github.com/TacticalPro/calle-app».
 - **Subida nueva con el id de producción** (`./ciq.sh package`), no una versión nueva de la beta (el portal
   lo exige). Título «CALLE», sin «(beta)», y sin el párrafo de la beta.
 - **Correo público de contacto** de la ficha: decidir si se mantiene.

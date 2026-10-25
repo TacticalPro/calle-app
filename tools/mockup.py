@@ -43,7 +43,13 @@ RELOJES = {
     "fenix847mm": (454, True, "fēnix 8 47 mm · 454"),
 }
 ANILLO_R, ANILLO_RI = 133, 128   # source/L.mc
-HORA_Y, HORA_PX, HORA_MAX, HORA_PUNTO, SUB_Y, NOMBRE_Y, NOMBRE_Y_SUB = 34, 44, 50, 18, 63, 58, 76
+HORA_Y, HORA_PX, HORA_MAX, SUB_Y, NOMBRE_Y, NOMBRE_Y_SUB = 36, 52, 50, 66, 58, 76
+ARCO_PX, PASTILLA_H, PIE_Y, NUM_PX = 5, 38, 244, 40
+# Caras de la v3.4 (P73): las TTF del propio SDK. El reloj no dibuja cada cara al tamaño pedido: medido en el
+# simulador del 7X Pro (test fuentesV34), Noto Sans sale como la TTF (187 px frente a 190) y Bionic al 79 %.
+FUENTES_SDK = Path.home() / "Library/Application Support/Garmin/ConnectIQ/Fonts"
+NOTO, BIONIC = ("NotoSansSC-Medium-3.ttf", 0.99), ("Bionic_Bold_Number_Only.ttf", 0.79)
+CIFRAS = set(" #%+-./0123456789:°")
 
 
 def roboto(size, peso=700):
@@ -64,6 +70,15 @@ class Vectorial:
 
     def dibujar(self, d, xy, txt, fill, anchor):
         d.text(xy, txt, font=self.ttf, fill=fill, anchor=anchor)
+
+
+class Cara(Vectorial):
+    """Graphics.getVectorFont de otra cara: el alto que da el reloj es el tamaño pedido; el dibujo, la TTF a escala."""
+
+    def __init__(self, cara, px):
+        archivo, k = cara
+        self.ttf = ImageFont.truetype(str(FUENTES_SDK / archivo), max(1, round(px * k)))
+        self.h = px
 
 
 class Sistema:
@@ -108,14 +123,18 @@ def usar(reloj):
            for k in ("xtiny", "tiny", "small", "medium", "large", "numberMild")}
     F = dict(sis)
     if RELOJES[reloj][1]:
-        v = {px: Vectorial(ly(px)) for px in (26, 28, 30, 32, 38, HORA_PX)}
-        F["grande"] = [v[38], v[32], v[28], v[26], sis["small"]]
-        F["media"] = [v[30], v[26], sis["small"], sis["tiny"]]
-        F["num"], F["hora"], F["dist"], F["nombre"] = v[30], v[HORA_PX], v[38], v[26]
+        n = {px: Cara(NOTO, ly(px)) for px in (22, 24, 25, 28, 32)}
+        F["grande"] = [n[32], n[28], n[25], n[22], sis["small"]]
+        F["media"] = [n[28], n[25], n[22], sis["tiny"]]
+        F["num"], F["letra"], F["hora"] = Cara(BIONIC, ly(NUM_PX)), n[24], Cara(BIONIC, ly(HORA_PX))
+        F["dist"], F["nombre"] = Vectorial(ly(38)), n[25]
+        F["ph"] = ly(PASTILLA_H)
     else:
         F["grande"] = [sis["large"], sis["medium"], sis["small"], sis["tiny"]]
         F["media"] = [sis["medium"], sis["small"], sis["tiny"]]
-        F["num"], F["dist"], F["nombre"] = sis["medium"], sis["large"], sis["small"]
+        F["num"] = sis["numberMild"] if sis["numberMild"].h <= ly(40) else sis["medium"]
+        F["letra"], F["dist"], F["nombre"] = sis["small"], sis["large"], sis["small"]
+        F["ph"] = max(ly(PASTILLA_H), F["num"].h + ly(4))
         # Fuentes.hora(): la más alta de sistema que no pase de L.y(HORA_MAX).
         cands = [sis[k] for k in ("numberMild", "large", "medium") if sis[k].h <= ly(HORA_MAX)]
         F["hora"] = max(cands, key=lambda f: f.h) if cands else sis["medium"]
@@ -204,18 +223,20 @@ def caja(d, nombre, fuentes, max_lineas, y0, y1, color):
         texto(d, (W // 2, top + i * lh), ln, f, color, "ma")
 
 
+def mayus(t):
+    return t.upper()
+
+
 def estado(d, e):
-    """La hora en grande con el punto del GPS a la izquierda; si el dato es viejo, su edad debajo en
-    amarillo, en lugar del barrio."""
-    f = F["hora"]
-    w = f.getlength("23:41")
-    punto, hy = ly(HORA_PUNTO), ly(HORA_Y)
-    x0 = W // 2 - (w + punto) // 2
-    r = ly(6)
-    d.ellipse((x0 + r - r, hy - r, x0 + r + r, hy + r), fill=e.get("punto", VERDE))
-    texto(d, (x0 + punto, hy), "23:41", f, BLANCO, "lm")
+    """La hora en grande bajo el arco de calidad del GPS; si el dato es viejo, su edad debajo en ámbar, en lugar
+    del barrio."""
+    pen = ly(ARCO_PX)
+    r = W // 2 - pen // 2 - 1
+    d.arc((W // 2 - r - pen // 2, H // 2 - r - pen // 2, W // 2 + r + pen // 2, H // 2 + r + pen // 2), 225, 315,
+          fill=e.get("punto", VERDE), width=pen)
+    texto(d, (W // 2, ly(HORA_Y)), "23:41", F["hora"], BLANCO)
     if e.get("edad") and "detalle" not in e:
-        linea(d, ly(SUB_Y), e["edad"], AMARILLO)
+        linea(d, ly(SUB_Y), mayus(e["edad"]), AMARILLO)
 
 
 def linea(d, y, txt, color, margen=10):
@@ -257,9 +278,9 @@ def render(e):
         if e.get("pie"):
             pie(d, ly(236), e["pie"], GRIS)
     elif "lugar" in e:
-        linea(d, ly(SUB_Y), "sin calle a 50 m", AMARILLO)
+        linea(d, ly(SUB_Y), "SIN CALLE A 50 M", AMARILLO)
         caja(d, e["lugar"], F["media"], 2, ly(86), ly(146), col)
-        linea(d, ly(164), e["sub"], GRIS)
+        linea(d, ly(164), mayus(e["sub"]), GRIS)
         pie(d, ly(236), e["pie"], GRIS)
     elif "detalle" in e:
         paso = max(ly(26), F["xtiny"].h)
@@ -273,44 +294,89 @@ def render(e):
                 d.rounded_rectangle((ly(18), y - ly(6), W - ly(18), y + ly(46)), ly(8), outline=GRIS_OSC)
             texto(d, (W // 2, y + ly(10)), recortar(corta(et), F["tiny"], W - ly(44)), F["tiny"], BLANCO)
             texto(d, (W // 2, y + ly(34)), recortar(sub, F["xtiny"], W - ly(44)), F["xtiny"], GRIS)
-    elif e.get("cruce"):
-        if e.get("barrio") and not e.get("edad"):
-            linea(d, ly(SUB_Y), e["barrio"], GRIS)
-        caja(d, e["calle1"], F["grande"], 3, y0sub, ly(168) - ex, col)
-        if e.get("num1"):
-            texto(d, (W // 2, ly(170) - ex), e["num1"], F["num"], col, "ma")
-        linea(d, ly(221), "esq. " + corta(e["cruce"]), col)
-        pie(d, ly(252), "CRUCE", AMARILLO)
-    elif "calle2" in e:
+    elif "calle2" in e and not e.get("cruce"):
         top = ly(NOMBRE_Y_SUB) + ex // 2 if e.get("edad") else ly(NOMBRE_Y)
         caja(d, e["calle1"], F["media"], 2, top, ly(116), col)
+        numc = GRIS if e.get("edad") else AMARILLO
         if e.get("num1"):
-            texto(d, (W // 2, ly(117)), e["num1"], F["xtiny"], col, "ma")
+            texto(d, (W // 2, ly(117)), e["num1"], F["xtiny"], numc, "ma")
         d.line((W // 2 - ly(90), ly(146), W // 2 + ly(90), ly(146)), fill=GRIS_OSC)
         caja(d, e["calle2"], F["media"], 2, ly(152), ly(214) - ex, col)
         if e.get("num2"):
-            texto(d, (W // 2, ly(215) - ex), e["num2"], F["xtiny"], col, "ma")
+            texto(d, (W // 2, ly(215) - ex), e["num2"], F["xtiny"], numc, "ma")
         pie(d, ly(252), "DOS CALLES", AMARILLO)
     else:
-        t = e.get("tramo")
-        y1 = ly(146) - ex if t else ly(192)
-        if e.get("barrio") and not e.get("edad"):
-            linea(d, ly(SUB_Y), e["barrio"], GRIS)
-        caja(d, e["calle1"], F["grande"], 3, y0sub, y1, col)
-        if e.get("num1"):
-            texto(d, (W // 2, y1 + ly(4 if t else 8)), e["num1"], F["num"], col, "ma")
-        y_t1 = ly(212) - ly(22) - ex
-        if t and len(t) == 2:
-            linea(d, y_t1, "entre " + corta(t[0]), GRIS)
-            linea(d, ly(212), "y " + corta(t[1]), GRIS)
-        elif t:
-            linea(d, y_t1, "cerca de " + corta(t[0]), GRIS)
+        una(d, e, col, ex)
     if e.get("anotado"):
         txt, color = e["anotado"]
         x = ly(24)
         d.rounded_rectangle((x, ly(108), W - x, ly(108) + ly(64)), ly(12), fill=(0, 0, 0), outline=color, width=ly(3))
         texto(d, (W // 2, ly(140)), recortar(txt, F["small"], W - ly(64)), F["small"], BLANCO)
     return redondo(img)
+
+
+def franja_una(e, ex):
+    """VistaCalle.franjaUna(): de abajo arriba, el pie con su rótulo, la pastilla y el nombre."""
+    paso = ly(19) + ex
+    t = e.get("tramo")
+    rot = l1 = l2 = 0
+    if e.get("cruce"):
+        l1 = ly(PIE_Y) - paso // 2
+        rot = l1 - paso
+    elif t:
+        l2 = ly(PIE_Y) if len(t) == 2 else 0
+        l1 = l2 - paso if len(t) == 2 else ly(PIE_Y) - paso // 2
+        rot = l1 - paso
+    ph = F["ph"]
+    pc = rot - paso // 2 - ly(4) - ph // 2 if rot else ly(196)
+    y1 = pc - ph // 2 - ly(4) if e.get("num1") else (rot - paso // 2 - ly(4) if rot else ly(200))
+    return y1, pc, rot, l1, l2
+
+
+def pastilla(d, cy, num, viejo):
+    """VistaCalle.pastilla(): cifras en Bionic, la letra en la de nombres; aproximado («~»), solo el borde."""
+    aprox = num.startswith("~")
+    num = num.split()[-1]
+    k = 0
+    while k < len(num) and num[k] in CIFRAS:
+        k += 1
+    a, b = num[:k], num[k:]
+    wa = F["num"].getlength(a) if a else 0
+    wb = F["letra"].getlength(b) if b else 0
+    w, pad, ph = wa + wb, ly(14), F["ph"]
+    caja_ = (W // 2 - w / 2 - pad, cy - ph // 2, W // 2 + w / 2 + pad, cy + ph // 2)
+    if aprox:
+        tinta = GRIS if viejo else AMARILLO
+        d.rounded_rectangle(caja_, ly(8), outline=tinta, width=ly(3))
+    else:
+        d.rounded_rectangle(caja_, ly(8), fill=GRIS_OSC if viejo else AMARILLO)
+        tinta = GRIS if viejo else (0, 0, 0)
+    x = W // 2 - w / 2
+    if a:
+        texto(d, (x, cy), a, F["num"], tinta, "lm")
+    if b:
+        texto(d, (x + wa, cy), b, F["letra"], tinta, "lm")
+
+
+def una(d, e, col, ex):
+    viejo = bool(e.get("edad"))
+    if e.get("barrio") and not viejo:
+        linea(d, ly(SUB_Y), mayus(e["barrio"]), GRIS)
+    top = ly(NOMBRE_Y_SUB) + ex // 2 if e.get("barrio") or viejo else ly(NOMBRE_Y)
+    y1, pc, rot, l1, l2 = franja_una(e, ex)
+    caja(d, e["calle1"], F["grande"], 3, top, y1, col)
+    if e.get("num1"):
+        pastilla(d, pc, e["num1"], viejo)
+    ambar = GRIS_OSC if viejo else AMARILLO
+    t = e.get("tramo")
+    if e.get("cruce"):
+        linea(d, rot, "ESQUINA", ambar)
+        linea(d, l1, corta(e["cruce"]), col)
+    elif t:
+        linea(d, rot, "ENTRE" if len(t) == 2 else "CERCA DE", ambar)
+        linea(d, l1, corta(t[0]), GRIS)
+        if len(t) == 2:
+            linea(d, l2, corta(t[1]), GRIS)
 
 
 def redondo(img):
@@ -499,7 +565,7 @@ ESCENARIOS = [
     ("Esquina", dict(calle1="Rúa do Franco", num1="nº 54", cruce="Rúa da Raíña", barrio="Casco Histórico")),
     ("Dos calles", dict(calle1="Rúa do Vilar", num1="nº 44", calle2="Rúa Nova", num2="nº 11")),
     ("Sin calle: lugar", dict(lugar="A Amañecida", sub="parroquia de Sorribas", pie="29T 526416 4738906")),
-    ("Sin calle, sin lugar", dict(aviso=("SIN CALLE", BLANCO, "parroquia de Calo"), pie="29T 531794 4739311")),
+    ("Sin calle, sin lugar", dict(aviso=("SIN CALLE", BLANCO, "PARROQUIA DE CALO"), pie="29T 531794 4739311")),
     ("Fuera de zona", dict(aviso=("FUERA DE ZONA", ROJO, "Callejero: Santiago"), pie="29T 540754 4760936")),
     ("START: anotado", dict(FRANCO, anotado=("Anotado 23:41", VERDE))),
     ("Anotaciones (menú)", dict(lista=[("23:41 · Rúa do Franco 33", "23-oct · 29T 537134 4747387"),

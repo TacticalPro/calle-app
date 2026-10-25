@@ -24,12 +24,15 @@ module L {
 
     // --- Pantalla. Las cotas son de la de 280×280 (fēnix 6X/7X) y se escalan con L.y() al alto real:
     // 218 (5S), 240 (5, 6S, 7S), 260 (6, 7), 416 y 454 (8 AMOLED). Las vistas llaman a L.escalar() en onLayout.
-    // La hora arriba en grande; debajo, el barrio o la edad del dato.
-    const HORA_Y = 34;           // centro vertical de la hora
-    const HORA_PX = 44;          // tamaño de la hora con fuente vectorial (fēnix 7); sin ella, la numérica del reloj
+    // La hora arriba en grande, bajo el arco de calidad del GPS; debajo, el barrio o la edad del dato.
+    const ARCO_PX = 5;           // grosor del arco de calidad del GPS en el borde de arriba (de 45° a 135°)
+    const HORA_Y = 36;           // centro vertical de la hora
+    const HORA_PX = 52;          // tamaño de la hora en Bionic (fēnix 7: la dibuja al 79 %, como una de 41); sin ella, la de sistema
     const HORA_MAX = 50;         // alto máximo de la fuente de sistema para la hora (sin vectoriales)
-    const HORA_PUNTO = 18;       // hueco a la izquierda de la hora para el punto de calidad del GPS
-    const SUB_Y = 63;            // línea pequeña bajo la hora: barrio, «sin calle a 50 m» o edad del dato
+    const SUB_Y = 66;            // línea pequeña bajo la hora: barrio, «sin calle a 50 m» o edad del dato
+    const PASTILLA_H = 38;       // alto de la pastilla ámbar del número de portal
+    const NUM_PX = 40;           // cifras del portal en Bionic (se ven como una de 32)
+    const PIE_Y = 244;           // última línea del pie de una calle (el tramo); las de encima se apilan por el alto real
     const NOMBRE_Y = 58;         // arriba de la franja del nombre sin esa línea…
     const NOMBRE_Y_SUB = 76;     // …y con ella
 

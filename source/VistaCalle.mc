@@ -22,15 +22,19 @@ class VistaCalle extends WatchUi.View {
 
     private var _fGrande as Array = [] as Array;   // cadena de fuentes para una calle
     private var _fMedia as Array = [] as Array;    // para dos calles y para el lugar
-    private var _fNum as Graphics.FontType = Graphics.FONT_MEDIUM;
+    private var _fNum as Graphics.FontType = Graphics.FONT_MEDIUM;     // cifras del portal (Bionic)
+    private var _fLetra as Graphics.FontType = Graphics.FONT_SMALL;    // su letra («12B»): Bionic no trae letras
     private var _fHora as Graphics.FontType = Graphics.FONT_NUMBER_MILD;
     // Lo que la XTINY del reloj pasa de la proporcional (19 px en 280): las fuentes de sistema no escalan con
     // la pantalla (26 px en el fēnix 5 de 240, 37 en el 8 de 454). Las pilas de líneas pequeñas se abren tanto.
     private var _ex as Number = 0;
+    private var _paso as Number = 19;   // entre líneas pequeñas: L.y(19) o el alto de la XTINY si es mayor
+    private var _ph as Number = 38;     // alto de la pastilla del número
 
     // Caché de maquetación: clave = lo que cambia la maquetación.
     private var _clave as String = "";
     private var _cajas as Array = [] as Array;     // por nombre: [fuente, líneas, top, alto de línea] o null
+    private var _barrio as String = "";            // el barrio en mayúsculas, con la maquetación
 
     // Aviso de 2 s («Anotado 23:41») encima de todo.
     private var _aviso as String or Null = null;
@@ -49,9 +53,14 @@ class VistaCalle extends WatchUi.View {
         _fGrande = f[0] as Array;
         _fMedia = f[1] as Array;
         _fNum = f[2] as Graphics.FontType;
+        _fLetra = f[3] as Graphics.FontType;
         _fHora = Fuentes.hora(dc);
         var hx = dc.getFontHeight(Graphics.FONT_XTINY);
         _ex = hx > L.y(19) ? hx - L.y(19) : 0;
+        _paso = L.y(19) + _ex;
+        // Con Bionic la celda es mucho más alta que las cifras: la pastilla, fija. Con las de sistema, crece con la fuente.
+        var nh = dc.getFontHeight(_fNum) + L.y(4);
+        _ph = (Graphics has :getVectorFont) || nh < L.y(L.PASTILLA_H) ? L.y(L.PASTILLA_H) : nh;
         _clave = "";
     }
 
@@ -157,23 +166,20 @@ class VistaCalle extends WatchUi.View {
         dibujarAviso(dc);
     }
 
-    // Fila superior: la hora en grande (la app hace también de reloj) con el punto de
-    // calidad del GPS a su izquierda. Si el dato es viejo, su edad va debajo, en amarillo, en lugar
-    // del barrio.
+    // Fila superior: la hora en grande (la app hace también de reloj) bajo un arco en el borde con el
+    // color de la calidad del GPS. Si el dato es viejo, su edad va debajo, en ámbar, en lugar del barrio.
     private function dibujarEstado(dc as Graphics.Dc) as Void {
         var m = _m;
         var cx = dc.getWidth() / 2;
-        var txt = Fmt.reloj();
-        var w = dc.getTextWidthInPixels(txt, _fHora);
-        var punto = L.y(L.HORA_PUNTO);
-        var x0 = cx - (w + punto) / 2;
-        var hy = L.y(L.HORA_Y);
+        var pen = L.y(L.ARCO_PX);
+        dc.setPenWidth(pen);
         dc.setColor(colorCalidad(m), Graphics.COLOR_TRANSPARENT);
-        dc.fillCircle(x0 + L.y(6), hy, L.y(6));
+        dc.drawArc(cx, dc.getHeight() / 2, cx - pen / 2 - 1, Graphics.ARC_COUNTER_CLOCKWISE, 45, 135);
+        dc.setPenWidth(1);
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(x0 + punto, hy, _fHora, txt, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(cx, L.y(L.HORA_Y), _fHora, Fmt.reloj(), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         if (viejo() && _pag == PAG_CALLE) {
-            linea(dc, L.y(L.SUB_Y), Fmt.edad(m.edad()), Graphics.COLOR_YELLOW);
+            linea(dc, L.y(L.SUB_Y), Fmt.mayus(Fmt.edad(m.edad())), Graphics.COLOR_YELLOW);
         }
     }
 
@@ -201,10 +207,27 @@ class VistaCalle extends WatchUi.View {
         return _m.semilla || _m.edad() > L.VIEJA_S ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_WHITE;
     }
 
-    // Franjas del nombre: la hora y el barrio encima y el tramo debajo se las comen. Con tramo, el
-    // número sube y el tramo va en la franja ancha (y 190-212): abajo, la pantalla redonda lo cortaba.
+    // Una calle, de abajo arriba: el pie (los dos lados del tramo, uno o la esquina) con su rótulo ámbar encima,
+    // la pastilla del número y, en lo que queda, el nombre. Devuelve [arriba y abajo del nombre, centro de la
+    // pastilla, y del rótulo, y de las líneas del pie (0 si no hay)].
     private function franjaUna() as Array<Number> {
-        return [topNombre(hayBarrio() || viejo()), _m.tramoA != null ? L.y(146) - _ex : L.y(192)] as Array<Number>;
+        var m = _m;
+        var top = topNombre(hayBarrio() || viejo());
+        var hayNum = m.num1 != null;
+        var rot = 0;
+        var l1 = 0;
+        var l2 = 0;
+        if (m.cruce) {
+            l1 = L.y(L.PIE_Y) - _paso / 2;
+            rot = l1 - _paso;
+        } else if (m.tramoA != null) {
+            l2 = m.tramoB != null ? L.y(L.PIE_Y) : 0;
+            l1 = m.tramoB != null ? l2 - _paso : L.y(L.PIE_Y) - _paso / 2;
+            rot = l1 - _paso;
+        }
+        var pc = rot > 0 ? rot - _paso / 2 - L.y(4) - _ph / 2 : L.y(196);
+        var y1 = hayNum ? pc - _ph / 2 - L.y(4) : (rot > 0 ? rot - _paso / 2 - L.y(4) : L.y(200));
+        return [top, y1, pc, rot, l1, l2] as Array<Number>;
     }
 
     // Arriba de la franja del nombre: con la línea pequeña bajo la hora, baja lo que esta crece.
@@ -217,27 +240,23 @@ class VistaCalle extends WatchUi.View {
         return topNombre(viejo());
     }
 
-    private function franjaCruce() as Array<Number> {
-        return [topNombre(hayBarrio() || viejo()), L.y(168) - _ex] as Array<Number>;
-    }
-
     private function maquetar(dc as Graphics.Dc) as Void {
         var m = _m;
         // Esquina y dos calles maquetan distinto; barrio y tramo cambian la franja; el lugar es otro título.
         var clave = m.estado + "|" + m.calle1 + "|" + m.calle2 + "|" + m.cruce + "|" + (hayBarrio() || viejo())
-            + "|" + (m.tramoA != null) + "|" + m.lugar;
+            + "|" + (m.tramoA != null) + "|" + (m.tramoB != null) + "|" + (m.num1 != null) + "|" + m.lugar + "|" + m.barrio;
         if (clave.equals(_clave)) {
             return;
         }
         _clave = clave;
         if (m.estado == EST_LEJOS) {
             _cajas = [m.lugar != null ? Texto.colocar(dc, m.lugar as String, _fMedia, 2, L.y(86), L.y(146)) : null];
-        } else if (m.calle2 == null) {
+        } else if (m.calle2 == null || m.cruce) {
             var f = franjaUna();
             _cajas = [Texto.colocar(dc, m.calle1 as String, _fGrande, 3, f[0], f[1])];
-        } else if (m.cruce) {
-            var f = franjaCruce();
-            _cajas = [Texto.colocar(dc, m.calle1 as String, _fGrande, 3, f[0], f[1])];
+            if (m.barrio != null) {
+                _barrio = Fmt.mayus(m.barrio as String);
+            }
         } else {
             _cajas = [Texto.colocar(dc, m.calle1 as String, _fMedia, 2, topDos(), L.y(116)),
                       Texto.colocar(dc, m.calle2 as String, _fMedia, 2, L.y(152), L.y(214) - _ex)];
@@ -274,40 +293,68 @@ class VistaCalle extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
-    // Una calle (con barrio encima y tramo debajo); en una esquina, "esq. <la otra>" debajo del número.
+    // Una calle: barrio encima; debajo, el número en la pastilla y el tramo («ENTRE» y sus dos lados, «CERCA DE»
+    // y uno) o la esquina («ESQUINA» y la otra calle).
     private function dibujarUna(dc as Graphics.Dc) as Void {
         var m = _m;
-        var cx = dc.getWidth() / 2;
         maquetar(dc);
         if (hayBarrio()) {
-            linea(dc, L.y(L.SUB_Y), m.barrio as String, Graphics.COLOR_LT_GRAY);
+            linea(dc, L.y(L.SUB_Y), _barrio, Graphics.COLOR_LT_GRAY);
         }
+        var f = franjaUna();
         dc.setColor(colorTexto(), Graphics.COLOR_TRANSPARENT);
-        if (!m.cruce) {
-            var f = franjaUna();
-            pintarCaja(dc, _cajas[0], m.calle1 as String, f[0], f[1]);
-            var tramo = m.tramoA != null;
-            if (m.num1 != null) {
-                dc.drawText(cx, f[1] + L.y(tramo ? 4 : 8), _fNum, Fmt.numero(m.num1 as String, m.aprox1),
-                    Graphics.TEXT_JUSTIFY_CENTER);
-            }
-            if (tramo) {
-                if (m.tramoB != null) {
-                    linea(dc, L.y(212) - L.y(22) - _ex, "entre " + Abrev.corta(m.tramoA as String), Graphics.COLOR_LT_GRAY);
-                    linea(dc, L.y(212), "y " + Abrev.corta(m.tramoB as String), Graphics.COLOR_LT_GRAY);
-                } else {
-                    linea(dc, L.y(212) - L.y(22) - _ex, "cerca de " + Abrev.corta(m.tramoA as String), Graphics.COLOR_LT_GRAY);
-                }
-            }
-            return;
-        }
-        var f = franjaCruce();
         pintarCaja(dc, _cajas[0], m.calle1 as String, f[0], f[1]);
         if (m.num1 != null) {
-            dc.drawText(cx, L.y(170) - _ex, _fNum, Fmt.numero(m.num1 as String, m.aprox1), Graphics.TEXT_JUSTIFY_CENTER);
+            pastilla(dc, f[2], m.num1 as String, m.aprox1);
         }
-        linea(dc, L.y(221), "esq. " + Abrev.corta(m.calle2 as String), colorTexto());
-        pie(dc, "CRUCE", Graphics.COLOR_YELLOW, L.y(252));
+        var ambar = viejo() ? Graphics.COLOR_DK_GRAY : Graphics.COLOR_YELLOW;
+        if (m.cruce) {
+            linea(dc, f[3], "ESQUINA", ambar);
+            linea(dc, f[4], Abrev.corta(m.calle2 as String), colorTexto());
+        } else if (m.tramoA != null) {
+            linea(dc, f[3], m.tramoB != null ? "ENTRE" : "CERCA DE", ambar);
+            linea(dc, f[4], Abrev.corta(m.tramoA as String), Graphics.COLOR_LT_GRAY);
+            if (m.tramoB != null) {
+                linea(dc, f[5], Abrev.corta(m.tramoB as String), Graphics.COLOR_LT_GRAY);
+            }
+        }
+    }
+
+    // El número de portal en una pastilla ámbar con las cifras en negro. Aproximado (portal a más de
+    // L.PORTAL_APROX): solo el borde y las cifras en ámbar, sin «~». Dato viejo: en grises.
+    private function pastilla(dc as Graphics.Dc, cy as Number, num as String, aprox as Boolean) as Void {
+        var cx = dc.getWidth() / 2;
+        var k = Fuentes.cifras(num);
+        var a = num.substring(0, k) as String;
+        var b = num.substring(k, num.length()) as String;
+        var wa = a.length() > 0 ? dc.getTextWidthInPixels(a, _fNum) : 0;
+        var wb = b.length() > 0 ? dc.getTextWidthInPixels(b, _fLetra) : 0;
+        var w = wa + wb;
+        var pad = L.y(14);
+        var x = cx - w / 2 - pad;
+        var y = cy - _ph / 2;
+        var r = L.y(8);
+        var viejo_ = viejo();
+        var tinta;
+        if (aprox) {
+            tinta = viejo_ ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_YELLOW;
+            dc.setColor(tinta, Graphics.COLOR_TRANSPARENT);
+            dc.setPenWidth(L.y(3));
+            dc.drawRoundedRectangle(x, y, w + 2 * pad, _ph, r);
+            dc.setPenWidth(1);
+        } else {
+            dc.setColor(viejo_ ? Graphics.COLOR_DK_GRAY : Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
+            dc.fillRoundedRectangle(x, y, w + 2 * pad, _ph, r);
+            tinta = viejo_ ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_BLACK;
+        }
+        dc.setColor(tinta, Graphics.COLOR_TRANSPARENT);
+        var j = Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER;
+        if (wa > 0) {
+            dc.drawText(cx - w / 2, cy, _fNum, a, j);
+        }
+        if (wb > 0) {
+            dc.drawText(cx - w / 2 + wa, cy, _fLetra, b, j);
+        }
     }
 
     private function dibujarDos(dc as Graphics.Dc) as Void {
@@ -317,6 +364,7 @@ class VistaCalle extends WatchUi.View {
         dc.setColor(colorTexto(), Graphics.COLOR_TRANSPARENT);
         pintarCaja(dc, _cajas[0], m.calle1 as String, topDos(), L.y(116));
         if (m.num1 != null) {
+            dc.setColor(viejo() ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, L.y(117), Graphics.FONT_XTINY, Fmt.numero(m.num1 as String, m.aprox1), Graphics.TEXT_JUSTIFY_CENTER);
         }
         dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
@@ -324,6 +372,7 @@ class VistaCalle extends WatchUi.View {
         dc.setColor(colorTexto(), Graphics.COLOR_TRANSPARENT);
         pintarCaja(dc, _cajas[1], m.calle2 as String, L.y(152), L.y(214) - _ex);
         if (m.num2 != null) {
+            dc.setColor(viejo() ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, L.y(215) - _ex, Graphics.FONT_XTINY, Fmt.numero(m.num2 as String, m.aprox2), Graphics.TEXT_JUSTIFY_CENTER);
         }
         pie(dc, "DOS CALLES", Graphics.COLOR_YELLOW, L.y(252));
@@ -333,14 +382,14 @@ class VistaCalle extends WatchUi.View {
     // debajo y la UTM al pie.
     private function dibujarLejos(dc as Graphics.Dc) as Void {
         var m = _m;
-        var sub = m.parroquia != null ? "parroquia de " + m.parroquia
-            : (m.barrio != null ? m.barrio as String : "a menos de " + Callejero.MAXD + " m");
+        var sub = Fmt.mayus(m.parroquia != null ? "parroquia de " + m.parroquia
+            : (m.barrio != null ? m.barrio as String : "a menos de " + Callejero.MAXD + " m"));
         if (m.lugar == null) {
             aviso(dc, "SIN CALLE", Graphics.COLOR_WHITE, sub);
         } else {
             maquetar(dc);
             if (!viejo()) {
-                linea(dc, L.y(L.SUB_Y), "sin calle a " + Callejero.MAXD + " m", Graphics.COLOR_YELLOW);
+                linea(dc, L.y(L.SUB_Y), "SIN CALLE A " + Callejero.MAXD + " M", Graphics.COLOR_YELLOW);
             }
             dc.setColor(colorTexto(), Graphics.COLOR_TRANSPARENT);
             pintarCaja(dc, _cajas[0], m.lugar as String, L.y(86), L.y(146));

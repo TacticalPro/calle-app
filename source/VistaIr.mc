@@ -38,7 +38,7 @@ class VistaIr extends WatchUi.View {
         L.escalar(dc);
         var v = Fuentes.vectorial(38);
         _fDist = v != null ? v : Graphics.FONT_LARGE;
-        var n = Fuentes.vectorial(26);
+        var n = Fuentes.nombre(25);   // Noto Sans, como el nombre de la calle (P73)
         _fNombre = n != null ? n : Graphics.FONT_SMALL;
         var hx = dc.getFontHeight(Graphics.FONT_XTINY);
         var nh = dc.getFontHeight(_fNombre);

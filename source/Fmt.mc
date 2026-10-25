@@ -25,6 +25,21 @@ module Fmt {
         return "hace " + (s / 3600) + " h";
     }
 
+    // Rótulos en mayúsculas (barrio, edad, «ENTRE»). toUpper() solo sube el ASCII: las tildes, la ñ y la ü, a mano.
+    const MINUS = "áéíóúñüàèòç";
+    const MAYUS = "ÁÉÍÓÚÑÜÀÈÒÇ";
+
+    function mayus(s as String) as String {
+        var cs = s.toUpper().toCharArray();
+        var r = "";
+        for (var i = 0; i < cs.size(); i++) {
+            var c = cs[i].toString();
+            var k = MINUS.find(c);
+            r += k != null ? MAYUS.substring(k, k + 1) : c;
+        }
+        return r;
+    }
+
     // «~», no «≈»: las fuentes de sistema del reloj (CDPG, página de códigos latina) no traen «≈» y lo
     // pintan como «�» (visto en DOS CALLES, que va en FONT_XTINY, y en el 6X, que no tiene vectoriales).
     function numero(num as String, aprox as Boolean) as String {

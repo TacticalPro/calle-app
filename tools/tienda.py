@@ -10,6 +10,8 @@ Lo llama `APP=<app> ./ciq.sh tienda`, que compila con lo que este script deja. I
 """
 import json
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,6 +40,22 @@ def zonas_generadas(carpetas):
     return zonas
 
 
+def solo_zonas(carpeta, zonas, out):
+    """Callejero.mc, Regiones.mc y el ajuste «Zona» con solo las zonas de la app, más sus Region<Nombre>.mc,
+    en out/gen-<variante>/. Las teselas no se tocan: el jungle de la app apunta a resources-gen*/<zona>/.
+    Devuelve la carpeta, relativa a out."""
+    variante = carpeta[len("source-gen-"):] if carpeta != "source-gen" else "normal"
+    gen = out / f"gen-{variante}"
+    if gen.exists():
+        shutil.rmtree(gen)
+    subprocess.run([sys.executable, "-I", str(ROOT / "tools/build_callejero.py"), "--comun", "--variante", variante,
+                    "--solo", ",".join(zonas), "--salida", str(gen)], check=True, stdout=sys.stderr)
+    for f in (ROOT / carpeta).glob("Region*.mc"):
+        if f.stem[len("Region"):].lower() in zonas:
+            shutil.copy(f, gen / "source" / f.name)
+    return gen.name
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit("uso: tienda.py <app de tools/catalogo.json>")
@@ -48,13 +66,18 @@ def main():
 
     jungle = (ROOT / "monkey.jungle").read_text("utf-8")
     rutas = rutas_jungle(jungle)
+    out = ROOT / "bin" / "tienda" / clave
+    filtro = {}   # carpeta source-gen* con más zonas que la app → carpeta de out con solo las de la app
     for reloj in app["relojes"]:
-        zonas = zonas_generadas(rutas.get(reloj, rutas["base"]))
-        if zonas != set(app["zonas"]):
+        carpetas = rutas.get(reloj, rutas["base"])
+        zonas = zonas_generadas(carpetas)
+        if not set(app["zonas"]) <= zonas:
             sys.exit(f"{reloj}: los datos generados tienen {sorted(zonas)} y «{app['nombre']}» lleva "
                      f"{sorted(app['zonas'])}. Regenere los datos de ese reloj antes de empaquetar.")
-
-    out = ROOT / "bin" / "tienda" / clave
+        if zonas != set(app["zonas"]):
+            for c in carpetas:
+                if c.startswith("source-gen") and c not in filtro:
+                    filtro[c] = solo_zonas(c, app["zonas"], out)
     (out / "res" / "strings").mkdir(parents=True, exist_ok=True)
 
     manifiesto = (ROOT / "manifest.xml").read_text("utf-8")
@@ -71,7 +94,15 @@ def main():
     for linea in jungle.splitlines():
         m = re.match(r"^(\w+\.(sourcePath|resourcePath))\s*=\s*(.+)$", linea.strip())
         if m:
-            carpetas = [SUBIR + c.strip() for c in m.group(3).split(";")]
+            carpetas = []
+            for c in (c.strip() for c in m.group(3).split(";")):
+                fuente = c.replace("resources-gen", "source-gen", 1)
+                if c in filtro:
+                    carpetas.append(filtro[c] + "/source")
+                elif c.startswith("resources-gen") and fuente in filtro:
+                    carpetas += [f"{SUBIR}{c}/{z}" for z in app["zonas"]] + [filtro[fuente] + "/res"]
+                else:
+                    carpetas.append(SUBIR + c)
             if m.group(2) == "resourcePath":
                 carpetas.append("res")
             linea = f"{m.group(1)} = {';'.join(carpetas)}"

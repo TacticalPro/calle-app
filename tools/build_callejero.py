@@ -1590,12 +1590,20 @@ module {mod} {{
             zstats, zcols, zfilas, zmayor, parroquias, lugares, fecha_zonas, pois)
 
 
-def escribir_comun(recien=None):
+def escribir_comun(recien=None, solo=None, salida=None):
     """source-gen/Callejero.mc (constantes del generador y la región activa), source-gen/Regiones.mc (las
-    regiones que hay en resources-gen/) y el ajuste «Zona» del teléfono (resources-gen/ajustes/)."""
+    regiones que hay en resources-gen/) y el ajuste «Zona» del teléfono (resources-gen/ajustes/).
+
+    solo y salida (tools/tienda.py): solo esas regiones, escritas en salida/source y salida/res/ajustes en vez
+    de source-gen*/ y resources-gen*/ajustes. Así una app de la tienda lleva sus zonas sin regenerar las teselas."""
     regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
+    src_dir = Path(salida) / "source" if salida else src_gen()
+    ajustes_dir = Path(salida) / "res" / "ajustes" if salida else res_gen() / "ajustes"
+    src_dir.mkdir(parents=True, exist_ok=True)
     metas = []
     for nombre, cfg in regiones.items():
+        if solo is not None and nombre not in solo:
+            continue
         f = OUT / f"meta-{nombre}{sufijo()}.json"
         if (res_gen() / nombre / f"{nombre}.xml").exists() and f.exists():
             metas.append(json.loads(f.read_text("utf-8")))
@@ -1695,7 +1703,7 @@ module Callejero {{
     }}
 }}
 """
-    (src_gen() / "Callejero.mc").write_text(cal, "utf-8")
+    (src_dir / "Callejero.mc").write_text(cal, "utf-8")
     casos = "\n".join(f"""        {"if" if k == 0 else "} else if"} (id == {m['id']}) {{
             return {nombre_modulo(m['region'])}.datos();""" for k, m in enumerate(metas))
     cajas = ",\n".join(f"        {m['bbox'][0]!r}d, {m['bbox'][1]!r}d, {m['bbox'][2]!r}d, {m['bbox'][3]!r}d"
@@ -1719,10 +1727,10 @@ module Regiones {{
     }}
 }}
 """
-    (src_gen() / "Regiones.mc").write_text(reg, "utf-8")
+    (src_dir / "Regiones.mc").write_text(reg, "utf-8")
 
     # Ajuste del teléfono (solo en la versión de la tienda): la misma lista que el menú del reloj.
-    adir = res_gen() / "ajustes"
+    adir = ajustes_dir
     adir.mkdir(parents=True, exist_ok=True)
     (adir / "propiedades.xml").write_text("""<resources>
     <properties>
@@ -1856,13 +1864,17 @@ def main():
     ap.add_argument("--region", default="santiago")
     ap.add_argument("--refresh", action="store_true", help="vuelve a descargar de Overpass")
     ap.add_argument("--comun", action="store_true", help="solo rehace Callejero.mc, Regiones.mc y el ajuste")
+    ap.add_argument("--solo", help="con --comun: solo estas regiones, separadas por comas (tools/tienda.py)")
+    ap.add_argument("--salida", help="con --solo: carpeta donde escribir source/ y res/ajustes/")
     ap.add_argument("--variante", choices=("normal", "6x"), default="normal",
                     help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/)")
     a = ap.parse_args()
     global VARIANTE, TESELA, ZONA, RN
     VARIANTE = a.variante
     if a.comun:
-        escribir_comun()
+        if bool(a.solo) != bool(a.salida):
+            sys.exit("--solo y --salida van juntas")
+        escribir_comun(solo=a.solo.split(",") if a.solo else None, salida=a.salida)
         return
     regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
     cfg = dict(regiones[a.region])

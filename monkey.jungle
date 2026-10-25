@@ -1,10 +1,12 @@
 project.manifest = manifest.xml
 base.sourcePath = source;source-gen;test;test-gen
 base.resourcePath = resources;resources-gen
-# fēnix 6X (API 3.4): datos compactos, porque su máquina virtual no admite más de 254 recursos de
-# datos (tools/build_callejero.py, VARIANTE). Se generan con VARIANTE=6x ./ciq.sh datos.
-fenix6xpro.sourcePath = source;source-gen-6x;test;test-gen-6x
-fenix6xpro.resourcePath = resources;resources-gen-6x
+# fēnix 6X (API 3.4): su máquina virtual no admite más de 254 recursos de datos. Desde la 3.2.0 lleva la
+# variante c (Madrid entero en teselas adaptativas, decisión del autor 2026-10-25); la 6x (una parte de Madrid, solo
+# 4 distritos: VARIANTE=6x ./ciq.sh datos) queda generada por si hiciera falta volver.
+fenix6xpro.sourcePath = source;source-gen-c;test;test-gen-c
+fenix6xpro.resourcePath = resources;resources-gen-c
+
 # fēnix 5/5S (API 3.1) y 6/6S (API 3.4): 128 KB por app. Madrid entero en teselas adaptativas (variante c,
 # tools/build_callejero.py): VARIANTE=c ./ciq.sh datos.
 fenix5.sourcePath = source;source-gen-c;test;test-gen-c

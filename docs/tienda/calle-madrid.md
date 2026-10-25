@@ -8,8 +8,11 @@ El portal avisa «Signature check failed» en la primera subida de una app nueva
 comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2 manifest.xml`.
 
 **Primera versión (3.1.0): solo el fēnix 6X**, con una parte de Madrid. Imágenes: `portada_500.png`,
-`ficha_1.png`, `ficha_3.png` y `ficha_4.png`. La `ficha_2.png` (Argüelles) se queda fuera, porque el 6X no
-la cubre; vuelve cuando entre el 7X Pro con Madrid entero.
+`ficha_1.png`, `ficha_3.png` y `ficha_4.png`.
+
+**3.2.0 (2026-10-25): el 6X y la familia fēnix 7, todos con Madrid entero.** Es *Upload New Version* sobre la
+misma app. El `.iq` pesa 52,5 MB: lo sube el autor a mano, porque el navegador automatizado no pasa de 10 MB.
+La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 
 Atribución obligatoria (OSM y Ayuntamiento de Madrid): no se quita de ninguna versión. El Catastro no
 aparece, porque solo se usa en Santiago.
@@ -29,8 +32,8 @@ La calle, el número de portal y las calles a cada lado, sin teléfono ni cobert
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
 
-Zona: en el fēnix 6X, una parte de Madrid y el
-centro hasta Sol y la Gran Vía. Se irán añadiendo relojes.
+Zona: el término municipal de Madrid entero, en el fēnix 6X y en toda la familia fēnix 7. Se irán añadiendo
+relojes.
 
 Privacidad: solo pide el permiso de posición. No tiene red: la posición no sale nunca del reloj. No graba
 actividades.
@@ -41,7 +44,8 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
-**Novedades (3.1.0):** primera versión de CALLE Madrid, para el fēnix 6X.
+**Novedades (3.2.0):** Madrid entero, también en el fēnix 6X, y llega la familia fēnix 7 (7, 7S, 7X y Pro).
+Datos más compactos.
 
 ## English
 
@@ -57,8 +61,8 @@ Street name, door number and the streets on each side, with no phone and no sign
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.
 
-Area: on the fēnix 6X, part of Madrid and the
-centre up to Sol and Gran Vía. More watches will follow. The interface is in Spanish.
+Area: the whole municipality of Madrid, on the fēnix 6X and the whole fēnix 7 family. More watches will
+follow. The interface is in Spanish.
 
 Privacy: the only permission is position. No network access: your position never leaves the watch. No
 activity recording.
@@ -69,4 +73,6 @@ Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
-**What's new (3.1.0):** first release of CALLE Madrid, for the fēnix 6X.
+**What's new (3.2.0):** all of Madrid, now on the fēnix 6X too, and the fēnix 7 family (7, 7S, 7X and Pro).
+Smaller data.
+

@@ -17,6 +17,6 @@
       "fenix7xpro",
       "fenix7xpronowifi"
     ],
-    "relojes_nota": "2026-10-25: 3.1.0 subida solo con el fēnix 6X (una parte de Madrid). Siguiente subida: el 6X y la familia fēnix 7 con Madrid entero (filtrado por tools/tienda.py), por decisión del autor. Los fēnix E, 8 y 9 (compilan) esperan al formato binario: con ellos el .iq pasaba de 127 MB."
+    "relojes_nota": "2026-10-25: 3.1.0 solo con el fēnix 6X (una parte de Madrid). 3.2.0: el 6X (ya con la variante c, Madrid entero) y la familia fēnix 7, con Madrid entero; la sube el autor a mano (52,5 MB). Pendientes: fēnix E, 8 y 9 (pantallas resueltas en el tramo 1b; faltan sus tests) y el grupo C."
   }
 }

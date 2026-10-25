@@ -67,7 +67,7 @@ Para **añadir una ciudad**, se describe la región en `tools/regiones.json` y s
   - el generador, `tools/build_callejero.py`;
   - la configuración de cada región, `tools/regiones.json`;
   - las correcciones locales, `tools/overrides-*.json`.
-- **Roboto Condensed** (`tools/fonts/`) va bajo SIL Open Font License 1.1 (`tools/fonts/OFL.txt`). Solo la
+- **Roboto Condensed** (`tools/fonts/`, © 2011 Google Inc.) va bajo Apache License 2.0 (`tools/fonts/LICENSE-RobotoCondensed.txt`). Solo la
   usan las maquetas (`tools/mockup.py`); en el reloj se usan las fuentes del propio reloj.
 
 ## Compilar

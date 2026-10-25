@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
-"""Maquetas de CALLE sin simulador (no hay permiso de captura de pantalla).
+"""Maquetas de CALLE sin simulador (no hay permiso de captura de pantalla), para cada pantalla.
 
-Replica las cotas de source/VistaCalle.mc y el reparto en líneas de source/Texto.mc
-con Roboto Condensed Bold, la fuente vectorial del reloj. Las fuentes de sistema
-(XTINY, TINY) se aproximan con la misma Roboto: lo fiel es el nombre y su reparto.
-Escribe tools/out/mockups.png.
+Replica las cotas de source/VistaCalle.mc y source/VistaIr.mc, escaladas como L.y() (cotas de la
+pantalla de 280 px por alto/280), y el reparto en líneas de source/Texto.mc.
+- Fuentes vectoriales (fēnix 7 y 8): Roboto Condensed Bold al tamaño escalado, como en el reloj.
+- Fuentes de sistema: alto y ancho por carácter medidos en el simulador de cada reloj
+  (tools/fonts/metricas.json, ./ciq.sh fuentes). El reparto en líneas y los recortes salen como en el
+  reloj; el dibujo de las letras es Roboto Condensed ajustada a ese ancho: lo fiel es el reparto.
+Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproximada.
+
+    tools/mockup.py                  todos los escenarios en el 7X Pro → tools/out/mockups.png
+    tools/mockup.py --reloj fenix5s  en otro reloj                     → tools/out/mockups-fenix5s.png
+    tools/mockup.py --todos          una hoja por reloj y la comparativa → tools/out/pantallas.png
+    tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
+    tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
 """
+import json
 import math
 from pathlib import Path
 
@@ -13,23 +23,112 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 FUENTE = ROOT / "tools" / "fonts" / "RobotoCondensed.ttf"
-W = H = 280
+METRICAS = json.loads((ROOT / "tools" / "fonts" / "metricas.json").read_text())
 BLANCO, GRIS, GRIS_OSC = (255, 255, 255), (0xAA, 0xAA, 0xAA), (0x55, 0x55, 0x55)
 AMARILLO, ROJO, VERDE, NARANJA = (0xFF, 0xAA, 0x00), (0xFF, 0, 0), (0, 0xFF, 0), (0xFF, 0x55, 0)
 
+# Un perfil por juego de fuentes distinto (los 5X y 5 Plus miden como el 5; el 6 Pro, como el 6).
+# reloj: (pantalla, tiene vectoriales, rótulo)
+RELOJES = {
+    "fenix5s": (218, False, "fēnix 5S · 218"),
+    "fenix5": (240, False, "fēnix 5 / 5X / 5 Plus · 240"),
+    "fenix6s": (240, False, "fēnix 6S · 240"),
+    "fenix7s": (240, True, "fēnix 7S · 240"),
+    "fenix6": (260, False, "fēnix 6 · 260"),
+    "fenix7": (260, True, "fēnix 7 · 260"),
+    "fenix6xpro": (280, False, "fēnix 6X · 280"),
+    "fenix7xpro": (280, True, "fēnix 7X · 280"),
+    "fenix843mm": (416, True, "fēnix 8 43 mm · 416"),
+    "fenix847mm": (454, True, "fēnix 8 47 mm · 454"),
+}
+ANILLO_R, ANILLO_RI = 133, 128   # source/L.mc
+HORA_Y, HORA_PX, HORA_MAX, HORA_PUNTO, SUB_Y, NOMBRE_Y, NOMBRE_Y_SUB = 34, 44, 50, 18, 63, 58, 76
+
 
 def roboto(size, peso=700):
-    f = ImageFont.truetype(str(FUENTE), size)
+    f = ImageFont.truetype(str(FUENTE), max(1, round(size)))
     f.set_variation_by_axes([peso])
     return f
 
 
-V = {s: roboto(s) for s in (26, 28, 30, 32, 38, 44)}
-# Cotas de source/L.mc (pantalla v3: la hora en grande arriba).
-HORA_Y, HORA_PUNTO, SUB_Y, NOMBRE_Y, NOMBRE_Y_SUB = 34, 18, 63, 58, 76
-XTINY, TINY, SMALL = roboto(16, 500), roboto(25, 500), roboto(27, 600)
-GRANDE = [V[38], V[32], V[28], V[26], SMALL]
-MEDIA = [V[30], V[26], SMALL, TINY]
+class Vectorial:
+    """Graphics.getVectorFont de RobotoCondensedBold: el reloj mide su alto igual al tamaño."""
+
+    def __init__(self, px):
+        self.ttf = roboto(px)
+        self.h = px
+
+    def getlength(self, txt):
+        return self.ttf.getlength(txt)
+
+    def dibujar(self, d, xy, txt, fill, anchor):
+        d.text(xy, txt, font=self.ttf, fill=fill, anchor=anchor)
+
+
+class Sistema:
+    """Una fuente de sistema con las métricas del reloj. Los anclajes son los de drawText:
+    "ma" = centrado con y en lo alto de la celda; "mm" y "lm" = celda centrada en y."""
+
+    def __init__(self, m, peso):
+        self.h, self.asc, self.w = m["h"], m["asc"], m["w"]
+        frase = "Calle de la Princesa"
+        objetivo = sum(self.w.get(c, 0) for c in frase)
+        size = self.h
+        for _ in range(6):   # el tamaño de la Roboto que da el mismo ancho a la frase
+            size *= objetivo / max(1.0, roboto(size, peso).getlength(frase))
+        self.ttf = roboto(size, peso)
+
+    def getlength(self, txt):
+        return sum(self.w.get(c, self.w["n"]) for c in txt)
+
+    def dibujar(self, d, xy, txt, fill, anchor):
+        x, y = xy
+        top = y if anchor[1] == "a" else y - self.h // 2
+        w = self.getlength(txt)
+        x0 = x - w / 2 if anchor[0] == "m" else x
+        # Cada letra en su sitio medido: el ancho total es el del reloj.
+        for c in txt:
+            d.text((x0, top + self.asc), c, font=self.ttf, fill=fill, anchor="ls")
+            x0 += self.w.get(c, self.w["n"])
+
+
+# El reloj en uso (usar()): pantalla, escala y fuentes.
+W = H = 280
+S = 1.0
+F = {}
+
+
+def usar(reloj):
+    global W, H, S, F
+    W = H = RELOJES[reloj][0]
+    S = H / 280.0
+    m = METRICAS[reloj]
+    sis = {k: Sistema(m[k], 400 if (k == "xtiny" and reloj.startswith("fenix5")) else 700)
+           for k in ("xtiny", "tiny", "small", "medium", "large", "numberMild")}
+    F = dict(sis)
+    if RELOJES[reloj][1]:
+        v = {px: Vectorial(ly(px)) for px in (26, 28, 30, 32, 38, HORA_PX)}
+        F["grande"] = [v[38], v[32], v[28], v[26], sis["small"]]
+        F["media"] = [v[30], v[26], sis["small"], sis["tiny"]]
+        F["num"], F["hora"], F["dist"], F["nombre"] = v[30], v[HORA_PX], v[38], v[26]
+    else:
+        F["grande"] = [sis["large"], sis["medium"], sis["small"], sis["tiny"]]
+        F["media"] = [sis["medium"], sis["small"], sis["tiny"]]
+        F["num"], F["dist"], F["nombre"] = sis["medium"], sis["large"], sis["small"]
+        # Fuentes.hora(): la más alta de sistema que no pase de L.y(HORA_MAX).
+        cands = [sis[k] for k in ("numberMild", "large", "medium") if sis[k].h <= ly(HORA_MAX)]
+        F["hora"] = max(cands, key=lambda f: f.h) if cands else sis["medium"]
+
+
+def ly(v):
+    """L.y(): una cota de la pantalla de 280 en la pantalla en uso (redondeo simétrico)."""
+    r = v * S
+    return int(r - 0.5) if r < 0 else int(r + 0.5)
+
+
+def texto(d, xy, txt, f, fill, anchor="mm"):
+    f.dibujar(d, xy, txt, fill, anchor)
+
 
 TIPOS = dict(zip(*[iter("Rúa R. Avenida Av. Praza Pr. Praciña Prc. Travesa Tr. Travesía Tr. Camiño Cm. Calle C/ "
                         "Plaza Pl. Paseo P.º Rolda Rd. Ronda Rd. Estrada Estr. Carretera Ctra. Corredoira Corr. "
@@ -42,15 +141,15 @@ def corta(n):
     return TIPOS[t] + " " + resto if t in TIPOS and resto else n
 
 
-def alto(f):
-    a, d = f.getmetrics()
-    return f.size if f in V.values() else a + d
+def ancho_r(y0, y1, r, margen):
+    """Texto.anchoR(): ancho de la franja [y0, y1] dentro de un círculo de radio r centrado."""
+    c = H // 2
+    d = max(abs(y0 - c), abs(y1 - c))
+    return 0 if d >= r else int(2 * math.sqrt(r * r - d * d)) - 2 * ly(margen)
 
 
 def ancho_franja(y0, y1, margen):
-    r, c = W // 2, H // 2
-    d = max(abs(y0 - c), abs(y1 - c))
-    return 0 if d >= r else int(2 * math.sqrt(r * r - d * d)) - 2 * margen
+    return ancho_r(y0, y1, W // 2, margen)
 
 
 def partir(s, f, anchos):
@@ -74,7 +173,7 @@ def partir(s, f, anchos):
 def colocar(nombre, fuentes, max_lineas, y0, y1):
     formas = [nombre] if corta(nombre) == nombre else [nombre, corta(nombre)]
     for f in fuentes:
-        a = alto(f)
+        a = f.h
         lh = int(a * 0.92)
         for forma in formas:
             for n in range(1, max_lineas + 1):
@@ -87,33 +186,55 @@ def colocar(nombre, fuentes, max_lineas, y0, y1):
     return None
 
 
+def recortar(txt, f, w):
+    while txt and f.getlength(txt) > w:
+        txt = txt[:-2] + "…"
+    return txt
+
+
 def caja(d, nombre, fuentes, max_lineas, y0, y1, color):
     c = colocar(nombre, fuentes, max_lineas, y0, y1)
     if not c:
-        d.text((W // 2, (y0 + y1) // 2), corta(nombre)[:22] + "…", font=TINY, fill=color, anchor="mm")
+        f = F["tiny"]
+        texto(d, (W // 2, (y0 + y1) // 2), recortar(corta(nombre), f, ancho_franja(y0, y1, 12)), f, color)
         return
     f, lineas, top, lh = c
     for i, ln in enumerate(lineas):
-        d.text((W // 2, top + i * lh), ln, font=f, fill=color, anchor="ma")
+        texto(d, (W // 2, top + i * lh), ln, f, color, "ma")
 
 
 def estado(d, e):
-    """La hora en grande (Roboto Condensed Bold 44, como el fēnix 7) con el punto del GPS a la izquierda;
-    si el dato es viejo, su edad debajo en amarillo, en lugar del barrio."""
-    w = d.textlength("23:41", font=V[44])
-    x0 = W / 2 - (w + HORA_PUNTO) / 2
-    d.ellipse((x0, HORA_Y - 6, x0 + 12, HORA_Y + 6), fill=e.get("punto", VERDE))
-    d.text((x0 + HORA_PUNTO, HORA_Y), "23:41", font=V[44], fill=BLANCO, anchor="lm")
+    """La hora en grande con el punto del GPS a la izquierda; si el dato es viejo, su edad debajo en
+    amarillo, en lugar del barrio."""
+    f = F["hora"]
+    w = f.getlength("23:41")
+    punto, hy = ly(HORA_PUNTO), ly(HORA_Y)
+    x0 = W // 2 - (w + punto) // 2
+    r = ly(6)
+    d.ellipse((x0 + r - r, hy - r, x0 + r + r, hy + r), fill=e.get("punto", VERDE))
+    texto(d, (x0 + punto, hy), "23:41", f, BLANCO, "lm")
     if e.get("edad") and "detalle" not in e:
-        linea(d, SUB_Y, e["edad"], AMARILLO)
+        linea(d, ly(SUB_Y), e["edad"], AMARILLO)
 
 
 def linea(d, y, txt, color, margen=10):
-    """Una línea XTINY recortada al ancho de la franja, como VistaCalle.linea()."""
-    w = ancho_franja(y - 11, y + 11, margen)
-    while txt and XTINY.getlength(txt) > w:
-        txt = txt[:-2] + "…" if not txt.endswith("…") else txt[:-2] + "…"
-    d.text((W // 2, y), txt, font=XTINY, fill=color, anchor="mm")
+    """VistaCalle.linea(): una línea XTINY recortada al ancho de la franja (la franja crece con la fuente)."""
+    f = F["xtiny"]
+    med = max(ly(11), f.h // 2)
+    texto(d, (W // 2, y), recortar(txt, f, ancho_franja(y - med, y + med, margen)), f, color)
+
+
+def pie(d, y, txt, color):
+    """VistaCalle.pie(): si la pantalla redonda lo corta, sube hasta caber."""
+    f = F["xtiny"]
+    while y > H // 2 and ancho_franja(y - f.h // 2, y + f.h // 2, 4) < f.getlength(txt):
+        y -= 2
+    texto(d, (W // 2, y), txt, f, color)
+
+
+def exceso():
+    """VistaCalle._ex: lo que la XTINY pasa de la proporcional (19 px en 280)."""
+    return max(0, F["xtiny"].h - ly(19))
 
 
 def render(e):
@@ -126,66 +247,68 @@ def render(e):
     if "lista" not in e:
         estado(d, e)
     col = GRIS if e.get("edad") else BLANCO
+    ex = exceso()
+    y0sub = ly(NOMBRE_Y_SUB) + ex // 2 if e.get("barrio") or e.get("edad") else ly(NOMBRE_Y)
     if "aviso" in e:
         titulo, color, sub = e["aviso"]
-        d.text((W // 2, 112), titulo, font=V[30], fill=color, anchor="mm")
-        linea(d, 152, sub, GRIS)
+        texto(d, (W // 2, ly(112)), titulo, F["media"][0], color)
+        linea(d, ly(152), sub, GRIS)
         if e.get("pie"):
-            d.text((W // 2, 236), e["pie"], font=XTINY, fill=GRIS, anchor="mm")
+            pie(d, ly(236), e["pie"], GRIS)
     elif "lugar" in e:
-        linea(d, SUB_Y, "sin calle a 50 m", AMARILLO)
-        caja(d, e["lugar"], MEDIA, 2, 86, 146, col)
-        linea(d, 164, e["sub"], GRIS)
-        d.text((W // 2, 236), e["pie"], font=XTINY, fill=GRIS, anchor="mm")
+        linea(d, ly(SUB_Y), "sin calle a 50 m", AMARILLO)
+        caja(d, e["lugar"], F["media"], 2, ly(86), ly(146), col)
+        linea(d, ly(164), e["sub"], GRIS)
+        pie(d, ly(236), e["pie"], GRIS)
     elif "detalle" in e:
+        paso = max(ly(26), F["xtiny"].h)
         for i, ln in enumerate(e["detalle"]):
-            d.text((W // 2, SUB_Y + 2 + i * 26), ln, font=XTINY, fill=BLANCO, anchor="mm")
-    elif "ir" in e:
-        return ir(e)
+            texto(d, (W // 2, ly(SUB_Y + 2) + i * paso), ln, F["xtiny"], BLANCO)
     elif "lista" in e:
-        d.text((W // 2, 62), "Anotaciones", font=SMALL, fill=BLANCO, anchor="mm")
+        texto(d, (W // 2, ly(62)), "Anotaciones", F["small"], BLANCO)
         for i, (et, sub) in enumerate(e["lista"]):
-            y = 96 + i * 58
+            y = ly(96 + i * 58)
             if i == 0:
-                d.rounded_rectangle((18, y - 6, W - 18, y + 46), 8, outline=GRIS_OSC)
-            d.text((W // 2, y + 10), corta(et), font=TINY, fill=BLANCO, anchor="mm")
-            d.text((W // 2, y + 34), sub, font=XTINY, fill=GRIS, anchor="mm")
+                d.rounded_rectangle((ly(18), y - ly(6), W - ly(18), y + ly(46)), ly(8), outline=GRIS_OSC)
+            texto(d, (W // 2, y + ly(10)), recortar(corta(et), F["tiny"], W - ly(44)), F["tiny"], BLANCO)
+            texto(d, (W // 2, y + ly(34)), recortar(sub, F["xtiny"], W - ly(44)), F["xtiny"], GRIS)
     elif e.get("cruce"):
-        y0 = NOMBRE_Y_SUB if e.get("barrio") or e.get("edad") else NOMBRE_Y
         if e.get("barrio") and not e.get("edad"):
-            linea(d, SUB_Y, e["barrio"], GRIS)
-        caja(d, e["calle1"], GRANDE, 3, y0, 168, col)
+            linea(d, ly(SUB_Y), e["barrio"], GRIS)
+        caja(d, e["calle1"], F["grande"], 3, y0sub, ly(168) - ex, col)
         if e.get("num1"):
-            d.text((W // 2, 170), e["num1"], font=V[30], fill=col, anchor="ma")
-        linea(d, 221, "esq. " + corta(e["cruce"]), col)
-        d.text((W // 2, 252), "CRUCE", font=XTINY, fill=AMARILLO, anchor="mm")
+            texto(d, (W // 2, ly(170) - ex), e["num1"], F["num"], col, "ma")
+        linea(d, ly(221), "esq. " + corta(e["cruce"]), col)
+        pie(d, ly(252), "CRUCE", AMARILLO)
     elif "calle2" in e:
-        caja(d, e["calle1"], MEDIA, 2, NOMBRE_Y_SUB if e.get("edad") else NOMBRE_Y, 116, col)
+        top = ly(NOMBRE_Y_SUB) + ex // 2 if e.get("edad") else ly(NOMBRE_Y)
+        caja(d, e["calle1"], F["media"], 2, top, ly(116), col)
         if e.get("num1"):
-            d.text((W // 2, 117), e["num1"], font=XTINY, fill=col, anchor="ma")
-        d.line((W // 2 - 90, 146, W // 2 + 90, 146), fill=GRIS_OSC)
-        caja(d, e["calle2"], MEDIA, 2, 152, 214, col)
+            texto(d, (W // 2, ly(117)), e["num1"], F["xtiny"], col, "ma")
+        d.line((W // 2 - ly(90), ly(146), W // 2 + ly(90), ly(146)), fill=GRIS_OSC)
+        caja(d, e["calle2"], F["media"], 2, ly(152), ly(214) - ex, col)
         if e.get("num2"):
-            d.text((W // 2, 215), e["num2"], font=XTINY, fill=col, anchor="ma")
-        d.text((W // 2, 252), "DOS CALLES", font=XTINY, fill=AMARILLO, anchor="mm")
+            texto(d, (W // 2, ly(215) - ex), e["num2"], F["xtiny"], col, "ma")
+        pie(d, ly(252), "DOS CALLES", AMARILLO)
     else:
-        y0 = NOMBRE_Y_SUB if e.get("barrio") or e.get("edad") else NOMBRE_Y
-        y1 = 146 if e.get("tramo") else 192
-        if e.get("barrio") and not e.get("edad"):
-            linea(d, SUB_Y, e["barrio"], GRIS)
-        caja(d, e["calle1"], GRANDE, 3, y0, y1, col)
         t = e.get("tramo")
+        y1 = ly(146) - ex if t else ly(192)
+        if e.get("barrio") and not e.get("edad"):
+            linea(d, ly(SUB_Y), e["barrio"], GRIS)
+        caja(d, e["calle1"], F["grande"], 3, y0sub, y1, col)
         if e.get("num1"):
-            d.text((W // 2, y1 + 4 if t else y1 + 8), e["num1"], font=V[30], fill=col, anchor="ma")
+            texto(d, (W // 2, y1 + ly(4 if t else 8)), e["num1"], F["num"], col, "ma")
+        y_t1 = ly(212) - ly(22) - ex
         if t and len(t) == 2:
-            linea(d, 190, "entre " + corta(t[0]), GRIS)
-            linea(d, 212, "y " + corta(t[1]), GRIS)
+            linea(d, y_t1, "entre " + corta(t[0]), GRIS)
+            linea(d, ly(212), "y " + corta(t[1]), GRIS)
         elif t:
-            linea(d, 190, "cerca de " + corta(t[0]), GRIS)
+            linea(d, y_t1, "cerca de " + corta(t[0]), GRIS)
     if e.get("anotado"):
         txt, color = e["anotado"]
-        d.rounded_rectangle((24, 108, W - 24, 172), 12, fill=(0, 0, 0), outline=color, width=3)
-        d.text((W // 2, 140), txt, font=SMALL, fill=BLANCO, anchor="mm")
+        x = ly(24)
+        d.rounded_rectangle((x, ly(108), W - x, ly(108) + ly(64)), ly(12), fill=(0, 0, 0), outline=color, width=ly(3))
+        texto(d, (W // 2, ly(140)), recortar(txt, F["small"], W - ly(64)), F["small"], BLANCO)
     return redondo(img)
 
 
@@ -197,33 +320,35 @@ def redondo(img):
     return fondo
 
 
+def flecha(d, cy, ang, color, k=None):
+    c, s_ = math.cos(ang), math.sin(ang)
+    k = S if k is None else k
+    forma = [(x * k, y * k) for x, y in ((0, -40), (27, 22), (0, 9), (-27, 22))]
+    pts = [(W // 2 + x * c - y * s_, cy + x * s_ + y * c) for x, y in forma]
+    d.polygon(pts, fill=color, outline=BLANCO, width=ly(2))
+
+
 def ir(e):
-    """La guía de source/VistaIr.mc: tipo, nombre, flecha (relativa a la brújula), distancia y dirección."""
+    """La guía de la v3, antes del anillo (solo para la comparación de --brujula)."""
     img = Image.new("RGB", (W, H), (0, 0, 0))
     d = ImageDraw.Draw(img)
     nombre, dirc, tipo, dist, ang, card, i, n = e["ir"]
-    hosp = tipo.startswith("HOSPITAL")
-    color = (0xFF, 0, 0) if hosp else (0, 0x55, 0xFF)
-    d.text((W // 2, 24), f"23:41   {i}/{n}", font=XTINY, fill=GRIS, anchor="mm")
-    d.text((W // 2, 48), tipo, font=XTINY, fill=color, anchor="mm")
-    lineas = partir(nombre, V[26], [ancho_franja(60, 108, 10)] * 2) or [nombre[:24] + "…"]
+    color = (0xFF, 0, 0) if tipo.startswith("HOSPITAL") else (0, 0x55, 0xFF)
+    texto(d, (W // 2, ly(24)), f"23:41   {i}/{n}", F["xtiny"], GRIS)
+    texto(d, (W // 2, ly(48)), tipo, F["xtiny"], color)
+    f = F["nombre"]
+    lineas = partir(nombre, f, [ancho_franja(ly(60), ly(108), 10)] * 2) or [nombre[:24] + "…"]
     for k, ln in enumerate(lineas):
-        d.text((W // 2, 84 + (k - (len(lineas) - 1) / 2) * 26), ln, font=V[26], fill=BLANCO, anchor="mm")
-    if e.get("llegado"):
-        d.text((W // 2, 152), "HA LLEGADO", font=V[32], fill=VERDE, anchor="mm")
-    else:
-        c, s_ = math.cos(ang), math.sin(ang)
-        pts = [(W // 2 + x * c - y * s_, 152 + x * s_ + y * c) for x, y in ((0, -40), (27, 22), (0, 9), (-27, 22))]
-        d.polygon(pts, fill=color, outline=BLANCO, width=2)
-    d.text((W // 2, 208), dist, font=V[38], fill=BLANCO, anchor="mm")
-    linea(d, 238, corta(dirc), GRIS)
-    d.text((W // 2, 258), f"línea recta · {card}", font=XTINY, fill=GRIS_OSC, anchor="mm")
+        texto(d, (W // 2, ly(84) + (k - (len(lineas) - 1) / 2) * f.h), ln, f, BLANCO)
+    flecha(d, ly(152), ang, color)
+    texto(d, (W // 2, ly(208)), dist, F["dist"], BLANCO)
+    linea(d, ly(238), corta(dirc), GRIS)
+    texto(d, (W // 2, ly(258)), f"línea recta · {card}", F["xtiny"], GRIS_OSC)
     return redondo(img)
 
 
 # Anillo de brújula (v3.1, 2026-10-24; source/Anillo.mc; referencia: Pin Point — Location and Share). Ocupa la franja
-# exterior: el texto vive dentro de RI y el anillo gira con el rumbo del reloj.
-RI, R_CIRC = 128, 133   # radio libre para el texto; radio del círculo fino del anillo
+# exterior: el texto vive dentro de ANILLO_RI y el anillo gira con el rumbo del reloj.
 AZUL = (0, 0x55, 0xFF)
 OSCURO = {ROJO: (0xAA, 0, 0), AZUL: (0, 0, 0xAA), VERDE: (0, 0xAA, 0)}   # el círculo, en el tono oscuro del destino
 
@@ -234,74 +359,91 @@ def punto(a, r):
 
 
 def anillo(d, rumbo, destino, color):
-    """Círculo fino (tono oscuro del destino), marcas cada 10° (cada 30°, más largas), triángulos en los cardinales (N rojo y mayor)
-    y el destino como una bola de su color. rumbo y destino en grados; el anillo gira con el rumbo."""
-    c = W / 2
-    d.ellipse((c - R_CIRC, c - R_CIRC, c + R_CIRC, c + R_CIRC), outline=OSCURO.get(color, GRIS_OSC), width=1)
+    """Círculo fino (tono oscuro del destino), marcas cada 10° (cada 30°, más largas), triángulos en los cardinales
+    (N rojo y mayor) y el destino como una bola de su color. rumbo y destino en grados; el anillo gira con el rumbo."""
+    c, r = W / 2, ly(ANILLO_R)
+    d.ellipse((c - r, c - r, c + r, c + r), outline=OSCURO.get(color, GRIS_OSC), width=1)
     for k in range(36):
         if k % 9 == 0:
             continue
         a = math.radians(k * 10 - rumbo)
         if k % 3 == 0:
-            d.line([punto(a, 129), punto(a, 138)], fill=GRIS, width=2)
+            d.line([punto(a, r - ly(4)), punto(a, r + ly(5))], fill=GRIS, width=ly(2))
         else:
-            d.line([punto(a, 131), punto(a, 135)], fill=GRIS_OSC, width=1)
+            d.line([punto(a, r - ly(2)), punto(a, r + ly(2))], fill=GRIS_OSC, width=ly(1))
     for k in range(4):
         a = math.radians(k * 90 - rumbo)
-        punta, base, medio, col = (123, 139, 8, ROJO) if k == 0 else (128, 138, 5, GRIS)
+        punta, base, medio, col = (r - ly(10), r + ly(6), ly(8), ROJO) if k == 0 else (r - ly(5), r + ly(5), ly(5), GRIS)
         bx, by = punto(a, base)
         tx, ty = math.cos(a), math.sin(a)          # tangente al anillo
         d.polygon([punto(a, punta), (bx + medio * tx, by + medio * ty), (bx - medio * tx, by - medio * ty)], fill=col)
     if destino is not None:
-        x, y = punto(math.radians(destino - rumbo), R_CIRC)
-        d.ellipse((x - 7, y - 7, x + 7, y + 7), fill=color, outline=BLANCO, width=2)
+        x, y = punto(math.radians(destino - rumbo), r)
+        b = ly(7)
+        d.ellipse((x - b, y - b, x + b, y + b), fill=color, outline=BLANCO, width=ly(2))
 
 
-def ancho_in(y0, y1, margen=4):
-    """Ancho libre dentro del anillo en la franja [y0, y1]."""
-    dd = max(abs(y0 - H / 2), abs(y1 - H / 2))
-    return 0 if dd >= RI else int(2 * math.sqrt(RI * RI - dd * dd)) - 2 * margen
-
-
-def linea_in(d, y, txt, color, f=None):
-    f = f or XTINY
-    w = ancho_in(y - 8, y + 8)
-    while txt and f.getlength(txt) > w:
-        txt = txt[:-2] + "…"
-    d.text((W // 2, y), txt, font=f, fill=color, anchor="mm")
+def linea_in(d, y, txt, color):
+    """VistaIr.linea(): XTINY recortada al ancho que deja el anillo."""
+    f = F["xtiny"]
+    med = max(ly(9), f.h // 2)
+    texto(d, (W // 2, y), recortar(txt, f, ancho_r(y - med, y + med, ly(ANILLO_RI), 4)), f, color)
 
 
 def ir_anillo(e):
-    """VistaIr con el anillo: el mismo contenido, recolocado dentro de RI."""
+    """VistaIr con el anillo."""
     a = e["anillo"]
     img = Image.new("RGB", (W, H), (0, 0, 0))
     d = ImageDraw.Draw(img)
     llegado = a.get("llegado")
     anillo(d, a["rumbo"], None if llegado else a["destino"], a["color"])
-    linea_in(d, 30, f"23:41  {a['i']}/{a['n']}", GRIS)
-    linea_in(d, 52, a["tipo"], a["color"])
-    lh = 26
-    for n in (1, 2):
-        top = 86 - n * lh // 2
-        lineas = partir(a["nombre"], V[26], [ancho_in(top + k * lh, top + (k + 1) * lh) for k in range(n)])
-        if lineas:
-            break
-    else:
-        lineas = [a["nombre"][:22] + "…"]
+    y_hora, y_tipo, y_nombre, y_flecha, y_dist, y_dir, y_pie, k_flecha, n_lineas = alturas_ir()
+    texto(d, (W // 2, y_hora), f"23:41  {a['i']}/{a['n']}", F["xtiny"], GRIS)
+    linea_in(d, y_tipo, a["tipo"], a["color"])
+    # El nombre: fitTextToArea en el ancho de su franja y dos líneas de alto.
+    f = F["nombre"]
+    aw = ancho_r(y_nombre - n_lineas * f.h // 2, y_nombre + n_lineas * f.h // 2, ly(ANILLO_RI), 4)
+    nombre = corta(a["nombre"])
+    lineas = partir(nombre, f, [aw] * n_lineas) or [recortar(nombre, f, aw)]
+
     for k, ln in enumerate(lineas):
-        d.text((W // 2, 86 + (k - (len(lineas) - 1) / 2) * lh), ln, font=V[26], fill=BLANCO, anchor="mm")
+        texto(d, (W // 2, y_nombre + (k - (len(lineas) - 1) / 2) * f.h), ln, f, BLANCO)
     if llegado:
-        d.text((W // 2, 154), "HA LLEGADO", font=V[32], fill=VERDE, anchor="mm")
+        texto(d, (W // 2, y_flecha), "HA LLEGADO", F["medium"], VERDE)
     else:
-        ang = math.radians(a["destino"] - a["rumbo"])
-        c, s_ = math.cos(ang), math.sin(ang)
-        pts = [(W // 2 + x * c - y * s_, 154 + x * s_ + y * c) for x, y in ((0, -40), (27, 22), (0, 9), (-27, 22))]
-        d.polygon(pts, fill=a["color"], outline=BLANCO, width=2)
-    d.text((W // 2, 200), a["dist"], font=V[38], fill=BLANCO, anchor="mm")
-    linea_in(d, 226, corta(a["dir"]), GRIS)
+        flecha(d, y_flecha, math.radians(a["destino"] - a["rumbo"]), a["color"], k_flecha)
+    texto(d, (W // 2, y_dist), a["dist"], F["dist"], BLANCO)
+    linea_in(d, y_dir, corta(a["dir"]), GRIS)
     card = "N NE E SE S SO O NO".split()[round((a["destino"] or 0) / 45) % 8]
-    linea_in(d, 245, "línea recta · " + card, GRIS_OSC)
+    hx = F["xtiny"].h
+    pw = ancho_r(y_pie - hx // 2, y_pie + hx // 2, ly(ANILLO_RI), 4)
+    pies = ["línea recta · " + card, "recta · " + card, card]
+    k = 0
+    while k < len(pies) - 1 and F["xtiny"].getlength(pies[k]) > pw:
+        k += 1
+    texto(d, (W // 2, y_pie), pies[k], F["xtiny"], GRIS_OSC)
     return redondo(img)
+
+
+def alturas_ir():
+    """VistaIr.onLayout(): las alturas de la guía apiladas por el alto real de las fuentes."""
+    hx, nh, dh = F["xtiny"].h, F["nombre"].h, F["dist"].h
+    hora = ly(30)
+    tipo = max(ly(52), hora + hx)
+    nombre_top = tipo + hx // 2
+    pie_ = ly(245)
+    dir_ = min(ly(226), pie_ - hx)
+    dist = min(ly(200), dir_ - hx // 2 - dh // 2 + ly(6))
+    abajo = dist - dh // 2
+    lineas = 2
+    k = (abajo - nombre_top - 2 * nh - 4) / 62.0
+    if k < 0.7 * S:
+        lineas = 1
+        k = (abajo - nombre_top - nh - 4) / 62.0
+    arriba = nombre_top + lineas * nh
+    k = min(k, S)
+    return hora, tipo, nombre_top + lineas * nh // 2, (arriba + abajo) // 2 + int(9 * k), dist, dir_, pie_, k, lineas
+
 
 
 def acciones(e):
@@ -309,13 +451,13 @@ def acciones(e):
     titulo, items = e["acciones"]
     img = Image.new("RGB", (W, H), (0, 0, 0))
     d = ImageDraw.Draw(img)
-    linea(d, 62, corta(titulo), BLANCO)
+    linea(d, ly(62), corta(titulo), BLANCO)
     for i, (et, sub) in enumerate(items):
-        y = 100 + i * 64
+        y = ly(100 + i * 64)
         if i == 0:
-            d.rounded_rectangle((18, y - 8, W - 18, y + 48), 8, outline=GRIS_OSC)
-        d.text((W // 2, y + 10), et, font=SMALL, fill=BLANCO, anchor="mm")
-        d.text((W // 2, y + 34), sub, font=XTINY, fill=GRIS, anchor="mm")
+            d.rounded_rectangle((ly(18), y - ly(8), W - ly(18), y + ly(48)), ly(8), outline=GRIS_OSC)
+        texto(d, (W // 2, y + ly(10)), et, F["small"], BLANCO)
+        texto(d, (W // 2, y + ly(34)), sub, F["xtiny"], GRIS)
     return redondo(img)
 
 
@@ -380,7 +522,8 @@ ESCENARIOS = [
 
 def ficha():
     """Imágenes de la ficha de la Connect IQ Store en docs/tienda/: portada de 500×500 y cuatro pantallas
-    a doble tamaño (560×560) con su rótulo. Solo datos públicos de ejemplo (calles y centros públicos)."""
+    a doble tamaño (560×560) con su rótulo, en el 7X Pro. Solo datos públicos de ejemplo (calles y centros públicos)."""
+    usar("fenix7xpro")
     out = ROOT / "docs" / "tienda"
     out.mkdir(parents=True, exist_ok=True)
     esc = dict(ESCENARIOS)
@@ -398,24 +541,69 @@ def ficha():
     print(f"escrito {out}/ (portada_500.png, ficha_1..4.png)")
 
 
+def hoja(reloj, escenarios, cols, nombre):
+    """Todos los escenarios en un reloj, a su tamaño real."""
+    usar(reloj)
+    rot = roboto(22, 500)
+    filas = math.ceil(len(escenarios) / cols)
+    img = Image.new("RGB", (cols * (W + 20) + 20, filas * (H + 50) + 60), (24, 24, 24))
+    d = ImageDraw.Draw(img)
+    d.text((20, 30), RELOJES[reloj][2], font=roboto(26, 600), fill=BLANCO, anchor="lm")
+    for i, (titulo, e) in enumerate(escenarios):
+        x, y = 20 + (i % cols) * (W + 20), 60 + (i // cols) * (H + 50)
+        img.paste(render(e), (x, y))
+        d.text((x + W // 2, y + H + 18), titulo, font=rot, fill=GRIS, anchor="mm")
+    out = ROOT / "tools" / "out" / nombre
+    out.parent.mkdir(exist_ok=True)
+    img.save(out)
+    print(f"escrito {out}")
+
+
+# La comparativa: los escenarios que más aprietan la pantalla, en todos los relojes y a su tamaño real.
+COMPARATIVA = ["Tramo y barrio", "Madrid: barrio · distrito", "Dato viejo (edad)", "Muy largo", "Esquina", "Dos calles",
+               "Sin calle: lugar", "Fuera de zona", "START: anotado", "Detalle", "Ir: hospital", "Ir: llegada"]
+
+
+def comparativa():
+    esc = dict(ESCENARIOS)
+    relojes = list(RELOJES)
+    anchos = [RELOJES[r][0] for r in relojes]
+    alto_fila = max(anchos) + 30
+    img = Image.new("RGB", (220 + sum(anchos) + 20 * len(anchos), 50 + len(COMPARATIVA) * alto_fila), (24, 24, 24))
+    d = ImageDraw.Draw(img)
+    rot = roboto(20, 600)
+    x = 220
+    for r, a in zip(relojes, anchos):
+        d.text((x + a // 2, 25), RELOJES[r][2], font=rot, fill=BLANCO, anchor="mm")
+        x += a + 20
+    for fi, nombre in enumerate(COMPARATIVA):
+        y = 50 + fi * alto_fila
+        d.text((20, y + alto_fila // 2), nombre, font=rot, fill=GRIS, anchor="lm")
+        x = 220
+        for r, a in zip(relojes, anchos):
+            usar(r)
+            img.paste(render(esc[nombre]), (x, y + (max(anchos) - a) // 2))
+            x += a + 20
+    out = ROOT / "tools" / "out" / "pantallas.png"
+    img.save(out)
+    print(f"escrito {out}")
+
+
 def main():
     import sys
-    if "--ficha" in sys.argv:
+    args = sys.argv[1:]
+    if "--ficha" in args:
         return ficha()
-    brujula = "--brujula" in sys.argv
-    escenarios = ESCENARIOS_BRUJULA if brujula else ESCENARIOS
-    cols = 3 if brujula else 4
-    filas = math.ceil(len(escenarios) / cols)
-    hoja = Image.new("RGB", (cols * (W + 20) + 20, filas * (H + 50) + 20), (24, 24, 24))
-    d = ImageDraw.Draw(hoja)
-    for i, (titulo, e) in enumerate(escenarios):
-        x, y = 20 + (i % cols) * (W + 20), 20 + (i // cols) * (H + 50)
-        hoja.paste(render(e), (x, y))
-        d.text((x + W // 2, y + H + 18), titulo, font=TINY, fill=GRIS, anchor="mm")
-    out = ROOT / "tools" / "out" / ("mockups-brujula.png" if brujula else "mockups.png")
-    out.parent.mkdir(exist_ok=True)
-    hoja.save(out)
-    print(f"escrito {out}")
+    if "--brujula" in args:
+        return hoja("fenix7xpro", ESCENARIOS_BRUJULA, 3, "mockups-brujula.png")
+    if "--todos" in args:
+        for r in RELOJES:
+            hoja(r, ESCENARIOS, 5, f"mockups-{r}.png")
+        return comparativa()
+    reloj = args[args.index("--reloj") + 1] if "--reloj" in args else "fenix7xpro"
+    if reloj not in RELOJES:
+        sys.exit(f"reloj desconocido: {reloj} (hay: {', '.join(RELOJES)})")
+    hoja(reloj, ESCENARIOS, 4, "mockups.png" if reloj == "fenix7xpro" else f"mockups-{reloj}.png")
 
 
 if __name__ == "__main__":

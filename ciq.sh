@@ -18,6 +18,8 @@
 #   ./ciq.sh privacidad   falla si el código puede sacar datos del reloj o guardar fuera de Notas y Ajustes
 #                         (va antes de release/instalar/package)
 #   ./ciq.sh icon         regenera el icono (Python + Pillow)
+#   ./ciq.sh fuentes      mide las fuentes de sistema de cada reloj en el simulador → tools/fonts/metricas.json
+#                         (las usa tools/mockup.py; rehacer al añadir un reloj al catálogo)
 #
 # DEV=fenix7xpronowifi ./ciq.sh build   para la variante sin wifi; DEV=fenix6xpro para el 6X; DEV=fenix6 (o
 # fenix6s, fenix5, fenix5s) para los de 128 KB, con los datos de VARIANTE=c.
@@ -114,5 +116,14 @@ case "${1:-build}" in
              tools/mtp_enviar bin/calle-release.prg CALLE.PRG 2>&1 | grep -v "association\|UNKNOWN\|report this" ;;
     privacidad) privacidad ;;
     icon)    $PY tools/gen_icon.py ;;
+    fuentes) sdk; simulador; out="$(mktemp -d)"
+             for d in $(grep -o 'product id="[^"]*"' tools/medir_fuentes/manifest.xml | sed 's/.*id="//;s/"//'); do
+                 DEV=$d; sdk
+                 "$BIN/monkeyc" -d "$d" -f tools/medir_fuentes/monkey.jungle -y "$KEY" -o "$out/$d.prg" -t -w >/dev/null
+                 "$BIN/monkeydo" "$out/$d.prg" "$d" -t > "$out/out-$d.txt" 2>&1 || true
+                 echo "$d: $(grep -c 'MED ' "$out/out-$d.txt") líneas"
+             done
+             $PY tools/medir_fuentes/recoger.py "$out"/out-*.txt tools/fonts/metricas.json ;;
+
     *)       awk 'NR == 1 { next } /^#/ { print; next } { exit }' "$0"; exit 1 ;;
 esac

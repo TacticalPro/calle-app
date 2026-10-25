@@ -6,7 +6,7 @@ import Toybox.Math;
 // de la altura (la cuerda del círculo), probando fuentes de mayor a menor.
 module Texto {
 
-    // Ancho útil de una franja horizontal [y0, y1] de la pantalla redonda, con margen.
+    // Ancho útil de una franja horizontal [y0, y1] de la pantalla redonda, con margen (en px de la de 280).
     function ancho(dc as Graphics.Dc, y0 as Number, y1 as Number, margen as Number) as Number {
         return anchoR(dc, y0, y1, dc.getWidth() / 2, margen);
     }
@@ -20,7 +20,8 @@ module Texto {
         if (d >= r) {
             return 0;
         }
-        return (2 * Math.sqrt(r * r - d * d)).toNumber() - 2 * margen;
+        return (2 * Math.sqrt(r * r - d * d)).toNumber() - 2 * L.y(margen);
+
     }
 
     function palabras(s as String) as Array<String> {

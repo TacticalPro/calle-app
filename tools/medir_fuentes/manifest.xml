@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+    <iq:application id="0a1b2c3d4e5f60718293a4b5c6d7e8f9" type="watch-app" name="@Strings.N" entry="MApp" minApiLevel="3.1.0">
+        <iq:products>
+            <iq:product id="fenix5s"/><iq:product id="fenix5"/><iq:product id="fenix6s"/><iq:product id="fenix6"/>
+            <iq:product id="fenix6xpro"/><iq:product id="fenix7s"/><iq:product id="fenix7"/><iq:product id="fenix7xpro"/>
+            <iq:product id="fenix843mm"/><iq:product id="fenix847mm"/><iq:product id="fenix5x"/><iq:product id="fenix5plus"/>
+        </iq:products>
+        <iq:permissions/><iq:languages/><iq:barrels/>
+    </iq:application>
+</iq:manifest>

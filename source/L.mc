@@ -22,7 +22,9 @@ module L {
     const AVISO_MS = 2000;       // «Anotado 23:41» en pantalla
     const VIBRA_MS = 50;
 
-    // --- Pantalla (280×280): la hora arriba en grande; debajo, el barrio o la edad del dato
+    // --- Pantalla. Las cotas son de la de 280×280 (fēnix 6X/7X) y se escalan con L.y() al alto real:
+    // 218 (5S), 240 (5, 6S, 7S), 260 (6, 7), 416 y 454 (8 AMOLED). Las vistas llaman a L.escalar() en onLayout.
+    // La hora arriba en grande; debajo, el barrio o la edad del dato.
     const HORA_Y = 34;           // centro vertical de la hora
     const HORA_PX = 44;          // tamaño de la hora con fuente vectorial (fēnix 7); sin ella, la numérica del reloj
     const HORA_MAX = 50;         // alto máximo de la fuente de sistema para la hora (sin vectoriales)
@@ -34,6 +36,19 @@ module L {
     // --- Guía (VistaIr) con el anillo de brújula (source/Anillo.mc; pantallas de 280 px)
     const ANILLO_R = 133;        // radio del círculo fino del anillo
     const ANILLO_RI = 128;       // el texto de la guía va dentro de este radio
+
+    var S as Float = 1.0;        // alto de la pantalla / 280
+
+    function escalar(dc as Graphics.Dc) as Void {
+        S = dc.getHeight() / 280.0;
+    }
+
+    // Una cota de la pantalla de 280 px, en la pantalla real (redondeo simétrico: la flecha tiene cotas negativas).
+    function y(v as Numeric) as Number {
+        var r = v * S;
+        return (r < 0 ? r - 0.5 : r + 0.5).toNumber();
+    }
+
 
     // Calidad del GPS (Position.QUALITY_*) → radio en metros. El reloj no da la precisión en metros.
     function radio(calidad as Number) as Number {

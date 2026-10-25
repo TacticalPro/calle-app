@@ -108,10 +108,38 @@ La búsqueda tarda la mitad: en Madrid en el 7X, de 34 a 14 ms en el simulador.
   - Nuevos: textos de portal con escapes, raster por tramos y cajas adaptativas.
   - `Sintetica` empaqueta teselas, zonas y puntos como el generador.
 
+## Pantallas de 218 a 454 px (tramo 1b, 2026-10-25)
+
+- **Escala:** las cotas siguen siendo las de 280 y `L.y()` las lleva al alto real (`L.escalar` en `onLayout`).
+  Lo mismo vale para las vectoriales, el anillo, la flecha y los grosores. En 280 el factor es 1: el 7X y el 6X no cambian.
+- **Las fuentes de sistema no escalan con la pantalla.** Medidas en el simulador (`./ciq.sh fuentes` →
+  `tools/fonts/metricas.json`), los anchos por carácter suman exactos.
+  - XTINY: 19 px en 240, 260 y 280; 26 en el fēnix 5 (240); 23 en el 5S (218); 34 y 37 en el 8 (416 y 454).
+  - En los fēnix 5, la NUMBER_MILD (26) es más baja que la LARGE (37). Por eso `Fuentes.hora` elige la más alta
+    que no pasa del tope, y no la primera.
+- **Apilado por el alto real:**
+  - `VistaCalle._ex` es lo que la XTINY pasa de la proporcional. Esa cantidad abre la pila del tramo, sube el
+    final de las franjas y baja el nombre bajo el barrio.
+  - `pie()` sube hasta donde la UTM cabe en el círculo.
+  - `linea()` crece con la fuente: en el 5, `fitTextToArea` con 24 px de alto la habría vaciado.
+  - La guía (`VistaIr.onLayout`) apila hora, rótulo, nombre, flecha, distancia, dirección y pie. Con poco hueco,
+    el nombre pasa a una línea antes de que la flecha baje del 70 %, y la flecha se encoge.
+  - En la cadena de sistema, la TINY va al final: un nombre muy largo cabe en tres líneas antes de recortarse.
+- **Maquetas:** `tools/mockup.py --todos` genera una hoja por reloj (`tools/out/mockups-<reloj>.png`) y la
+  comparativa `tools/out/pantallas.png`, con 12 escenarios en los 10 perfiles a su tamaño real.
+- **Lo que queda flojo:**
+  - En los fēnix 5 y 5S, la XTINY de 26 y 23 px recorta mucho el tramo («entre Rla. de Paio o Er…»), y un nombre
+    muy largo se recorta en una línea.
+  - Arreglo posible: una fuente propia de ~16 px solo para ellos (Roboto Condensed, OFL), a costa de memoria en los
+    de 128 KB. Lo decide el autor.
+  - La página de detalle se sale por abajo en el 5, el 5S y el 8. Es de depuración.
+- **Tests:** 53/53 en el 7X Pro y 39/39 en el fēnix 5. El lienzo de los tests es de 280, así que no ejercita la
+  escala: eso lo cubren las maquetas.
+
 ## Pendiente
 
-- **Pantallas:** el grupo C tiene 218 (5S), 240 (5, 6S) y 260 px (6). `source/L.mc` está fijada a 280: es el
-  tramo 1b (maquetas), que bloquea publicarlo.
+
+- **Pantallas: hecho (tramo 1b, 2026-10-25).** Va en la sección siguiente.
 - **Tienda:** añadir `fenix5`, `fenix5s`, `fenix6` y `fenix6s` a CALLE Madrid en `tools/catalogo.json` cuando estén
   las maquetas. `tools/tienda.py` ya les da los datos c por la jungle. Cada `.prg` pesa ~4,6 MB: falta saber si los
   fēnix 5 tienen tope de tamaño de app.

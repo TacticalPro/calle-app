@@ -17,7 +17,12 @@ La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 **3.4.0 (2026-10-25): la interfaz de CALLE Galicia (P73).** Mismos relojes y mismos datos que la 3.2.0; cambian la
 pantalla, la carátula (el marcador ámbar sobre el callejero de Sol, `tools/caratula.py --instalar`) y el icono.
 Las cinco imágenes, regeneradas (`mockup.py --ficha`). El `.iq` (`bin/calle-madrid.iq`, 52,5 MB, firma verificada)
-lo sube el autor a mano con *Upload New Version*, cuando la 3.2.0 salga de revisión.
+se subió el mismo día con *Upload New Version* mientras la 3.2.0 seguía en revisión: el portal la verificó
+(firma, 11 dispositivos) y ya da «Latest app version: 3.4.0». Novedades, carátula y las cuatro pantallas, cambiadas en
+el mismo envío. **Subida de un `.iq` de más de 10 MB con la extensión de Chrome:** trocear con `split -b 9000000`,
+subir cada trozo a un `<input type=file>` auxiliar creado por JS, recomponer con `new Blob(trozos)`, comprobar el
+SHA-256 en la página y asignarlo al campo real con `DataTransfer`. Servirlo desde localhost no vale: la CSP
+(`connect-src`) del portal lo bloquea.
 
 **Título «CALLE Madrid (offline)»** (decisión del autor, 2026-10-25: que no usa red es su punto fuerte). Se cambia
 con *Edit Details* en cuanto Garmin apruebe la 3.2.0: no se toca mientras esté en revisión.

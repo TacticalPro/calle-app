@@ -8,9 +8,12 @@ sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.
-- **Imágenes** en `docs/tienda/galicia/` (`tools/mockup.py --ficha galicia`, en el 7X Pro), por este orden: `portada_500.png`
-  y `ficha_1.png` a `ficha_4.png`. Cada escena es lo que dicen los datos reales en un sitio público (`tools/ref.py`):
-  1. Santiago, Rúa do Franco 33, Casco Histórico, entre la Ruela de Paio o Eremita y la Rúa da Raíña (también en la portada);
+- **Portada:** la carátula «el marcador en el cruce», sobre el callejero real del casco de Santiago, con «CALLE / GALICIA / LA
+  CALLE Y EL PORTAL, SIN COBERTURA», todo en mayúsculas (elegida el 2026-10-25). Se genera con `tools/caratula.py --instalar`, que pone
+  también el icono del lanzador.
+- **Pantallas** en `docs/tienda/galicia/` (`tools/mockup.py --ficha galicia`, en el 7X Pro), por este orden: `ficha_1.png` a
+  `ficha_4.png`. Cada escena es lo que dicen los datos reales en un sitio público (`tools/ref.py`):
+  1. Santiago, Rúa do Franco 33, Casco Histórico, entre la Ruela de Paio o Eremita y la Rúa da Raíña;
   2. A Coruña, Rúa Real 26, A Pescaría, entre la Rúa Alcalde Canuto Berea y la Rúa Torreiro;
   3. la aldea de O Carrio (parroquia de Camposancos), sin calle a 50 m, con su UTM;
   4. desde la Rúa dos Campos (Pontevedra), el hospital con urgencias más cercano: el Montecelo, a 1,5 km hacia el SE.

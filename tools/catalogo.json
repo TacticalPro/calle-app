@@ -26,8 +26,15 @@
       "galicia"
     ],
     "relojes": [
-      "fenix7xpro"
+      "fenix7",
+      "fenix7s",
+      "fenix7x",
+      "fenix7pro",
+      "fenix7pronowifi",
+      "fenix7spro",
+      "fenix7xpro",
+      "fenix7xpronowifi"
     ],
-    "relojes_nota": "2026-10-25: primera compilación, solo el fēnix 7X Pro (beta 3.3.x), antes de abrirla a más relojes."
+    "relojes_nota": "2026-10-25: la beta 3.3.x es solo del fēnix 7X Pro; el catálogo lleva toda la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; Galicia usa ~2.150) y los fēnix 8, 9 y E (faltan sus tests)."
   }
 }

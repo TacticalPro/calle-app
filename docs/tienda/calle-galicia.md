@@ -8,8 +8,12 @@ sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.
-- **Imágenes: pendientes.** Hacen falta una portada y cuatro pantallas con datos gallegos, por ejemplo: una calle del casco de Santiago con
-  portal, una aldea con su parroquia, «Hospital más cercano» con el anillo y una calle de Vigo o A Coruña.
+- **Imágenes** en `docs/tienda/galicia/` (`tools/mockup.py --ficha galicia`, en el 7X Pro), por este orden: `portada_500.png`
+  y `ficha_1.png` a `ficha_4.png`. Cada escena es lo que dicen los datos reales en un sitio público (`tools/ref.py`):
+  1. Santiago, Rúa do Franco 33, Casco Histórico, entre la Ruela de Paio o Eremita y la Rúa da Raíña (también en la portada);
+  2. A Coruña, Rúa Real 26, A Pescaría, entre la Rúa Alcalde Canuto Berea y la Rúa Torreiro;
+  3. la aldea de O Carrio (parroquia de Camposancos), sin calle a 50 m, con su UTM;
+  4. desde la Rúa dos Campos (Pontevedra), el hospital con urgencias más cercano: el Montecelo, a 1,5 km hacia el SE.
 - El portal puede avisar «Signature check failed» en la primera subida de una app nueva: es un fallo conocido suyo.
   La firma se comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2
   manifest.xml`.

@@ -14,6 +14,7 @@ Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproxim
     tools/mockup.py --todos          una hoja por reloj y la comparativa → tools/out/pantallas.png
     tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
     tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
+    tools/mockup.py --ficha galicia  las de CALLE Galicia               → docs/tienda/galicia/
 """
 import json
 import math
@@ -520,20 +521,43 @@ ESCENARIOS = [
 ]
 
 
-def ficha():
-    """Imágenes de la ficha de la Connect IQ Store en docs/tienda/: portada de 500×500 y cuatro pantallas
-    a doble tamaño (560×560) con su rótulo, en el 7X Pro. Solo datos públicos de ejemplo (calles y centros públicos)."""
+# CALLE Galicia: lo que dicen los datos reales (tools/ref.py --region galicia) en sitios públicos, 2026-10-25.
+ESCENAS_GALICIA = [
+    ("Santiago: Rúa do Franco", FRANCO),
+    ("A Coruña: Rúa Real", dict(calle1="Rúa Real", num1="nº 26", barrio="A Pescaría",
+                                tramo=("Rúa Alcalde Canuto Berea", "Rúa Torreiro"))),
+    ("Aldea y parroquia", dict(lugar="O Carrio", sub="parroquia de Camposancos", pie="29T 569563 4733404")),
+    # Desde la Rúa dos Campos (Pontevedra): el de urgencias más cercano está a 1,5 km, rumbo 145°. (El Lucus
+    # Augusti de Lugo no cabe entero en la línea: el escaparate pide un nombre que se lea.)
+    ("Pontevedra: hospital", dict(anillo=dict(nombre="Hospital Montecelo", dir="Estrada Mourente",
+                                              tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
+                                              destino=145, i=1, n=8))),
+]
+FICHAS = {
+    "madrid": ("", ESCENARIOS, "Madrid: Gran Vía", (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
+                                                   ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
+                                                   ("Nearest hospital: arrow and distance", "Ir: hospital"),
+                                                   ("Nearest police station", "Ir: comisaría"))),
+    "galicia": ("galicia", ESCENAS_GALICIA, "Santiago: Rúa do Franco",
+                (("Street, door number and the streets on each side", "Santiago: Rúa do Franco"),
+                 ("Cities and towns: street, number and neighbourhood", "A Coruña: Rúa Real"),
+                 ("Outside town: village and parish", "Aldea y parroquia"),
+                 ("Nearest hospital with A&E: arrow and distance", "Pontevedra: hospital"))),
+}
+
+
+def ficha(app="madrid"):
+    """Imágenes de la ficha de la Connect IQ Store en docs/tienda/ (Madrid) o docs/tienda/<app>/: portada de 500×500
+    y cuatro pantallas a doble tamaño (560×560) con su rótulo, en el 7X Pro. Solo sitios públicos."""
     usar("fenix7xpro")
-    out = ROOT / "docs" / "tienda"
+    sub, escenas, portada_de, pantallas = FICHAS[app]
+    out = ROOT / "docs" / "tienda" / sub
     out.mkdir(parents=True, exist_ok=True)
-    esc = dict(ESCENARIOS)
+    esc = dict(escenas)
     portada = Image.new("RGB", (500, 500), (24, 24, 24))
-    portada.paste(render(esc["Madrid: Gran Vía"]).resize((440, 440), Image.LANCZOS), (30, 30))
+    portada.paste(render(esc[portada_de]).resize((440, 440), Image.LANCZOS), (30, 30))
     portada.save(out / "portada_500.png")
-    for k, (titulo, nombre) in enumerate((("Street, door number and the streets on each side", "Madrid: Gran Vía"),
-                                          ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
-                                          ("Nearest hospital: arrow and distance", "Ir: hospital"),
-                                          ("Nearest police station", "Ir: comisaría")), 1):
+    for k, (titulo, nombre) in enumerate(pantallas, 1):
         hoja = Image.new("RGB", (600, 660), (24, 24, 24))
         hoja.paste(render(esc[nombre]).resize((560, 560), Image.LANCZOS), (20, 20))
         ImageDraw.Draw(hoja).text((300, 620), titulo, font=roboto(26, 600), fill=GRIS, anchor="mm")
@@ -593,7 +617,8 @@ def main():
     import sys
     args = sys.argv[1:]
     if "--ficha" in args:
-        return ficha()
+        i = args.index("--ficha")
+        return ficha(args[i + 1] if i + 1 < len(args) and not args[i + 1].startswith("--") else "madrid")
     if "--brujula" in args:
         return hoja("fenix7xpro", ESCENARIOS_BRUJULA, 3, "mockups-brujula.png")
     if "--todos" in args:

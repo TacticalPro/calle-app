@@ -41,14 +41,15 @@ module Ir {
     function cercanos(d as Array, lat as Double, lon as Double, tipos as Array<Number>, n as Number) as Array<Array> {
         var XY = d[5] as Array<Number>;
         var T = d[6] as Array<Number>;
+        var u = d.size() > 7 ? (d[7] as Number).toDouble() : 1.0d;   // metros por unidad de XY (Galicia: 4)
         var out = [] as Array<Array>;
         for (var i = 0; i < XY.size(); i++) {
             var ti = (T[i >> 2] >> ((i & 3) * 8)) & 0xFF;
             if (tipos.indexOf(ti) < 0) {
                 continue;
             }
-            var la = Callejero.LAT_MIN + ((XY[i] >> 16) & 0xFFFF).toDouble() / Callejero.KY;
-            var lo = Callejero.LON_MIN + (XY[i] & 0xFFFF).toDouble() / Callejero.KX;
+            var la = Callejero.LAT_MIN + ((XY[i] >> 16) & 0xFFFF).toDouble() * u / Callejero.KY;
+            var lo = Callejero.LON_MIN + (XY[i] & 0xFFFF).toDouble() * u / Callejero.KX;
             var m = distancia(lat, lon, la, lo);
             // Inserción ordenada en una lista de como mucho n (no hay Array.sort en la API 3.4).
             var k = out.size();

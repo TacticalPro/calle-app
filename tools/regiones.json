@@ -142,5 +142,128 @@
       "tope_kb": 26,
       "nota": "relojes de 128 KB (fēnix 5/5S, 6/6S): Madrid entero en teselas adaptativas de ≤ tope_kb de heap estimado y zonas de 10 km. Cargar un recurso pide el doble de su tamaño (medido en el fēnix 6, 2026-10-25): con ~55 KB libres, la tesela no puede pasar de ~27 KB"
     }
+  },
+  "galicia": {
+    "id": 3,
+    "etiqueta": "Galicia",
+    "prefijo": "g",
+    "bbox": [
+      41.8,
+      -9.31,
+      43.8,
+      -6.72
+    ],
+    "bbox_nota": "Comunidad Autónoma de Galicia (relación OSM 349036) más ~500 m; las consultas se limitan a su polígono (area_osm)",
+    "area_osm": 349036,
+    "pbf": "geofabrik/galicia-261024.osm.pbf",
+    "pbf_nota": "Geofabrik (europe/spain/galicia, datos OSM del 2026-10-24), recortado al polígono de la comunidad. Overpass no bajaba Galicia entera (502 en bucle, 2026-10-25); area_osm queda para volver a él. Se convierte con .venv/bin/python tools/pbf_a_json.py --region galicia",
+    "grande": true,
+    "overrides": "overrides-santiago.json",
+    "overrides_nota": "las de Santiago: van por nombre y por coordenadas absolutas, y Santiago está dentro de Galicia",
+    "catastro": [
+      42.81,
+      -8.68,
+      42.93,
+      -8.47
+    ],
+    "catastro_nota": "Santiago y su entorno: portales del Catastro donde OSM no tiene número (2026-10-25). Toda Galicia así serían cientos de miles de consultas al WFS: haría falta la descarga masiva por municipio, y solo en zonas urbanas",
+    "zonas": {
+      "poligono": "parroquia",
+      "admin_level": [
+        "9"
+      ]
+    },
+    "ruta": "Rúa do Franco",
+    "adaptativa": {
+      "zona": 10000,
+      "tope_kb": 30,
+      "nota": "Galicia entera no cabe en la rejilla fija de 500 m (≈ 190.000 celdas): teselas adaptativas como la variante c, con su tope de heap, y zonas de 10 km. Las zonas de 2 km serían ≈ 12.000 entradas de índice en el código"
+    },
+    "control": [
+      {
+        "id": "obradoiro",
+        "tipo": "area",
+        "calle": "Praza do Obradoiro"
+      },
+      {
+        "id": "franco",
+        "tipo": "mitad",
+        "calle": "Rúa do Franco",
+        "lat": 42.878,
+        "lon": -8.5452
+      },
+      {
+        "id": "portal",
+        "tipo": "portal",
+        "calle": "Rúa do Vilar",
+        "num": 44
+      },
+      {
+        "id": "vigo",
+        "tipo": "cerca",
+        "lat": 42.237,
+        "lon": -8.7235,
+        "nota": "Vigo, Príncipe"
+      },
+      {
+        "id": "coruna",
+        "tipo": "cerca",
+        "lat": 43.37,
+        "lon": -8.399,
+        "nota": "A Coruña, Cidade Vella"
+      },
+      {
+        "id": "lugo",
+        "tipo": "cerca",
+        "lat": 43.0105,
+        "lon": -7.556,
+        "nota": "Lugo, dentro da muralla"
+      },
+      {
+        "id": "ourense",
+        "tipo": "cerca",
+        "lat": 42.336,
+        "lon": -7.864,
+        "nota": "Ourense, centro"
+      },
+      {
+        "id": "pontevedra",
+        "tipo": "cerca",
+        "lat": 42.431,
+        "lon": -8.644,
+        "nota": "Pontevedra, centro"
+      },
+      {
+        "id": "ferrol",
+        "tipo": "cerca",
+        "lat": 43.483,
+        "lon": -8.235,
+        "nota": "Ferrol, A Magdalena"
+      },
+      {
+        "id": "rural",
+        "tipo": "cerca",
+        "lat": 42.683,
+        "lon": -7.645,
+        "nota": "aldea del interior (Lugo)"
+      },
+      {
+        "id": "denso",
+        "tipo": "cerca",
+        "lat": 42.8352,
+        "lon": -8.6377,
+        "nota": "centro de la zona más densa (z247, 3.032 lugares): la que hacía saltar el watchdog"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 41.5,
+        "lon": -8.4
+      }
+    ]
   }
 }

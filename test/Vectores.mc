@@ -1,5 +1,7 @@
 import Toybox.Lang;
+import Toybox.Position;
 import Toybox.Test;
+import Toybox.Time;
 
 // Comprueba los vectores de test-gen/Vectores<Región>Test.mc (generados por tools/ref.py) con las teselas reales.
 (:test)
@@ -45,6 +47,18 @@ module Vectores {
             }
         }
         return ok;
+    }
+
+    // La cadena entera del Localizador en (lat, lon), desde cero y en una sola llamada, como al abrir la app
+    // (sembrar): carga la tesela y la zona, busca la calle y el lugar. Si se pasa del watchdog, el test revienta.
+    function cadena(logger as Test.Logger, region as Number, lat as Double, lon as Double) as Boolean {
+        Activa.poner(region);
+        Zonas.soltar();
+        var m = new Modelo();
+        new Localizador(m).actualizar(lat, lon, Position.QUALITY_GOOD, Time.now().value(), true, false);
+        logger.debug("cadena " + lat.format("%.5f") + "," + lon.format("%.5f") + ": " + m.ms + " ms, " + m.calle1
+            + " / " + m.lugar);
+        return m.estado != EST_FUERA;
     }
 
     function _s(v as String or Null) as String {

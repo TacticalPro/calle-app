@@ -104,29 +104,67 @@ module Zonas {
         var jb = -1;          // barrio, y el segundo más cercano
         var db = 0.0;
         var db2 = Buscador.LEJOS;
-        for (var j = 0; j < L.size(); j++) {
-            var p = L[j];
-            var dx = px - (p & 0x3FFF).toFloat();
-            var dy = py - ((p >> 14) & 0x3FFF).toFloat();
-            var d2 = dx * dx + dy * dy;
-            var tipo = (p >> 28) & 7;
-            if ((tipo & 1) != 0 && d2 <= rl2 && (jl < 0 || d2 < dl)) {
-                jl = j;
-                dl = d2;
+        // Solo cuentan los lugares a ZMARGEN m del punto en x y en y: es el radio del lugar y cubre el barrio
+        // (BARRIO_R / BARRIO_FRAC), así que lo de fuera no cambia el resultado. L va por franjas de H m desde el
+        // sur y, dentro de cada una, por x (FZ: dónde empieza cada franja); se recorren las franjas que tocan y,
+        // en cada una, el tramo de x, buscado por bisección. Recorrer L entera hacía saltar el watchdog en el 7X
+        // Pro con Galicia (zonas de 10 km con hasta 3.032 lugares, ERA del 2026-10-25). Datos sin franjas: una
+        // sola, ordenada por x.
+        var R = Callejero.ZMARGEN.toFloat();
+        var xmin = px - R;
+        var xmax = px + R;
+        var s0 = 0;
+        var s1 = 0;
+        var FZ = null as Array<Number> or Null;
+        if (z.size() > 8) {
+            var H = z[7] as Number;
+            FZ = z[8] as Array<Number>;
+            var nf = (Callejero.ZONA + 2 * Callejero.ZMARGEN + H - 1) / H;   // franjas
+            s0 = ((py - R) / H).toNumber();
+            s1 = ((py + R) / H).toNumber();
+            s0 = s0 < 0 ? 0 : s0;
+            s1 = s1 > nf - 1 ? nf - 1 : s1;
+        }
+        for (var sf = s0; sf <= s1; sf++) {
+            var lo = FZ == null ? 0 : par16(FZ, sf);
+            var fin = FZ == null ? L.size() : par16(FZ, sf + 1);
+            var hi = fin;
+            while (lo < hi) {
+                var m = (lo + hi) / 2;
+                if ((L[m] & 0x3FFF).toFloat() < xmin) {
+                    lo = m + 1;
+                } else {
+                    hi = m;
+                }
             }
-            if ((tipo & 4) != 0 && d2 <= rl2 && (jp < 0 || d2 < dp)) {
-                jp = j;
-                dp = d2;
-            }
-            if ((tipo & 2) != 0) {
-                if (jb < 0 || d2 < db) {
-                    if (jb >= 0) {
-                        db2 = db;
+            for (var j = lo; j < fin; j++) {
+                var p = L[j];
+                var lx = (p & 0x3FFF).toFloat();
+                if (lx > xmax) {
+                    break;
+                }
+                var dx = px - lx;
+                var dy = py - ((p >> 14) & 0x3FFF).toFloat();
+                var d2 = dx * dx + dy * dy;
+                var tipo = (p >> 28) & 7;
+                if ((tipo & 1) != 0 && d2 <= rl2 && (jl < 0 || d2 < dl)) {
+                    jl = j;
+                    dl = d2;
+                }
+                if ((tipo & 4) != 0 && d2 <= rl2 && (jp < 0 || d2 < dp)) {
+                    jp = j;
+                    dp = d2;
+                }
+                if ((tipo & 2) != 0) {
+                    if (jb < 0 || d2 < db) {
+                        if (jb >= 0) {
+                            db2 = db;
+                        }
+                        jb = j;
+                        db = d2;
+                    } else if (d2 < db2) {
+                        db2 = d2;
                     }
-                    jb = j;
-                    db = d2;
-                } else if (d2 < db2) {
-                    db2 = d2;
                 }
             }
         }

@@ -55,7 +55,7 @@ nombre distinto, calzada o peatonal; sendas y áreas no cruzan). Un extremo que 
 intersección sigue la calle por nodos de grado 2 hasta la siguiente; en una bifurcación o un
 fondo de saco no hay cruce. Cada trozo se simplifica por separado, conservando sus extremos.
 
-Formato de una zona (celda de ZONA m; FORMATO 4), [FORMATO, S, O, F, RL, L, LN]:
+Formato de una zona (celda de ZONA m; FORMATO 4), [FORMATO, S, O, F, RL, L, LN, H, FZ]:
     S, O    nombres como en las teselas: las parroquias de la zona primero, luego los lugares
     F       por fila del raster (RN filas de RCEL m desde el sur, más una final), su primer tramo en RL;
             2 por número, 16 bits
@@ -66,6 +66,9 @@ Formato de una zona (celda de ZONA m; FORMATO 4), [FORMATO, S, O, F, RL, L, LN]:
             esquina SO de la zona menos ZMARGEN; tipo: bit 0 = lugar poblado, bit 1 = barrio,
             bit 2 = paraje (solo cuenta como lugar si no hay poblado a LUGAR_R)
     LN      paralelo a L: índice en N del nombre; 2 por número, 16 bits
+    H, FZ   L va por franjas de H m desde el sur de la zona menos ZMARGEN y, dentro de cada una, por x; FZ, el
+            primer lugar de cada franja (más uno final), 2 por número. Desde el 2026-10-25; sin ellos (datos
+            anteriores), L va solo por x
 
 Garantía (la comprueba ref.py por fuerza bruta): para un punto a menos de BUF−MAXD de la
 tesela, toda vía o portal a menos de MAXD de él está en la tesela. Los recortes caen en el
@@ -107,6 +110,9 @@ KD_LADO_MAX = 7800     # m: las coordenadas de tirada son de 13 bits con el marg
 KD_LADO_MIN = 300      # m: más pequeña no se parte aunque pese más (no debería pasar)
 KD_PASO = 10           # m: los cortes caen en múltiplos de esto
 KD_LLENADO = 0.92      # al contar cuántas teselas necesita una caja, cada una se llena hasta aquí
+# Teselas adaptativas en la variante c y en las regiones con "adaptativa" (Galicia entera, en la normal: la
+# rejilla fija de 500 m serían ≈ 190.000 celdas en el índice). Lo fija main().
+KD = False
 
 
 def sufijo():
@@ -150,6 +156,7 @@ LUGAR_R = 1500      # m: el lugar más cercano, si está a menos de esto
 BARRIO_R = 800      # m: el barrio más cercano, si está a menos de esto…
 BARRIO_FRAC = 0.8   # …y a menos de esta fracción de la distancia al segundo: en la frontera no se adivina
 ZMARGEN = LUGAR_R   # m de margen de lugares alrededor de la zona
+ZFRANJA = 500       # m: alto de las franjas en que se ordenan los lugares de una zona (Zonas.buscar)
 assert RN < 256 and ZMARGEN >= max(LUGAR_R, BARRIO_R / BARRIO_FRAC) and ZONA + 2 * ZMARGEN < 1 << 14
 # El lugar es el poblado más cercano; un paraje (locality: montes, cotos, agras) solo si no hay
 # poblado a LUGAR_R. En la radio se da la aldea, no el nombre del monte (2026-10-23).
@@ -361,8 +368,19 @@ def cabecera(bbox, grande):
             else f"[out:json][timeout:300][bbox:{s},{w},{n},{e}];")
 
 
-def consulta(bbox, grande=False):
-    return cabecera(bbox, grande) + """
+def en_area(q, area):
+    """Con area (id de relación de OSM, la de Galicia), cada sentencia de la consulta se limita a su polígono:
+    la caja de Galicia lleva también el norte de Portugal, Asturias y León. Sin area, la consulta no cambia
+    (ni su caché)."""
+    if not area:
+        return q
+    cab, cuerpo = q.split("\n", 1)
+    cuerpo = re.sub(r"^(  (?:way|relation|node|nwr)\b.*?)(;)$", r"\1(area.g)\2", cuerpo, flags=re.M)
+    return f"{cab}area(id:{3600000000 + area})->.g;\n{cuerpo}"
+
+
+def consulta(bbox, grande=False, area=None):
+    return en_area(cabecera(bbox, grande) + """
 (
   way["highway"]["name"];
   way["highway"~"^(motorway|trunk|primary|secondary|tertiary)(_link)?$"]["ref"];
@@ -372,27 +390,27 @@ def consulta(bbox, grande=False):
   nwr["addr:housenumber"];
   node["entrance"];
 );
-out geom;"""
+out geom;""", area)
 
 
-def consulta_zonas(bbox, niveles=("9",), grande=False):
+def consulta_zonas(bbox, niveles=("9",), grande=False, area=None):
     """Aparte de la de calles: añadir zonas no invalida la caché del callejero."""
     tipos = "|".join(sorted(LUGAR_TIPOS | PARAJE_TIPOS | BARRIO_TIPOS))
     nv = "".join(f'\n  relation["boundary"="administrative"]["admin_level"="{n}"];' for n in niveles)
-    return cabecera(bbox, grande) + f"""
+    return en_area(cabecera(bbox, grande) + f"""
 ({nv}
   node["place"~"^({tipos})$"]["name"];
 );
-out geom;"""
+out geom;""", area)
 
 
-def consulta_poi(bbox, grande=False):
+def consulta_poi(bbox, grande=False, area=None):
     """Hospitales y comisarías, para «ir a…» (el centro de cada uno basta)."""
-    return cabecera(bbox, grande) + """
+    return en_area(cabecera(bbox, grande) + """
 (
   nwr["amenity"~"^(police|hospital)$"];
 );
-out center tags;"""
+out center tags;""", area)
 
 
 def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
@@ -429,18 +447,29 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
     sys.exit("Overpass no respondió en ningún servidor; reintente más tarde.")
 
 
-def descargar_por_partes(region, bbox, partes, refresh, nivel_max=2):
+def leer_pbf(region, que):
+    """Región con "pbf" (Galicia): las respuestas que daría Overpass, sacadas antes del extracto de Geofabrik por
+    tools/pbf_a_json.py (que es quien necesita pyosmium; esto sigue siendo biblioteca estándar)."""
+    f = CACHE / f"pbf-{region}-{que}.json"
+    if not f.exists():
+        sys.exit(f"Falta {f.name}: .venv/bin/python tools/pbf_a_json.py --region {region}")
+    print(f"Geofabrik: {f.name}")
+    return json.loads(f.read_text("utf-8"))
+
+
+def descargar_por_partes(region, bbox, partes, refresh, nivel_max=2, q=None):
     """La consulta de calles de una región grande, en partes×partes cajas (Overpass corta las respuestas
     de cientos de MB). Si una caja falla, se parte en cuatro y se reintenta, hasta nivel_max veces (el
     centro de Madrid no bajó entero el 2026-10-24). Cada caja va a su caché; se juntan quitando los
     repetidos (una vía que cruza dos cajas viene entera en las dos)."""
+    q = q or (lambda caja: consulta(caja, True))
     elems, vistos = [], set()
     fecha = [None]
 
     def bajar(caja, nivel, etiqueta):
         # Antes de partir, solo el servidor principal (falla rápido); el de respaldo tarda 15 min en rendirse.
-        d = (descargar(region, consulta(caja, True), refresh, vueltas=2, salir=False, servidores=SERVIDORES[:1])
-             if nivel < nivel_max else descargar(region, consulta(caja, True), refresh))
+        d = (descargar(region, q(caja), refresh, vueltas=2, salir=False, servidores=SERVIDORES[:1])
+             if nivel < nivel_max else descargar(region, q(caja), refresh))
         if d is None:
             print(f"  {etiqueta}: no bajó entera; la parto en cuatro")
             s, w, n, e = caja
@@ -898,6 +927,9 @@ def _texto_catastro(s):
 
 def leer_catastro(f):
     raiz = ET.parse(f).getroot()
+    # Una caja sin edificios (monte, agras: fuera del casco pasa mucho) no es un error, es una caja vacía.
+    if raiz.tag.endswith("ExceptionReport") and "No se han encontrado inmuebles" in "".join(raiz.itertext()):
+        return {}
     if not raiz.tag.endswith("FeatureCollection"):
         sys.exit(f"Catastro: respuesta inesperada en {f.name} ({raiz.tag}); quítela de la caché y reintente.")
     gid = "{%s}id" % NS_AD["gml"]
@@ -1369,14 +1401,24 @@ def pares16(vs):
     return [int32(vs[j] | vs[j + 1] << 16) for j in range(0, len(vs), 2)]
 
 
+def nfranjas():
+    return math.ceil((ZONA + 2 * ZMARGEN) / ZFRANJA)
+
+
 def empaquetar_zona(zc, zf, G, parroquias, lugares):
     """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada."""
     zx0, zy0 = zc * ZONA, zf * ZONA
+    NFRANJAS = nfranjas()
     filas = [[G[zf * RN + r][zc * RN + c] for c in range(RN)] for r in range(RN)]
     presentes = sorted({g for fila in filas for g in fila if g}, key=lambda g: orden_alfa(parroquias[g - 1]["nombre"]))
     ox, oy = zx0 - ZMARGEN, zy0 - ZMARGEN
+    # Por franjas de ZFRANJA m desde el sur y, dentro de cada una, por x: Zonas.buscar solo recorre las franjas
+    # y el tramo de x a ZMARGEN m del punto. Con zonas de 10 km (Galicia), recorrerlas enteras (hasta 3.032 lugares)
+    # hacía saltar el watchdog del 7X Pro (ERA, 2026-10-25).
+    def franja(l):
+        return min(NFRANJAS - 1, int((l["y"] - oy) // ZFRANJA))
     aqui = sorted((l for l in lugares if ox <= l["x"] <= zx0 + ZONA + ZMARGEN and oy <= l["y"] <= zy0 + ZONA + ZMARGEN),
-                  key=lambda l: (l["x"], l["y"]))
+                  key=lambda l: (franja(l), l["x"], l["y"]))
     if not presentes and not aqui:
         return None, None
     N = [parroquias[g - 1]["nombre"] for g in presentes]
@@ -1401,8 +1443,13 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
     S, O = cadena_nombres(N)
     L = [int(round(l["x"] - ox)) | int(round(l["y"] - oy)) << 14 | l["tipo"] << 28 for l in aqui]
     LN = [ids[l["nombre"]] for l in aqui]
-    lista = [FORMATO, S, O, pares16(F), pares16(RL), L, pares16(LN)]
-    nums = sum(len(x) for x in lista[2:])
+    FZ = [0] * (NFRANJAS + 1)   # primer lugar de cada franja, y uno final
+    for l in aqui:
+        FZ[franja(l) + 1] += 1
+    for k in range(NFRANJAS):
+        FZ[k + 1] += FZ[k]
+    lista = [FORMATO, S, O, pares16(F), pares16(RL), L, pares16(LN), ZFRANJA, pares16(FZ)]
+    nums = sum(len(x) if isinstance(x, list) else 1 for x in lista[2:])
     est = dict(parroquias=len(presentes), lugares=len(aqui), nombres=len(N), nums=nums, tramos=len(RL),
                heap=int(5 * (nums + 7) + len(S.encode()) + 20),
                con_parroquia=sum(1 for fila in filas for v in fila if v))
@@ -1849,10 +1896,16 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
     # Así son ~13 KB en el reloj y no ~30: en los de 128 KB no cabían con la tesela cargada (2026-10-25).
     sn, on = cadena_nombres([p[0] for p in pois])
     sd, od = cadena_nombres([p[1] for p in pois])
-    assert all(0 <= p[2] < 1 << 16 and 0 <= p[3] < 1 << 16 and 0 <= p[4] < 256 for p in pois)
+    # Una región de más de 65 km (Galicia, 215 km) no cabe en 16 bits de metros: XY va en unidades de U m y U
+    # se añade al final (Ir.cercanos; sin él, 1). A 4 m, la flecha y la distancia no cambian.
+    u = max(1, math.ceil(max([p[2] for p in pois] + [p[3] for p in pois] + [0]) / 0xFFFF))
+    xy = [(round(p[2] / u), round(p[3] / u)) for p in pois]
+    assert all(0 <= x < 1 << 16 and 0 <= y < 1 << 16 for x, y in xy) and all(0 <= p[4] < 256 for p in pois)
     ts = [p[4] for p in pois] + [0] * (-len(pois) % 4)
-    poi = [FORMATO, sn, on, sd, od, [int32(p[2] | p[3] << 16) for p in pois],
+    poi = [FORMATO, sn, on, sd, od, [int32(x | y << 16) for x, y in xy],
            [int32(ts[k] | ts[k + 1] << 8 | ts[k + 2] << 16 | ts[k + 3] << 24) for k in range(0, len(ts), 4)]]
+    if u > 1:
+        poi.append(u)
     (rdir / "poi.json").write_text(json.dumps(poi, ensure_ascii=False, separators=(",", ":")), "utf-8")
     xml.append(f'    <jsonData id="{pref}poi" filename="poi.json"/>')
     if cajas is not None:
@@ -1861,6 +1914,9 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
     (rdir / f"{region}.xml").write_text("\n".join(xml) + "\n", "utf-8")
 
     zbarrio = cfg["zonas"]["poligono"] == "barrio"
+    # Una región adaptativa en la variante normal (Galicia) lleva zonas de su tamaño, distinto del de las
+    # demás (Santiago y Madrid, 2 km): las da en datos() y Callejero.activar() las toma de ahí.
+    zona_propia = KD and VARIANTE == "normal"
     meta = dict(region=region, id=cfg["id"], prefijo=pref, etiqueta=cfg["etiqueta"], datos=fecha_osm, formato=FORMATO,
                 fuentes=fuentes, bbox=cfg["bbox"],
                 lat_min=proy.lat_min, lon_min=proy.lon_min, kx=proy.kx, ky=proy.ky, tesela=TESELA, buf=BUF,
@@ -1868,7 +1924,7 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
                 cajas=cajas, t_mayor=f"t{mayor}",
                 zonas=fecha_zonas, zona=ZONA, rcel=RCEL, rn=RN, zmargen=ZMARGEN, lugar_r=LUGAR_R, barrio_r=BARRIO_R,
                 barrio_frac=BARRIO_FRAC, zbarrio=zbarrio,
-                zcols=zcols, zfilas=zfilas, zidx=zidx, z_mayor=f"z{zmayor}", npoi=len(pois),
+                zcols=zcols, zfilas=zfilas, zidx=zidx, z_mayor=f"z{zmayor}", npoi=len(pois), zona_propia=zona_propia,
                 control=cfg.get("control"))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"meta-{region}{sufijo()}.json").write_text(json.dumps(meta, ensure_ascii=False), "utf-8")
@@ -1930,7 +1986,9 @@ module {mod} {{
             {"true" if zbarrio else "false"},
             // Teselas adaptativas (variante c): recurso con x0 | y0 << 16, x1 | y1 << 16 de cada una, en unidades
             // de TESELA m (Geo.celda lo carga al cambiar de tesela); null = rejilla fija.
-            {cajas_mc}
+            {cajas_mc}{f""",
+            // Zonas propias de la región: ZONA y RN.
+            {ZONA}, {RN}""" if zona_propia else ""}
         ] as Array;
     }}
 }}
@@ -1965,10 +2023,21 @@ def escribir_comun(recien=None, solo=None, salida=None):
                    for m in metas)
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
           + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c") else ""))
-    zonas = {(m["zona"], m["rn"]) for m in metas}
+    # Callejero.ZONA es una para todas, salvo las regiones con zona propia (Galicia), que la dan en datos().
+    zonas = {(m["zona"], m["rn"]) for m in metas if not m.get("zona_propia")}
     if len(zonas) > 1:
         sys.exit(f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una.")
-    zona, rn = zonas.pop() if zonas else (ZONA, RN)
+    propia = any(m.get("zona_propia") for m in metas)
+    zona, rn = (zonas.pop() if zonas else (next(((m["zona"], m["rn"]) for m in metas), (ZONA, RN))))
+    decl_zona = (f"""    var ZONA as Number = {zona};             // la de la región activa (activar)
+    const RCEL = {RCEL};
+    var RN as Number = {rn};""" if propia else f"""    const ZONA = {zona};
+    const RCEL = {RCEL};
+    const RN = {rn};""")
+    act_zona = (f"""
+        // Zonas propias (Galicia, 10 km); las demás regiones, las de siempre.
+        ZONA = d.size() > 21 ? d[21] as Number : {zona};
+        RN = d.size() > 21 ? d[22] as Number : {rn};""" if propia else "")
     if VARIANTE in ("6x", "c") and recursos > TOPE_RECURSOS_6X:
         if recien:
             # Se retira lo que se acaba de escribir: con ello dentro, el 6X no compilaría.
@@ -1993,9 +2062,7 @@ module Callejero {{
     const EXT_U = {RUN_EXT_U};
     const EXT_SIN = {RUN_EXT_SIN};
     const CB_U = {CB_U};
-    const ZONA = {zona};
-    const RCEL = {RCEL};
-    const RN = {rn};
+{decl_zona}
     const ZMARGEN = {ZMARGEN};
     const LUGAR_R = {LUGAR_R};
     const BARRIO_R = {BARRIO_R};
@@ -2056,7 +2123,7 @@ module Callejero {{
         Z_MAYOR = d[17] as ResourceId;
         POI = d[18] as ResourceId;
         ZBARRIO = d[19] as Boolean;
-        CAJAS = d[20] as ResourceId or Null;
+        CAJAS = d[20] as ResourceId or Null;{act_zona}
     }}
 }}
 """
@@ -2121,7 +2188,7 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
             zstats, zcols, zfilas, zmayor, parroquias, lugares, fecha_zonas, pois):
     L = [f"Callejero {region} — datos OSM {fecha_osm} — generado {date.today().isoformat()}",
          f"Región {proy.ancho / 1000:.1f} × {proy.alto / 1000:.1f} km; "
-         + (f"teselas adaptativas de ≤ {KD_TOPE // 1024} KB " if VARIANTE == "c" else f"rejilla {cols} × {filas} de {TESELA} m ") +
+         + (f"teselas adaptativas de ≤ {KD_TOPE // 1024} KB " if KD else f"rejilla {cols} × {filas} de {TESELA} m ") +
          f"(margen {BUF} m, MAXD {MAXD} m, portal {PORTAL_R} m)", ""]
     L.append("Recuento:")
     for k, v in sorted(cuenta.items()):
@@ -2156,7 +2223,7 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
           f"media {sum(zh) / len(zh) / 1024:.1f} KB; JSON total {sum(s['json'] for s in zstats.values()) / 1024:.0f} KB"]
     hs = sorted(s["heap"] for s in stats.values())
     js = sum(s["json"] for s in stats.values())
-    L += ["", f"Teselas con calles: {len(stats)}" + ("" if VARIANTE == "c" else f" de {cols * filas}")
+    L += ["", f"Teselas con calles: {len(stats)}" + ("" if KD else f" de {cols * filas}")
           + f"; JSON total {js / 1024:.0f} KB",
           f"Heap estimado por tesela: máx {hs[-1] / 1024:.1f} KB · p95 {hs[int(.95 * len(hs))] / 1024:.1f} KB · "
           f"media {sum(hs) / len(hs) / 1024:.1f} KB (T_MAYOR = t{mayor})", "", "Las 10 más pesadas:"]
@@ -2172,7 +2239,7 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
           f"  sin dirección: {sum(1 for p in pois if not p[1])}"]
 
     def mapa(titulo, fn):
-        if VARIANTE == "c":
+        if KD:
             return   # teselas adaptativas: no hay rejilla que pintar
         L.extend(["", titulo + " (norte arriba):"])
         for f in range(filas - 1, -1, -1):
@@ -2231,7 +2298,7 @@ def main():
                     help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/); c: teselas "
                          "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -2254,18 +2321,26 @@ def main():
             cfg["bbox"] = caja_distritos(a.region, cfg, comp["distritos"], comp.get("margen_m", 500), a.refresh)
             cfg["etiqueta"] = comp.get("etiqueta", cfg["etiqueta"])
         print(f"Variante 6x de {a.region}: teselas de {TESELA} m, zonas de {ZONA} m, caja {cfg['bbox']}")
-    if VARIANTE == "c":
-        vc = cfg.get("c")
-        if not vc:
-            sys.exit(f"La región {a.region} no tiene \"c\" en tools/regiones.json: no va en los relojes de 128 KB.")
+    if VARIANTE == "c" and not cfg.get("c"):
+        sys.exit(f"La región {a.region} no tiene \"c\" en tools/regiones.json: no va en los relojes de 128 KB.")
+    if VARIANTE == "6x" and cfg.get("adaptativa"):
+        sys.exit(f"La región {a.region} es de teselas adaptativas: en el fēnix 6X va con la variante c.")
+    vc = cfg.get("c") if VARIANTE == "c" else cfg.get("adaptativa") if VARIANTE == "normal" else None
+    if vc:
+        KD = True
         ZONA, KD_TOPE = vc["zona"], vc["tope_kb"] * 1024
         TESELA = KD_PASO    # unidad de las cajas; COLS × FILAS es la región entera
         RN = ZONA // RCEL
         assert RN < 256 and ZONA + 2 * ZMARGEN < 1 << 14
-        print(f"Variante c de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m")
+        print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m")
     proy = Proy(cfg["bbox"])
-    d = (descargar_por_partes(a.region, bbox_datos, cfg["partes"], a.refresh) if cfg.get("partes")
-         else descargar(a.region, consulta(bbox_datos, grande), a.refresh))
+    area = cfg.get("area_osm")
+    if cfg.get("pbf"):
+        d = leer_pbf(a.region, "calles")
+    else:
+        d = (descargar_por_partes(a.region, bbox_datos, cfg["partes"], a.refresh,
+                                  q=(lambda caja: consulta(caja, True, area)) if area else None) if cfg.get("partes")
+             else descargar(a.region, consulta(bbox_datos, grande, area), a.refresh))
     fecha_osm = (d.get("osm3s", {}).get("timestamp_osm_base") or "")[:10] or date.today().isoformat()
     elems = d["elements"]
     del d
@@ -2296,14 +2371,22 @@ def main():
     # El número va en 12 bits (≤ 4095): lo que pasa de ahí son kilómetros o errores de etiquetado.
     cuenta["portal con número > 4095 (fuera)"] += sum(1 for p in portales if p["num"] > 0xFFF)
     portales = [p for p in portales if p["num"] <= 0xFFF]
-    dp = descargar(a.region, consulta_poi(bbox_datos, grande), a.refresh)
+    dp = (leer_pbf(a.region, "poi") if cfg.get("pbf")
+          else descargar(a.region, consulta_poi(bbox_datos, grande, area), a.refresh))
     pois = extraer_poi(dp["elements"], proy, vias, portales, overrides, cuenta, proy.ancho, proy.alto)
     trozos = trocear(vias, cuenta)
-    dz = descargar(a.region, consulta_zonas(bbox_datos, tuple(cfg["zonas"]["admin_level"]), grande), a.refresh)
+    niveles = tuple(cfg["zonas"]["admin_level"])
+    # Galicia: 3.782 parroquias con su geometría no bajan de una vez; por partes, como las calles.
+    if cfg.get("pbf"):
+        dz = leer_pbf(a.region, "zonas")
+    else:
+        dz = (descargar_por_partes(a.region, bbox_datos, cfg["zonas_partes"], a.refresh,
+                                   q=lambda caja: consulta_zonas(caja, niveles, True, area)) if cfg.get("zonas_partes")
+              else descargar(a.region, consulta_zonas(bbox_datos, niveles, grande, area), a.refresh))
     fecha_zonas = (dz.get("osm3s", {}).get("timestamp_osm_base") or "")[:10] or date.today().isoformat()
     parroquias, lugares = extraer_zonas(dz["elements"], proy, overrides, cuenta, cfg["zonas"])
     cajas = None
-    if VARIANTE == "c":
+    if KD:
         teselas, cajas = teselar_kd(trozos, portales, proy, KD_TOPE)
         cols, filas = math.ceil(proy.ancho / KD_PASO), math.ceil(proy.alto / KD_PASO)
     else:

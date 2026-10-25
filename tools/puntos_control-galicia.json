@@ -1,0 +1,100 @@
+[
+ {
+  "id": "obradoiro",
+  "lat": 42.8805208,
+  "lon": -8.5457732,
+  "nota": "centro de Praza do Obradoiro",
+  "espera": "Praza do Obradoiro"
+ },
+ {
+  "id": "franco",
+  "lat": 42.8794322,
+  "lon": -8.5450847,
+  "nota": "mitad de Rúa do Franco",
+  "espera": "Rúa do Franco",
+  "tambien": "Praza de Fonseca",
+  "num": "1"
+ },
+ {
+  "id": "portal",
+  "lat": 42.8785356,
+  "lon": -8.5446453,
+  "nota": "Rúa do Vilar 44, 5 m desde el portal hacia la calle",
+  "espera": "Rúa do Vilar",
+  "num": "44"
+ },
+ {
+  "id": "vigo",
+  "lat": 42.2370118,
+  "lon": -8.7232157,
+  "nota": "mitad de Rúa do Príncipe",
+  "espera": "Rúa do Príncipe"
+ },
+ {
+  "id": "coruna",
+  "lat": 43.3698619,
+  "lon": -8.3995461,
+  "nota": "mitad de Ruela da Estacada",
+  "espera": "Ruela da Estacada",
+  "num": "8"
+ },
+ {
+  "id": "lugo",
+  "lat": 43.0113482,
+  "lon": -7.5562867,
+  "nota": "mitad de Rúa da Raíña",
+  "espera": "Rúa da Raíña",
+  "num": "12"
+ },
+ {
+  "id": "ourense",
+  "lat": 42.3361078,
+  "lon": -7.8640138,
+  "nota": "mitad de Rúa Arcedianos",
+  "espera": "Rúa Arcedianos"
+ },
+ {
+  "id": "pontevedra",
+  "lat": 42.4310346,
+  "lon": -8.6437397,
+  "nota": "mitad de Praza de Ourense",
+  "espera": "Praza de Ourense",
+  "tambien": "Xardín de Casto Sampedro"
+ },
+ {
+  "id": "ferrol",
+  "lat": 43.4846185,
+  "lon": -8.2363408,
+  "nota": "mitad de Rúa da Coruña",
+  "espera": "Rúa da Coruña",
+  "num": "40-42"
+ },
+ {
+  "id": "rural",
+  "lat": 42.7056453,
+  "lon": -7.6478535,
+  "nota": "mitad de LU-P-4202",
+  "espera": "LU-P-4202"
+ },
+ {
+  "id": "denso",
+  "lat": 42.8330565,
+  "lon": -8.6349027,
+  "nota": "mitad de Pista dos Roxais",
+  "espera": "Pista dos Roxais"
+ },
+ {
+  "id": "lejos",
+  "lat": 41.8075165,
+  "lon": -7.4280224,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 41.5,
+  "lon": -8.4,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

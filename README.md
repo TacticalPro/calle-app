@@ -41,6 +41,7 @@ de la app y la posición no sale nunca del reloj.
 |---|---|
 | fēnix 7X Pro (y su variante sin Wi-Fi) | Santiago de Compostela y alrededores; término municipal de Madrid |
 | fēnix 6X Pro | una parte de Madrid |
+| fēnix 7X Pro, app aparte (CALLE Galicia, en beta) | Galicia entera, en teselas adaptativas y zonas de 10 km |
 
 El fēnix 6X no admite más de 254 recursos de datos por app, así que lleva datos compactos y solo los
 distritos de `compacta.distritos` en `tools/regiones.json`.
@@ -56,7 +57,7 @@ Para **añadir una ciudad**, se describe la región en `tools/regiones.json` y s
 
   | Fuente | Qué aporta | Licencia y atribución |
   |---|---|---|
-  | OpenStreetMap, vía Overpass | calles, plazas, portales, barrios, lugares, parroquias, hospitales y comisarías | ODbL 1.0 · «© colaboradores de OpenStreetMap» |
+  | OpenStreetMap, vía Overpass (Galicia: extracto de Geofabrik) | calles, plazas, portales, barrios, lugares, parroquias, hospitales y comisarías | ODbL 1.0 · «© colaboradores de OpenStreetMap» |
   | Dirección General del Catastro (WFS INSPIRE de direcciones) | números de portal que OSM no tiene, en la caja `catastro` de cada región | uso libre citando la fuente · «Fuente: Dirección General del Catastro» |
   | Ayuntamiento de Madrid, datos.madrid.es, conjunto 213605 («Relación de direcciones vigentes, con coordenadas») | números de portal de Madrid | CC BY 4.0 · «Fuente: Ayuntamiento de Madrid (datos.madrid.es)» |
 
@@ -86,10 +87,14 @@ Para **añadir una ciudad**, se describe la región en `tools/regiones.json` y s
 # 1. Callejero. Descarga de Overpass y del Catastro; se guarda en tools/cache/.
 REGION=santiago ./ciq.sh datos
 REGION=madrid ./ciq.sh datos        # antes, el CSV del Ayuntamiento (ver abajo)
+# Galicia no baja de Overpass: extracto de Geofabrik (europe/spain/galicia) en tools/cache/geofabrik/,
+# convertido con pyosmium (python3 -m venv .venv && .venv/bin/pip install osmium)
+.venv/bin/python tools/pbf_a_json.py --region galicia && REGION=galicia ./ciq.sh datos
 
 # 2. Referencia en Python (fuerza bruta) y vectores para los tests de Monkey C
 REGION=santiago ./ciq.sh ref --gen-tests
 REGION=madrid ./ciq.sh ref --gen-tests
+REGION=galicia ./ciq.sh ref --gen-tests
 
 # 3. Tests en el simulador y compilación
 ./ciq.sh test

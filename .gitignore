@@ -17,3 +17,4 @@ test-gen-6x/
 resources-gen-c/
 source-gen-c/
 test-gen-c/
+.venv/

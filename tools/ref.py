@@ -15,6 +15,7 @@ import argparse
 import json
 import math
 import random
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -253,7 +254,7 @@ class Ref:
             return (None, None, None)
         if nom not in self._z:
             self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
-        fmt, S, O, F, RL, L, LN = self._z[nom]
+        fmt, S, O, F, RL, L, LN = self._z[nom][:7]   # H y FZ (franjas) solo aceleran el reloj
         assert fmt == m["formato"]
 
         def par16(A, k):
@@ -628,8 +629,11 @@ def derivar_control(ref, region):
     print(f"escrito {f.relative_to(ROOT)} ({len(puntos)} puntos)")
 
 
-def _larga(g, nombre):
-    cs = [c for c in g["calles"] if c["n"] == nombre and len(c["p"]) > 1 and not c["a"]]
+def _larga(g, nombre, cerca=None, radio=2000.0):
+    """La calle más larga con ese nombre; con cerca (x, y), solo entre las que pasan a radio m: en una región grande
+    (Galicia) hay homónimas en otras ciudades (la «Rúa do Franco» más larga es la de Lugo, no la de Santiago)."""
+    cs = [c for c in g["calles"] if c["n"] == nombre and len(c["p"]) > 1 and not c["a"]
+          and (cerca is None or min(math.dist(q, cerca) for q in c["p"]) <= radio)]
     if not cs:
         sys.exit(f"no existe la calle {nombre!r} en los datos")
     return max(cs, key=lambda c: sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1)))
@@ -680,12 +684,12 @@ def derivar_control_cfg(ref, region, specs):
             xs, ys = [q[0] for q in a["p"][:-1]], [q[1] for q in a["p"][:-1]]
             anadir(id_, sum(xs) / len(xs), sum(ys) / len(ys), f"centro de {sp['calle']}")
         elif t == "mitad":
-            x, y = _mitad(_larga(g, sp["calle"]))
+            x, y = _mitad(_larga(g, sp["calle"], ref.xy(sp["lat"], sp["lon"]) if "lat" in sp else None))
             anadir(id_, x, y, f"mitad de {sp['calle']}")
         elif t == "cerca":
             x, y = ref.xy(sp["lat"], sp["lon"])
             best, orden, _, _ = ref.global_(x, y, radio=400)
-            x, y = _mitad(_larga(g, orden[0]))
+            x, y = _mitad(_larga(g, orden[0], (x, y)))
             anadir(id_, x, y, f"mitad de {orden[0]}")
         elif t == "cruce":
             propia = {tuple(q) for c in g["calles"] if c["n"] == sp["calle"] for q in c["p"]}
@@ -783,7 +787,8 @@ def gen_tests(ref, region, n=40, semilla=3):
             continue
         if abs(r["d1"] - m["maxd"]) < 0.5 or (r["p1"] and abs(r["p1"][1] - m["portal_r"]) < 0.5):
             continue
-        if r["t1_margen"] < 0.5 or ref.zona(x, y, margen=True)[3] < 0.5:
+        z = ref.zona(x, y, margen=True)
+        if r["t1_margen"] < 0.5 or z is None or len(z) < 4 or z[3] < 0.5:   # (None, None, None): zona sin recurso
             continue
         lat, lon = ref.latlon(x, y)
         vec.append((f"azar{len(vec)}", round(lat, 7), round(lon, 7)))
@@ -795,7 +800,7 @@ def gen_tests(ref, region, n=40, semilla=3):
         if ref.celda(x, y) < 0 or ref.buscar(x, y)["estado"] != "LEJOS":
             continue
         z = ref.zona(x, y, margen=True)
-        if z is None or z[3] < 0.5 or z[0] is None:
+        if z is None or len(z) < 4 or z[3] < 0.5 or z[0] is None:
             continue
         lat, lon = ref.latlon(x, y)
         vec.append((f"rural{rurales}", round(lat, 7), round(lon, 7)))
@@ -847,6 +852,25 @@ def gen_tests(ref, region, n=40, semilla=3):
     L += ["        " + ", ".join(f"{la!r}d, {lo!r}d" for la, lo in ruta[k:k + 4]) + ","
           for k in range(0, len(ruta), 4)]
     L += ["    ] as Array<Double>);", "}"]
+    # Cadena completa del reloj en un punto, en una sola llamada y desde cero (tesela, calle, zona y lugar), como al
+    # abrir la app: el watchdog cuenta la suma. Por separado cabía y el 7X Pro con Galicia se cerraba (ERA,
+    # 2026-10-25). Los puntos de control, el centro de la tesela más pesada y el de la zona más pesada.
+    cad = [(p["id"], p["lat"], p["lon"]) for p in json.loads((TOOLS / f"puntos_control-{region}.json").read_text("utf-8"))
+           if p["espera"] != "FUERA" and ref.celda(*ref.xy(p["lat"], p["lon"])) >= 0]
+    ti = int(m["t_mayor"][1:])
+    if m.get("cajas"):
+        x0, y0, x1, y1 = m["cajas"][ti]
+    else:
+        x0, y0 = (ti % m["cols"]) * m["tesela"], (ti // m["cols"]) * m["tesela"]
+        x1, y1 = x0 + m["tesela"], y0 + m["tesela"]
+    zi = int(m["z_mayor"][1:])
+    zx, zy = (zi % m["zcols"] + 0.5) * m["zona"], (zi // m["zcols"] + 0.5) * m["zona"]
+    for id_, (x, y) in (("tmayor", ((x0 + x1) / 2, (y0 + y1) / 2)), ("zmayor", (zx, zy))):
+        if ref.celda(x, y) >= 0:
+            cad.append((id_, *[round(v, 7) for v in ref.latlon(x, y)]))
+    for id_, lat, lon in cad:
+        L += ["", "(:test)", f"function cadena{mod}_{re.sub(r'[^A-Za-z0-9]', '_', id_)}(logger as Test.Logger) as Boolean {{",
+              f"    return Vectores.cadena(logger, {cfg['id']}, {lat!r}d, {lon!r}d);", "}"]
     out = ROOT / f"test-gen{ref.suf}" / f"Vectores{mod}Test.mc"
     out.parent.mkdir(exist_ok=True)
     out.write_text("\n".join(L) + "\n", "utf-8")

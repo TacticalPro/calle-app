@@ -1,6 +1,6 @@
 # CALLE Galicia — textos de la Connect IQ Store
 
-Segunda app del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tienda` → `bin/calle-galicia.iq`.
+App del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tienda` → `bin/calle-galicia.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `50da24c1…`. **Borrador del 2026-10-25,
 sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
 
@@ -8,14 +8,13 @@ sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.
-- **Imágenes: pendientes.** La portada y las pantallas de `docs/tienda/` son de Madrid (Gran Vía, Sol). Para Galicia
-  hacen falta una portada y cuatro pantallas con datos gallegos, por ejemplo: una calle del casco de Santiago con
+- **Imágenes: pendientes.** Hacen falta una portada y cuatro pantallas con datos gallegos, por ejemplo: una calle del casco de Santiago con
   portal, una aldea con su parroquia, «Hospital más cercano» con el anillo y una calle de Vigo o A Coruña.
 - El portal puede avisar «Signature check failed» en la primera subida de una app nueva: es un fallo conocido suyo.
   La firma se comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2
   manifest.xml`.
 
-Atribución obligatoria (OSM y Catastro): no se quita de ninguna versión. El Ayuntamiento de Madrid no aparece.
+Atribución obligatoria (OSM y Catastro): no se quita de ninguna versión.
 Los datos de OSM vienen del extracto de Geofabrik; la fuente y la licencia siguen siendo OSM (ODbL).
 
 **Source Code URL:** https://github.com/TacticalPro/calle-app

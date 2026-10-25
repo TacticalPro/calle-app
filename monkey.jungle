@@ -1,0 +1,7 @@
+project.manifest = manifest.xml
+base.sourcePath = source;source-gen;test;test-gen
+base.resourcePath = resources;resources-gen
+# fēnix 6X (API 3.4): datos compactos, porque su máquina virtual no admite más de 254 recursos de
+# datos (tools/build_callejero.py, VARIANTE). Se generan con VARIANTE=6x ./ciq.sh datos.
+fenix6xpro.sourcePath = source;source-gen-6x;test;test-gen-6x
+fenix6xpro.resourcePath = resources;resources-gen-6x

@@ -1,0 +1,101 @@
+[
+ {
+  "id": "portal",
+  "lat": 42.8785356,
+  "lon": -8.5446453,
+  "nota": "Rúa do Vilar 44, 5 m desde el portal hacia la calle",
+  "espera": "Rúa do Vilar",
+  "num": "44"
+ },
+ {
+  "id": "obradoiro",
+  "lat": 42.8805208,
+  "lon": -8.5457732,
+  "nota": "centro de la plaza",
+  "espera": "Praza do Obradoiro"
+ },
+ {
+  "id": "franco",
+  "lat": 42.8781762,
+  "lon": -8.5453149,
+  "nota": "mitad de Rúa do Franco",
+  "espera": "Rúa do Franco",
+  "num": "33"
+ },
+ {
+  "id": "vilar",
+  "lat": 42.8785539,
+  "lon": -8.5446323,
+  "nota": "mitad de Rúa do Vilar",
+  "espera": "Rúa do Vilar",
+  "num": "44"
+ },
+ {
+  "id": "galicia",
+  "lat": 42.8764585,
+  "lon": -8.5445416,
+  "nota": "mitad de Praza de Galicia",
+  "espera": "Praza de Galicia",
+  "num": "2"
+ },
+ {
+  "id": "horreo",
+  "lat": 42.8752373,
+  "lon": -8.5442519,
+  "nota": "mitad de Rúa do Hórreo",
+  "espera": "Rúa do Hórreo",
+  "num": "25"
+ },
+ {
+  "id": "lugo",
+  "lat": 42.8782394,
+  "lon": -8.5339543,
+  "nota": "mitad de Avenida de Lugo",
+  "espera": "Avenida de Lugo",
+  "num": "157"
+ },
+ {
+  "id": "aeropuerto",
+  "lat": 42.8941769,
+  "lon": -8.4243442,
+  "nota": "mitad de Acceso Terminal Aeroporto",
+  "espera": "Acceso Terminal Aeroporto"
+ },
+ {
+  "id": "conxo",
+  "lat": 42.8647661,
+  "lon": -8.5556266,
+  "nota": "mitad de Rúa de Uxío Novoneyra",
+  "espera": "Rúa de Uxío Novoneyra"
+ },
+ {
+  "id": "fontinas",
+  "lat": 42.8852408,
+  "lon": -8.5235413,
+  "nota": "mitad de Rúa de Moscova",
+  "espera": "Rúa de Moscova"
+ },
+ {
+  "id": "cruce",
+  "lat": 42.8775467,
+  "lon": -8.5456419,
+  "nota": "cruce de Rúa do Franco con Rúa do Vilar",
+  "espera": "Rúa do Franco",
+  "tambien": "Rúa do Vilar",
+  "num": "54"
+ },
+ {
+  "id": "lejos",
+  "lat": 42.8022504,
+  "lon": -8.67694,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 43.0,
+  "lon": -8.5,
+  "nota": "al norte de la región",
+  "espera": "FUERA"
+ }
+]

@@ -1,0 +1,97 @@
+[
+ {
+  "id": "sol",
+  "lat": 40.4169001,
+  "lon": -3.7035824,
+  "nota": "centro de Puerta del Sol",
+  "espera": "Puerta del Sol",
+  "tambien": "Plaza de la Puerta del Sol",
+  "num": "11"
+ },
+ {
+  "id": "granvia",
+  "lat": 40.4195328,
+  "lon": -3.6989269,
+  "nota": "mitad de Gran Vía",
+  "espera": "Gran Vía",
+  "num": "9"
+ },
+ {
+  "id": "alcala",
+  "lat": 40.4479012,
+  "lon": -3.6020166,
+  "nota": "mitad de Calle de Alcalá",
+  "espera": "Calle de Alcalá",
+  "num": "690P"
+ },
+ {
+  "id": "castellana",
+  "lat": 40.4490285,
+  "lon": -3.6907938,
+  "nota": "mitad de Paseo de la Castellana",
+  "espera": "Paseo de la Castellana"
+ },
+ {
+  "id": "mayor",
+  "lat": 40.4151078,
+  "lon": -3.7142912,
+  "nota": "mitad de Calle Mayor",
+  "espera": "Calle Mayor",
+  "num": "83"
+ },
+ {
+  "id": "comisaria",
+  "lat": 40.4216071,
+  "lon": -3.7100988,
+  "nota": "Calle de Leganitos 19, 5 m desde el portal hacia la calle",
+  "espera": "Calle de Leganitos",
+  "num": "19"
+ },
+ {
+  "id": "princesa",
+  "lat": 40.4269759,
+  "lon": -3.714272,
+  "nota": "Calle de la Princesa 25, 5 m desde el portal hacia la calle",
+  "espera": "Calle Luisa Fernanda",
+  "num": "2"
+ },
+ {
+  "id": "salamanca",
+  "lat": 40.4286601,
+  "lon": -3.6745877,
+  "nota": "mitad de Calle de Don Ramón de la Cruz",
+  "espera": "Calle de Don Ramón de la Cruz",
+  "num": "85"
+ },
+ {
+  "id": "barajas",
+  "lat": 40.4711578,
+  "lon": -3.5808618,
+  "nota": "mitad de Calle Canal de Suez",
+  "espera": "Calle Canal de Suez",
+  "num": "5"
+ },
+ {
+  "id": "cruce",
+  "lat": 40.4200187,
+  "lon": -3.7016328,
+  "nota": "cruce de Calle de Fuencarral con Gran Vía",
+  "espera": "Gran Vía",
+  "tambien": "Calle de Fuencarral",
+  "num": "23"
+ },
+ {
+  "id": "lejos",
+  "lat": 40.3137541,
+  "lon": -3.6090197,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 40.25,
+  "lon": -3.7,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

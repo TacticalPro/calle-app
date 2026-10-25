@@ -1,0 +1,19 @@
+{
+  "_que_es": "Correcciones locales al callejero de OSM. alias_calle: addr:street tal cual -> nombre de la vía. nombre_mostrar: nombre OSM -> nombre en pantalla. excluir_vias: ids de way que no cuentan. barrios_extra: nodos de barrio que OSM no tiene (el barrio se decide por el nodo más cercano). poi: por «tipo/id» de OSM, dirección correcta de un hospital o comisaría, o excluir.",
+  "alias_calle": {
+    "Avenida da Mahía": "Avenida da Maía",
+    "Praza da Mahia": "Praza da Maía",
+    "Rúa da Ponte da Rochaq": "Rúa da Ponte da Rocha"
+  },
+  "nombre_mostrar": {},
+  "excluir_vias": [],
+  "barrios_extra": [
+    {
+      "nombre": "Casco Histórico",
+      "lat": 42.88,
+      "lon": -8.5435,
+      "nota": "OSM no tiene nodo para la ciudad histórica: sin él, el Obradoiro salía «A Poza de Bar» (2026-10-23)"
+    }
+  ],
+  "poi": {}
+}

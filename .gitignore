@@ -1,0 +1,16 @@
+bin/
+*.prg
+*.prg.debug.xml
+*.iq
+*.PRF
+tools/cache/
+tools/out/
+__pycache__/
+tools/mtp_enviar
+# Generado por ./ciq.sh datos y ./ciq.sh ref --gen-tests (se rehace desde OSM, Catastro y Ayuntamiento de Madrid)
+resources-gen/
+resources-gen-6x/
+source-gen/
+source-gen-6x/
+test-gen/
+test-gen-6x/

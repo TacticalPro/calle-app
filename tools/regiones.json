@@ -1,0 +1,141 @@
+{
+  "santiago": {
+    "id": 1,
+    "etiqueta": "Santiago",
+    "bbox": [
+      42.8,
+      -8.68,
+      42.96,
+      -8.4
+    ],
+    "overrides": "overrides-santiago.json",
+    "catastro": [
+      42.8745,
+      -8.549,
+      42.886,
+      -8.5365
+    ],
+    "catastro_nota": "Zona Vella y su borde: portales del Catastro donde OSM no tiene número (2026-10-24)",
+    "prefijo": "s",
+    "zonas": {
+      "poligono": "parroquia",
+      "admin_level": [
+        "9"
+      ]
+    },
+    "ruta": "Rúa do Franco",
+    "compacta_retirada": {
+      "tesela": 1500,
+      "zona": 4000
+    },
+    "compacta_nota": "Fuera del fēnix 6X desde el 2026-10-24: la variante 6X se dedica a Madrid, y Santiago ocupaba ~209 de los 250 recursos. Para volver a meterla, renombrar compacta_retirada a compacta."
+  },
+  "madrid": {
+    "id": 2,
+    "etiqueta": "Madrid",
+    "prefijo": "m",
+    "bbox": [
+      40.307,
+      -3.895,
+      40.648,
+      -3.512
+    ],
+    "bbox_nota": "término municipal (relación OSM 5326784) más ~500 m",
+    "grande": true,
+    "overrides": "overrides-madrid.json",
+    "portales_ayto_madrid": "madrid-ayto/direccionesvigentes_20261019.csv",
+    "portales_nota": "Callejero oficial del Ayuntamiento de Madrid (datos.madrid.es, CC BY 4.0), 214.676 direcciones",
+    "zonas": {
+      "poligono": "barrio",
+      "admin_level": [
+        "9",
+        "10"
+      ]
+    },
+    "partes": 3,
+    "ruta": "Calle Mayor",
+    "compacta": {
+      "tesela": 1000,
+      "zona": 4000,
+      "distritos": [
+        356761,
+        356998,
+        356962,
+        356879
+      ],
+      "margen_m": 500,
+      "etiqueta": "Madrid (centro)",
+      "nota": "fēnix 6X: Madrid entero no cabe en 254 recursos; distritos a elección (tools/regiones.json)",
+      "distritos_nota": "ids de relación OSM (admin_level 9): 356761 Centro, 356998 Chamberí, 356775 Arganzuela, 356879 Retiro, 356962 Salamanca, 356983 Chamartín, 356984 Tetuán, 356760 Moncloa-Aravaca, 355676 Latina, 355666 Carabanchel, 349469 Usera, 354080 Puente de Vallecas, 354223 Moratalaz, 1675818 Ciudad Lineal, 354522 Hortaleza, 349470 Villaverde, 349485 Villa de Vallecas, 354389 Vicálvaro, 354377 San Blas - Canillejas, 354410 Barajas, 356771 Fuencarral-El Pardo",
+      "distritos_elegidos": "Centro, Chamberí, Salamanca y Retiro (2026-10-24)"
+    },
+    "control": [
+      {
+        "id": "sol",
+        "tipo": "area",
+        "calle": "Puerta del Sol"
+      },
+      {
+        "id": "granvia",
+        "tipo": "mitad",
+        "calle": "Gran Vía"
+      },
+      {
+        "id": "alcala",
+        "tipo": "mitad",
+        "calle": "Calle de Alcalá"
+      },
+      {
+        "id": "castellana",
+        "tipo": "mitad",
+        "calle": "Paseo de la Castellana"
+      },
+      {
+        "id": "mayor",
+        "tipo": "mitad",
+        "calle": "Calle Mayor"
+      },
+      {
+        "id": "comisaria",
+        "tipo": "portal",
+        "calle": "Calle de Leganitos",
+        "num": 19
+      },
+      {
+        "id": "princesa",
+        "tipo": "portal",
+        "calle": "Calle de la Princesa",
+        "num": 25
+      },
+      {
+  "id": "salamanca",
+  "lat": 40.4286601,
+  "lon": -3.6745877,
+  "nota": "mitad de Calle de Don Ramón de la Cruz",
+  "espera": "Calle de Don Ramón de la Cruz",
+  "num": "85"
+ },
+      {
+        "id": "barajas",
+        "tipo": "cerca",
+        "lat": 40.474,
+        "lon": -3.579
+      },
+      {
+        "id": "cruce",
+        "tipo": "cruce",
+        "calle": "Calle de Fuencarral"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 40.25,
+        "lon": -3.7
+      }
+    ]
+  }
+}

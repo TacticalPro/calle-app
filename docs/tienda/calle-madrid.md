@@ -14,6 +14,9 @@ comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -s
 misma app. El `.iq` pesa 52,5 MB: lo sube el autor a mano, porque el navegador automatizado no pasa de 10 MB.
 La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 
+**Título «CALLE Madrid (offline)»** (decisión del autor, 2026-10-25: que no usa red es su punto fuerte). Se cambia
+con *Edit Details* en cuanto Garmin apruebe la 3.2.0: no se toca mientras esté en revisión.
+
 Atribución obligatoria (OSM y Ayuntamiento de Madrid): no se quita de ninguna versión. El Catastro no
 aparece, porque solo se usa en Santiago.
 

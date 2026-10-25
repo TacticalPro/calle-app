@@ -4,7 +4,9 @@ App del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tiend
 Subida nueva en el portal (no es una versión de la beta), con el id `50da24c1…`. **Borrador del 2026-10-25,
 sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
 
-- **Versión:** 3.3.2, la misma que la beta probada en la muñeca.
+- **Título (decisión del autor, 2026-10-25):** «CALLE Galicia (offline)», en inglés y en español. Que no usa red es su punto fuerte.
+  La beta ya se llama «CALLE Galicia (offline) (beta)» desde la 3.4.0.
+- **Versión:** 3.4.0 (la interfaz nueva, P73), cuando pase la prueba en la muñeca.
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.

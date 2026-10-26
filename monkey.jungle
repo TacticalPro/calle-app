@@ -17,3 +17,19 @@ fenix6.sourcePath = source;source-gen-c;test;test-gen-c
 fenix6.resourcePath = resources;resources-gen-c
 fenix6s.sourcePath = source;source-gen-c;test;test-gen-c
 fenix6s.resourcePath = resources;resources-gen-c
+
+# fēnix 6 Pro/6S Pro, 5X y 5 Plus/5S Plus/5X Plus (API 3.1–3.4): 1,25 MB y el tope de 254 recursos. Variante b:
+# Galicia entera en teselas grandes con unidad por tesela y zonas de 25 km (VARIANTE=b REGION=galicia ./ciq.sh
+# datos). El 6X Pro sigue en la c (Madrid); la app de Galicia lo pasa a la b ("variante" en tools/catalogo.json).
+fenix6pro.sourcePath = source;source-gen-b;test;test-gen-b
+fenix6pro.resourcePath = resources;resources-gen-b
+fenix6spro.sourcePath = source;source-gen-b;test;test-gen-b
+fenix6spro.resourcePath = resources;resources-gen-b
+fenix5x.sourcePath = source;source-gen-b;test;test-gen-b
+fenix5x.resourcePath = resources;resources-gen-b
+fenix5plus.sourcePath = source;source-gen-b;test;test-gen-b
+fenix5plus.resourcePath = resources;resources-gen-b
+fenix5splus.sourcePath = source;source-gen-b;test;test-gen-b
+fenix5splus.resourcePath = resources;resources-gen-b
+fenix5xplus.sourcePath = source;source-gen-b;test;test-gen-b
+fenix5xplus.resourcePath = resources;resources-gen-b

@@ -74,6 +74,7 @@ module Zonas {
         var RL = z[4] as Array<Number>;
         var L = z[5] as Array<Number>;
         var LN = z[6] as Array<Number>;
+        var zu = z.size() > 9 ? z[9] as Number : 1;   // metros por unidad de L (variante b: 2)
         var rn = Callejero.RN;
         var c = (x / Callejero.RCEL).toNumber();
         var r = (y / Callejero.RCEL).toNumber();
@@ -131,7 +132,7 @@ module Zonas {
             var hi = fin;
             while (lo < hi) {
                 var m = (lo + hi) / 2;
-                if ((L[m] & 0x3FFF).toFloat() < xmin) {
+                if (((L[m] & 0x3FFF) * zu).toFloat() < xmin) {
                     lo = m + 1;
                 } else {
                     hi = m;
@@ -139,12 +140,12 @@ module Zonas {
             }
             for (var j = lo; j < fin; j++) {
                 var p = L[j];
-                var lx = (p & 0x3FFF).toFloat();
+                var lx = ((p & 0x3FFF) * zu).toFloat();
                 if (lx > xmax) {
                     break;
                 }
                 var dx = px - lx;
-                var dy = py - ((p >> 14) & 0x3FFF).toFloat();
+                var dy = py - (((p >> 14) & 0x3FFF) * zu).toFloat();
                 var d2 = dx * dx + dy * dy;
                 var tipo = (p >> 28) & 7;
                 if ((tipo & 1) != 0 && d2 <= rl2 && (jl < 0 || d2 < dl)) {

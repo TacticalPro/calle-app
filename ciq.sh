@@ -3,6 +3,7 @@
 #
 #   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid; VARIANTE=6x para el fēnix 6X,
 #                         VARIANTE=c para los de 128 KB: fēnix 5/5S y 6/6S;
+#                         VARIANTE=b para los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro y 5X/5 Plus (Galicia);
 #                         --refresh vuelve a Overpass; --comun solo rehace Callejero/Regiones/ajuste)
 #   ./ciq.sh ref          autotest de la referencia Python y vectores para los tests de Monkey C
 #   ./ciq.sh build        .prg de depuración        → bin/calle.prg

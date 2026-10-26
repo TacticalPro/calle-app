@@ -179,6 +179,13 @@
       "tope_kb": 30,
       "nota": "Galicia entera no cabe en la rejilla fija de 500 m (≈ 190.000 celdas): teselas adaptativas como la variante c, con su tope de heap, y zonas de 10 km. Las zonas de 2 km serían ≈ 12.000 entradas de índice en el código"
     },
+    "b": {
+      "zona": 25000,
+      "tope_kb": 120,
+      "rcel": 100,
+      "zu": 2,
+      "nota": "Variante b (fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus; 1,25 MB y 254 recursos): teselas adaptativas de hasta 31 km con unidad por tesela y zonas de 25 km (raster de 100 m, lugares en unidades de 2 m), para que Galicia entera quepa en ~250 recursos (2026-10-26)"
+    },
     "control": [
       {
         "id": "obradoiro",

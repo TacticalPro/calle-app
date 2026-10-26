@@ -66,8 +66,12 @@ class Tes:
     """Una tesela del FORMATO 4 (tools/build_callejero.py), desempaquetada a la manera del reloj."""
 
     def __init__(self, t):
-        fmt, self.nc, self.pb, self.S, O, self.C, self.CB, self.R, self.V, self.P, E = t
+        fmt, self.nc, self.pb, self.S, O, self.C, self.CB, self.R, self.V, self.P, E = t[:11]
         self.fmt = fmt
+        # Variante b: la unidad de la tesela va en los bits altos de PB (sin ellos, 1 m) y K, al final, solo
+        # acelera el reloj (salta las calles lejanas); aquí se recorren todas.
+        self.u = (self.pb >> 8) or 1
+        self.pb &= 0xFF
         n = self.S.count("\n") - 1
         offs = [(O[j // 2] >> (16 * (j % 2))) & 0xFFFF for j in range(n + 1)]
         self.nombres = [self.S[offs[k]:offs[k + 1] - 1] for k in range(n)]
@@ -181,12 +185,14 @@ class Ref:
         N = t.nombres[:t.nc]
         B, MAXD = m["buf"], m["maxd"]
         caja = self.caja(i)
-        px, py = x - (caja[0] - B), y - (caja[1] - B)
+        u = t.u                       # todo en unidades de la tesela; las distancias, de vuelta en metros
+        px, py = (x - (caja[0] - B)) / u, (y - (caja[1] - B)) / u
         best = [math.inf] * len(N)
         brun = [-1] * len(N)          # la tirada más cercana de cada calle (la primera, si empatan)
         tramos = {}                   # offset en R → (A, B)
         vistas = []                   # (calle, d, tramo) de cada tirada medida
-        pxi, pyi, M, U = int(px), int(py), MAXD + 1, m["cb_u"]
+        pxi, pyi, M, U = int(px), int(py), -(-MAXD // u) + 1, m["cb_u"]
+        maxd_u = MAXD / u
         for r, calle, clase, area, ext, vs, a, b in t.tiradas():
             tramos[r] = (a, b)
             # Como el reloj: la caja gruesa de la calle descarta todas sus tiradas de un golpe.
@@ -199,20 +205,20 @@ class Ref:
                 e = ext * m["ext_u"]
                 dx = max(0.0, abs(px - vs[0][0]) - e)
                 dy = max(0.0, abs(py - vs[0][1]) - e)
-                if dx * dx + dy * dy > MAXD * MAXD:
+                if dx * dx + dy * dy > maxd_u * maxd_u:
                     continue
             n = len(vs)
             if n == 1:
                 d2 = (px - vs[0][0]) ** 2 + (py - vs[0][1]) ** 2
             else:
                 d2 = min(dseg2(px, py, *vs[j], *vs[j + 1]) for j in range(n - 1))
-            d = (0.0 if area and dentro(px, py, vs) else math.sqrt(d2)) + m["pen"][clase]
+            d = (0.0 if area and dentro(px, py, vs) else math.sqrt(d2) * u) + m["pen"][clase]
             if d < best[calle]:
                 best[calle], brun[calle] = d, r
             vistas.append((calle, d, (a, b)))
         orden = sorted(range(len(N)), key=lambda s: best[s])
         if not orden or best[orden[0]] > MAXD:
-            return dict(estado="LEJOS", tesela=i, s1=N[orden[0]] if orden else None,
+            return dict(estado="LEJOS", tesela=i, u=u, s1=N[orden[0]] if orden else None,
                         d1=best[orden[0]] if orden else math.inf)
         s1 = orden[0]
         s2 = orden[1] if len(orden) > 1 and best[orden[1]] <= MAXD else None
@@ -220,7 +226,7 @@ class Ref:
         def portal(s):
             mejor = None
             for qx, qy, texto in t.portales(s):
-                d = math.hypot(px - qx, py - qy)
+                d = math.hypot(px - qx, py - qy) * u
                 if d <= m["portal_r"] and (mejor is None or d < mejor[1]):
                     mejor = (texto, d)
             return mejor
@@ -231,7 +237,7 @@ class Ref:
 
         t_s1 = tramos[brun[s1]]
         t1_margen = min([d - best[s1] for c, d, tr in vistas if c == s1 and tr != t_s1] + [math.inf])
-        return dict(estado="OK", tesela=i, s1=N[s1], d1=best[s1], p1=portal(s1), t1=tramo(s1), t1_margen=t1_margen,
+        return dict(estado="OK", tesela=i, u=u, s1=N[s1], d1=best[s1], p1=portal(s1), t1=tramo(s1), t1_margen=t1_margen,
                     s2=N[s2] if s2 is not None else None, d2=best[s2] if s2 is not None else None,
                     p2=portal(s2) if s2 is not None else None)
 
@@ -259,6 +265,7 @@ class Ref:
         if nom not in self._z:
             self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
         fmt, S, O, F, RL, L, LN = self._z[nom][:7]   # H y FZ (franjas) solo aceleran el reloj
+        zu = self._z[nom][9] if len(self._z[nom]) > 9 else 1   # unidad de los lugares (variante b)
         assert fmt == m["formato"]
 
         def par16(A, k):
@@ -281,7 +288,7 @@ class Ref:
         mejor = {}   # bit → (d, nombre)
         d2b = math.inf   # el segundo barrio más cercano
         for j, p in enumerate(L):
-            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
+            d = math.hypot(x - (lx0 + (p & 0x3FFF) * zu), y - (ly0 + ((p >> 14) & 0x3FFF) * zu))
             for bit, radio in ((1, m["lugar_r"]), (2, math.inf), (4, m["lugar_r"])):
                 if (p >> 28) & bit and d <= radio:
                     if d < mejor.get(bit, (math.inf,))[0]:
@@ -300,7 +307,7 @@ class Ref:
         ms = [abs(fx - round(fx)) * m["rcel"], abs(fy - round(fy)) * m["rcel"]]
         ds = {1: [], 2: [], 4: []}
         for p in L:
-            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
+            d = math.hypot(x - (lx0 + (p & 0x3FFF) * zu), y - (ly0 + ((p >> 14) & 0x3FFF) * zu))
             for bit in ds:
                 if (p >> 28) & bit:
                     ds[bit].append(d)
@@ -415,13 +422,13 @@ class Ref:
             mejor.sort(key=lambda t: t[0])
             return mejor[:2]
 
-        def tramo(nombre):
-            """El tramo del trozo más cercano, o None si otro trozo con otro tramo está a menos de TOL."""
+        def tramo(nombre, tol=TOL):
+            """El tramo del trozo más cercano, o None si otro trozo con otro tramo está a menos de tol."""
             ts = sorted(tramos.get(nombre, ()), key=lambda t: t[0])
             if not ts:
                 return None
             otros = [e for e, t in ts if t != ts[0][1]]
-            return ts[0][1] if not otros or otros[0] - ts[0][0] > TOL else None
+            return ts[0][1] if not otros or otros[0] - ts[0][0] > tol else None
 
         return best, orden, portal, tramo
 
@@ -488,31 +495,34 @@ def fuerza_bruta(ref, n, semilla=1):
                         cands.append(f1 * m["cols"] + c1)
         for ti in cands:
             r = ref.buscar(x, y, ti)
+            # Con unidad de U m (variante b), la cuantización mueve las distancias hasta ~0,71·U m.
+            u = r.get("u", 1)
+            tol, tol_portal = TOL * u, TOL_PORTAL * u
             g1 = best[orden[0]] if orden else math.inf
-            if g1 <= m["maxd"] - TOL:
+            if g1 <= m["maxd"] - tol:
                 comparados += 1
                 if r["estado"] != "OK":
                     fallos.append((x, y, ti, f"tesela dice {r['estado']} y la calle {orden[0]} está a {g1:.1f} m"))
                     continue
-                if r["s1"] != orden[0] and abs(best.get(r["s1"], math.inf) - g1) > TOL:
+                if r["s1"] != orden[0] and abs(best.get(r["s1"], math.inf) - g1) > tol:
                     fallos.append((x, y, ti, f"tesela {r['s1']} ({r['d1']:.1f}) ≠ global {orden[0]} ({g1:.1f})"))
-                elif abs(r["d1"] - g1) > TOL:
+                elif abs(r["d1"] - g1) > tol:
                     fallos.append((x, y, ti, f"distancia {r['d1']:.2f} ≠ {g1:.2f}"))
                 elif r["s1"] == orden[0]:
-                    tg = tramo_g(orden[0])
+                    tg = tramo_g(orden[0], tol)
                     if tg is not None:
                         tramos_cmp += 1
                         if tuple(r["t1"]) != tg:
                             fallos.append((x, y, ti, f"tramo {r['t1']} ≠ global {tg}"))
                     ps = portal(orden[0])
-                    if ps and ps[0][0] <= m["portal_r"] - TOL and (len(ps) == 1 or ps[1][0] - ps[0][0] > TOL_PORTAL):
+                    if ps and ps[0][0] <= m["portal_r"] - tol and (len(ps) == 1 or ps[1][0] - ps[0][0] > tol_portal):
                         portales_cmp += 1
                         esperado = ps[0][1][4] if ps[0][1][3] == 0 else f"{ps[0][1][3]}{ps[0][1][4]}"
                         if r["p1"] and r["p1"][0] == esperado:
                             portales_ok += 1
                         else:
                             fallos.append((x, y, ti, f"portal {r['p1']} ≠ {esperado}"))
-            elif g1 > m["maxd"] + TOL and r["estado"] == "OK":
+            elif g1 > m["maxd"] + tol and r["estado"] == "OK":
                 fallos.append((x, y, ti, f"tesela da {r['s1']} a {r['d1']:.1f} m y lo más cercano está a {g1:.1f}"))
     fuerza_bruta.tramos = tramos_cmp
     return comparados, fallos, portales_cmp, portales_ok
@@ -894,7 +904,7 @@ def main():
     ap.add_argument("--derivar", action="store_true")
     ap.add_argument("--gen-tests", action="store_true")
     ap.add_argument("--n", type=int, default=10000, help="puntos de la fuerza bruta")
-    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal")
+    ap.add_argument("--variante", choices=("normal", "6x", "c", "b"), default="normal")
     a = ap.parse_args()
     ref = Ref(a.region, a.variante)
     if a.punto:

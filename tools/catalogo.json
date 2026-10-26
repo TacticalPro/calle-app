@@ -188,7 +188,6 @@
   "valencia": {
     "id": "f435ba19fe1541c7a2ac3bdeedf78b6e",
     "nombre": "Calles C. Valenciana",
-    "nombre_nota": "nombre provisional en el reloj (lo decide el autor; se cambia solo aquí). En la tienda: «Calles Comunitat Valenciana (offline)», en docs/tienda/calle-valencia.md",
     "zonas": [
       "valencia"
     ],
@@ -202,6 +201,12 @@
       "fenix7xpro",
       "fenix7xpronowifi"
     ],
-    "relojes_nota": "2026-10-26: la familia fēnix 7, como Galicia (768 KB, 64 MB de programa; pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; la Comunitat usa 1.951) y los fēnix 8, 9 y E (faltan sus tests)."
+    "relojes_nota": "2026-10-26: la familia fēnix 7, como Galicia (768 KB, 64 MB de programa; pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; la Comunitat usa 1.951) y los fēnix 8, 9 y E (faltan sus tests).",
+    "nombre_nota": "Nombre confirmado por el autor (2026-10-26): «Calles C. Valenciana» en el reloj y «Calles Comunitat Valenciana (offline)» en la tienda (docs/tienda/calle-valencia.md).",
+    "beta_id": "a37285fa35bf45b5967cc34767609a5b",
+    "beta_relojes": [
+      "fenix7xpro"
+    ],
+    "beta_nota": "Beta privada propia de Calles Comunitat Valenciana (2026-10-26), solo el fēnix 7X Pro: APP=valencia ./ciq.sh beta. El beta_id no se cambia nunca (la tienda trataría otro id como otra app); no es el de Galicia (19ddcb3e…) ni el de Murcia (fe5c0e8f…). Aún sin subir."
   }
 }

@@ -3,7 +3,7 @@
 App del catálogo por zonas (`tools/catalogo.json`): `APP=valencia ./ciq.sh tienda` → `bin/calle-valencia.iq`.
 Subida nueva en el portal (no es una versión de ninguna beta), con el id `f435ba19…`. **Sin subir**: la sube el autor.
 
-- **Título (provisional, lo decide el autor):** «Calles Comunitat Valenciana (offline)», en inglés y en español. En el
+- **Título (confirmado por el autor, 2026-10-26):** «Calles Comunitat Valenciana (offline)», en inglés y en español. En el
   reloj, «Calles C. Valenciana» (`nombre` de la entrada `valencia` en `tools/catalogo.json`, el único sitio donde se
   cambia). En el menú del reloj y en el ajuste «Zona del callejero», la zona se llama «C. Valenciana» (`etiqueta` en
   `tools/regiones.json`).

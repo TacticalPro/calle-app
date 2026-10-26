@@ -26,8 +26,8 @@ module Fmt {
     }
 
     // Rótulos en mayúsculas (barrio, edad, «ENTRE»). toUpper() solo sube el ASCII: las tildes, la ñ y la ü, a mano.
-    const MINUS = "áéíóúñüàèòç";
-    const MAYUS = "ÁÉÍÓÚÑÜÀÈÒÇ";
+    const MINUS = "áéíóúñüàèòçï";
+    const MAYUS = "ÁÉÍÓÚÑÜÀÈÒÇÏ";
 
     function mayus(s as String) as String {
         var cs = s.toUpper().toCharArray();

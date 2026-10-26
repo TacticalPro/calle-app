@@ -5,7 +5,8 @@
                                  y tools/out/caratula_<X>.png / icono_<X>.png
     tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png,
                                  docs/tienda/portada_500.png (Madrid) y el icono del lanzador,
-                                 resources/drawables/launcher_icon.png (de todas las apps Calles)
+                                 resources/drawables/launcher_icon.png (de todas las apps Calles) y,
+                                 para los relojes que lo piden de otro tamaño, resources-<reloj>/
 
 El fondo es el callejero real de cada app (tools/out/geom-<región>.json, ODbL), dibujado tenue: el casco de
 Santiago en Galicia y la Puerta del Sol en Madrid.
@@ -26,7 +27,8 @@ NEGRO, FONDO = (0, 0, 0), (17, 17, 17)
 BLANCO, GRIS, GRIS_OSC = (255, 255, 255), (0xAA, 0xAA, 0xAA), (0x55, 0x55, 0x55)
 AMBAR, AZUL_PLACA = (0xFF, 0xAA, 0x00), (0x1F, 0x3B, 0x73)
 CENTRO = (42.8792, -8.5446)   # casco de Santiago, entre el Obradoiro y la Quintana
-CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035)}   # Madrid: la Puerta del Sol
+CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035),   # Madrid: la Puerta del Sol
+           "barcelona": (41.3830, 2.1750)}                   # Barcelona: el Gòtic
 LADO_M = 900                  # metros de mapa que caben en la carátula
 
 
@@ -202,12 +204,35 @@ def hoja(propuestas):
     return img
 
 
+def iconos_por_reloj():
+    """El icono a la medida de cada reloj del catálogo que no lo pide de 40 px (fēnix 8: 60 o 65; Venu 3: 70…): en
+    resources-<reloj>/, que el compilador toma solo para ese reloj en lugar de escalar el de 40."""
+    sdk = Path.home() / "Library" / "Application Support" / "Garmin" / "ConnectIQ" / "Devices"
+    cat = json.loads((ROOT / "tools" / "catalogo.json").read_text("utf-8"))
+    relojes = sorted({r for k, a in cat.items() if not k.startswith("_") for r in a["relojes"]})
+    xml = (ROOT / "resources" / "drawables" / "drawables.xml").read_text("utf-8")
+    n = 0
+    for r in relojes:
+        lado = json.loads((sdk / r / "compiler.json").read_text("utf-8")).get("launcherIcon", {}).get("width", 40)
+        if lado == 40:
+            continue
+        d = ROOT / f"resources-{r}" / "drawables"
+        d.mkdir(parents=True, exist_ok=True)
+        icono_b(lado).save(d / "launcher_icon.png")
+        (d / "drawables.xml").write_text(xml, "utf-8")
+        n += 1
+    print(f"iconos a medida: {n} relojes (resources-<reloj>/)")
+
+
 def main():
     import sys
     if "--instalar" in sys.argv:
         caratula_b().save(ROOT / "docs" / "tienda" / "galicia" / "portada_500.png", optimize=True)
         caratula_b("madrid").save(ROOT / "docs" / "tienda" / "portada_500.png", optimize=True)
+        (ROOT / "docs" / "tienda" / "barcelona").mkdir(exist_ok=True)
+        caratula_b("barcelona").save(ROOT / "docs" / "tienda" / "barcelona" / "portada_500.png", optimize=True)
         icono_b().save(ROOT / "resources" / "drawables" / "launcher_icon.png")
+        iconos_por_reloj()
         print("escrito docs/tienda/galicia/portada_500.png, docs/tienda/portada_500.png "
               "y resources/drawables/launcher_icon.png")
         return

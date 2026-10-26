@@ -15,6 +15,7 @@ Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproxim
     tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
     tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
     tools/mockup.py --ficha galicia  las de CALLE Galicia               → docs/tienda/galicia/
+    tools/mockup.py --ficha barcelona  las de Calles Barcelona        → docs/tienda/barcelona/
 """
 import json
 import math
@@ -599,6 +600,19 @@ ESCENAS_GALICIA = [
                                               tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
                                               destino=145, i=1, n=8))),
 ]
+# Calles Barcelona: lo que dicen los datos reales (tools/ref.py --region barcelona) en sitios públicos, 2026-10-26.
+ESCENAS_BARCELONA = [
+    ("Barcelona: Carrer de Ferran", dict(calle1="Carrer de Ferran", num1="nº 41", barrio="el Gòtic · Ciutat Vella",
+                                         tramo=("Passatge del Crèdit", "Carrer d'Avinyó"))),
+    ("Barcelona: La Rambla", dict(calle1="La Rambla", num1="nº 61", barrio="el Raval · Ciutat Vella",
+                                  tramo=("Carrer de Sant Pau",))),
+    ("Gràcia: Carrer de Verdi", dict(calle1="Carrer de Verdi", num1="nº 32", barrio="la Vila de Gràcia · Gràcia",
+                                     tramo=("Carrer de la Perla", "Carrer de l'Or"))),
+    # Desde la plaça de Catalunya: el de urgencias más cercano es el Clínic, a 1,5 km, rumbo 281°.
+    ("Barcelona: hospital", dict(anillo=dict(nombre="Hospital Clínic", dir="Carrer de Villarroel 170-166",
+                                             tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
+                                             destino=281, i=1, n=8))),
+]
 FICHAS = {
     "madrid": ("", ESCENARIOS, None, (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
                                                    ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
@@ -609,6 +623,11 @@ FICHAS = {
                  ("Cities and towns: street, number and neighbourhood", "A Coruña: Rúa Real"),
                  ("Outside town: village and parish", "Aldea y parroquia"),
                  ("Nearest hospital with A&E: arrow and distance", "Pontevedra: hospital"))),
+    "barcelona": ("barcelona", ESCENAS_BARCELONA, None,
+                  (("Street, door number and the streets on each side", "Barcelona: Carrer de Ferran"),
+                   ("Neighbourhood and district, offline", "Barcelona: La Rambla"),
+                   ("Every street of the city, with no signal", "Gràcia: Carrer de Verdi"),
+                   ("Nearest hospital with A&E: arrow and distance", "Barcelona: hospital"))),
 }
 
 

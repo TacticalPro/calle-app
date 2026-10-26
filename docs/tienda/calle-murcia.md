@@ -3,6 +3,14 @@
 App del catálogo por zonas (`tools/catalogo.json`): `APP=murcia ./ciq.sh tienda` → `bin/calle-murcia.iq`.
 Subida nueva en el portal (no es una versión de ninguna beta), con el id `e6ac6e68…`. **Sin subir**: la sube el autor.
 
+**Beta privada** (app propia, solo el fēnix 7X Pro): `APP=murcia ./ciq.sh beta` → `bin/calle-murcia-beta.iq` (2,3 MB), con el
+id de beta `fe5c0e8f…` (`beta_id` en `tools/catalogo.json`; no se cambia nunca). **Subida el 2026-10-26 como 3.4.0**:
+«Calles Murcia (offline) (beta)», [página en la tienda](https://apps.garmin.com/apps/9fc95931-e107-4bde-8b54-8cec1f923d2f),
+estado «App pending»; el portal la dio por verificada (fēnix 7X Pro y sus ediciones Sapphire Solar y Dual Power) y avisó
+«Signature check failed» al subirla, el fallo conocido: en *Edit Details* ya dice «Signature: Verified». Textos en inglés y
+en español con una línea de beta al principio, Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas,
+la carátula y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
+
 - **Título:** «Calles Murcia (offline)», en inglés y en español (confirmado por el autor, 2026-10-26).
 - **Versión:** 3.4.0 (la interfaz 3.4, propuesta); la decide el autor al subirla.
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con los tests en verde

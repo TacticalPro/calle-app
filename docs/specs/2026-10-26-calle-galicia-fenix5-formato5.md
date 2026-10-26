@@ -31,6 +31,7 @@ Pruebas en el compilador y el simulador del fēnix 5 (proyecto de prueba en un d
 | 20.000 B de datos en JSON | 25.024 B en memoria |
 | Los mismos 20.000 B en base64 → `ByteArray` | texto 26.688 B + `ByteArray` 20.024 B durante la conversión; **20.024 B** al soltar el texto |
 | Base64 dentro de un `jsonData` (una cadena JSON suelta) | idéntico al de `Rez.Strings`: el lector no distingue el módulo |
+| Tamaño máximo de un `<string>` | **32.767 caracteres** (≈ 24.570 bytes de tesela en base64); un `jsonData` con una cadena de 60.000 compila |
 
 Conclusión: con dos módulos caben ~500 recursos, y la tesela en bytes ocupa un 20 % menos en reposo.
 
@@ -67,6 +68,7 @@ solo es viable si la búsqueda **no recorre** la tesela, sino que salta a lo cer
   2. **Zonas sin parajes fuera:** los lugares `tipo == 4` (`locality`) fuera de la demarcación no entran.
 - **Unidad por tesela:** 1 m si el centro de la tesela cae en la demarcación, 4 m si no. `KD_LADO_MAX` pasa a
   depender de la unidad (7,8 km × U). Esto arregla también las ~9 teselas de ciudad que pasaban de 26 KB con 4 m.
+- **Tope de la tesela:** 24.000 bytes en FORMATO 5. Lo fijan a la vez el límite de un `<string>` (32.767 caracteres de base64) y el pico de memoria (~2,33 × 24.000 ≈ 56 KB).
 - **Reparto en módulos:** cada tesela es un base64; las primeras van como `<string>` (`Rez.Strings`) hasta
   llenar el módulo (dejando las cadenas de la app y 4 de margen) y el resto como `jsonData` con una cadena suelta. El
   índice de teselas mezcla los dos tipos de `ResourceId`. Zonas, cajas y puntos (hospitales y comisarías) siguen

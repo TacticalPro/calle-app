@@ -7,7 +7,7 @@ import Toybox.WatchUi;
 // una de ellas), la zona del callejero y sus datos. Aquí se engancharán las funciones futuras.
 module MenuCalle {
     function abrir() as Void {
-        var menu = new WatchUi.Menu2({:title => "CALLE"});
+        var menu = new WatchUi.Menu2({:title => "CALLES"});
         menu.addItem(new WatchUi.MenuItem("Hospital más cercano", "flecha y distancia", :hospital, null));
         menu.addItem(new WatchUi.MenuItem("Comisaría más cercana", "CNP; al final, otras policías", :comisaria, null));
         menu.addItem(new WatchUi.MenuItem(etiquetaNotas(), "START anota en la pantalla de calle", :notas, null));

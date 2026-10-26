@@ -2,7 +2,7 @@
   "_nota": "Apps de la Connect IQ Store: una por zona. El id no se cambia nunca (la tienda trataría otro id como otra app). zonas: las de tools/regiones.json que lleva la app; relojes: ids de producto del SDK. APP=<clave> ./ciq.sh tienda → bin/calle-<clave>.iq",
   "madrid": {
     "id": "cc8abcb6d0d94381bbde363a92350945",
-    "nombre": "CALLE Madrid",
+    "nombre": "Calles Madrid",
     "zonas": [
       "madrid"
     ],
@@ -21,7 +21,7 @@
   },
   "galicia": {
     "id": "50da24c1158647598e90a8589c9d32a8",
-    "nombre": "CALLE Galicia",
+    "nombre": "Calles Galicia",
     "zonas": [
       "galicia"
     ],

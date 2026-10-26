@@ -1,16 +1,16 @@
-# CALLE Galicia — textos de la Connect IQ Store
+# Calles Galicia — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tienda` → `bin/calle-galicia.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `50da24c1…`. **Borrador del 2026-10-25,
-sin subir.** La beta privada «CALLE Galicia (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
+sin subir.** La beta privada «Calles Galicia (offline) (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
 
-- **Título (decisión del autor, 2026-10-25):** «CALLE Galicia (offline)», en inglés y en español. Que no usa red es su punto fuerte.
-  La beta ya se llama «CALLE Galicia (offline) (beta)» desde la 3.4.0.
+- **Título:** «Calles Galicia (offline)», en inglés y en español (el autor, 2026-10-26; antes «CALLE Galicia (offline)»).
+  Que no usa red es su punto fuerte. La beta pasa a «Calles Galicia (offline) (beta)» con *Edit Details*.
 - **Versión:** 3.4.0 (la interfaz nueva, P73), cuando pase la prueba en la muñeca.
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.
-- **Portada:** la carátula «el marcador en el cruce», sobre el callejero real del casco de Santiago, con «CALLE / GALICIA / LA
+- **Portada:** la carátula «el marcador en el cruce», sobre el callejero real del casco de Santiago, con «CALLES / GALICIA / LA
   CALLE Y EL PORTAL, SIN COBERTURA», todo en mayúsculas (elegida el 2026-10-25). Se genera con `tools/caratula.py --instalar`, que pone
   también el icono del lanzador.
 - **Pantallas** en `docs/tienda/galicia/` (`tools/mockup.py --ficha galicia`, en el 7X Pro), por este orden: `ficha_1.png` a
@@ -30,10 +30,15 @@ Los datos de OSM vienen del extracto de Geofabrik; la fuente y la licencia sigue
 
 ## Español
 
-**Nombre:** CALLE Galicia
+**Nombre:** Calles Galicia (offline)
 
-La calle, el número de portal y las calles a cada lado, sin teléfono ni cobertura. Y fuera de la ciudad, la aldea
-y la parroquia.
+**Sin conexión.** El callejero de Galicia entera viaja dentro de la app: la calle, el número de portal y las calles a
+cada lado, sin teléfono, sin cobertura y sin datos móviles. Y fuera de la ciudad, la aldea y la parroquia.
+
+**Por qué sin conexión:**
+- Funciona donde el móvil no llega: sin cobertura, sin datos o con el teléfono en casa.
+- No espera a ninguna red ni a ningún servidor: en cuanto el reloj tiene posición, tiene la dirección.
+- Su posición es solo suya: la app no tiene acceso a internet, así que no puede enviarla a ningún sitio.
 
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Parroquia, aldea o lugar más cercano, y barrio en las ciudades. Lejos de cualquier calle, dice dónde está igualmente.
@@ -48,8 +53,7 @@ Zona: Galicia entera, las cuatro provincias, en toda la familia fēnix 7. Se ir�
 Los números de portal salen de OpenStreetMap y, en Santiago y su entorno, también del Catastro. En muchos pueblos y
 aldeas el mapa aún no tiene números: ahí la app da la calle, la aldea y la parroquia, pero no el portal.
 
-Privacidad: solo pide el permiso de posición. No tiene red: la posición no sale nunca del reloj. No graba
-actividades.
+Permisos: solo la posición. Sin acceso a internet y sin grabar actividades.
 
 Primera versión: los fallos y las sugerencias, al correo de contacto.
 
@@ -57,15 +61,20 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Dirección General del Catastro.
 
-**Novedades (3.3.2):** primera versión pública. Galicia entera, con parroquias y aldeas, y números de portal del
+**Novedades (3.4.0):** primera versión pública. Galicia entera, con parroquias y aldeas, y números de portal del
 Catastro en Santiago y su entorno.
 
 ## English
 
-**Name:** CALLE Galicia
+**Name:** Calles Galicia (offline)
 
-Street name, door number and the streets on each side, with no phone and no signal. Outside town, the village and
-the parish.
+**Fully offline.** The street map of all of Galicia ships inside the app: street name, door number and the streets
+on each side, with no phone, no signal and no mobile data. Outside town, the village and the parish.
+
+**Why offline:**
+- It works where your phone doesn't: no signal, no data, or the phone left at home.
+- It never waits for a network or a server: as soon as the watch has a position, you have the address.
+- Your position stays yours: the app has no internet access, so it cannot send it anywhere.
 
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the corner.
 - Parish, nearest village or place, and neighbourhood in towns. Far from any street, it still tells you where you are.
@@ -82,8 +91,7 @@ Door numbers come from OpenStreetMap and, in Santiago de Compostela and its surr
 Cadastre. Many villages still have no door numbers on the map: there the app gives the street, village and parish,
 but no number.
 
-Privacy: the only permission is position. No network access: your position never leaves the watch. No activity
-recording.
+Permissions: position only. No internet access and no activity recording.
 
 First release: please send bugs and suggestions to the contact email.
 
@@ -91,5 +99,5 @@ Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Dirección General del Catastro.
 
-**What's new (3.3.2):** first public release. All of Galicia, with parishes and villages, and Cadastre door numbers
+**What's new (3.4.0):** first public release. All of Galicia, with parishes and villages, and Cadastre door numbers
 in Santiago de Compostela and its surroundings.

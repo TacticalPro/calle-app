@@ -1,4 +1,4 @@
-# CALLE Madrid — textos de la Connect IQ Store
+# Calles Madrid — textos de la Connect IQ Store
 
 Primera app del catálogo por zonas (`tools/catalogo.json`): `APP=madrid ./ciq.sh tienda` → `bin/calle-madrid.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `cc8abcb6…`.
@@ -14,7 +14,7 @@ comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -s
 misma app. El `.iq` pesa 52,5 MB: lo sube el autor a mano, porque el navegador automatizado no pasa de 10 MB.
 La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 
-**3.4.0 (2026-10-25): la interfaz de CALLE Galicia (P73).** Mismos relojes y mismos datos que la 3.2.0; cambian la
+**3.4.0 (2026-10-25): la interfaz de Calles Galicia (P73).** Mismos relojes y mismos datos que la 3.2.0; cambian la
 pantalla, la carátula (el marcador ámbar sobre el callejero de Sol, `tools/caratula.py --instalar`) y el icono.
 Las cinco imágenes, regeneradas (`mockup.py --ficha`). El `.iq` (`bin/calle-madrid.iq`, 52,5 MB, firma verificada)
 se subió el mismo día con *Upload New Version* mientras la 3.2.0 seguía en revisión: el portal la verificó
@@ -24,8 +24,9 @@ subir cada trozo a un `<input type=file>` auxiliar creado por JS, recomponer con
 SHA-256 en la página y asignarlo al campo real con `DataTransfer`. Servirlo desde localhost no vale: la CSP
 (`connect-src`) del portal lo bloquea.
 
-**Título «CALLE Madrid (offline)»** (decisión del autor, 2026-10-25: que no usa red es su punto fuerte). Se cambia
-con *Edit Details* en cuanto Garmin apruebe la 3.2.0: no se toca mientras esté en revisión.
+**Título «Calles Madrid (offline)»** (el autor, 2026-10-26; antes «CALLE Madrid (offline)»: que no usa red es su
+punto fuerte). Se cambia con *Edit Details*, junto con la carátula «CALLES / MADRID», en cuanto Garmin apruebe la
+versión en revisión: no se toca mientras tanto. En el reloj, «Calles Madrid» llega con la próxima versión.
 
 Atribución obligatoria (OSM y Ayuntamiento de Madrid): no se quita de ninguna versión. El Catastro no
 aparece, porque solo se usa en Santiago.
@@ -34,9 +35,15 @@ aparece, porque solo se usa en Santiago.
 
 ## Español
 
-**Nombre:** CALLE Madrid
+**Nombre:** Calles Madrid (offline)
 
-La calle, el número de portal y las calles a cada lado, sin teléfono ni cobertura.
+**Sin conexión.** El callejero de Madrid entero viaja dentro de la app: la calle, el número de portal y las calles a
+cada lado, sin teléfono, sin cobertura y sin datos móviles.
+
+**Por qué sin conexión:**
+- Funciona donde el móvil no llega: sin cobertura, sin datos o con el teléfono en casa.
+- No espera a ninguna red ni a ningún servidor: en cuanto el reloj tiene posición, tiene la dirección.
+- Su posición es solo suya: la app no tiene acceso a internet, así que no puede enviarla a ningún sitio.
 
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Barrio y distrito.
@@ -48,8 +55,7 @@ La calle, el número de portal y las calles a cada lado, sin teléfono ni cobert
 Zona: el término municipal de Madrid entero, en el fēnix 6X y en toda la familia fēnix 7. Se irán añadiendo
 relojes.
 
-Privacidad: solo pide el permiso de posición. No tiene red: la posición no sale nunca del reloj. No graba
-actividades.
+Permisos: solo la posición. Sin acceso a internet y sin grabar actividades.
 
 Primera versión: los fallos y las sugerencias, al correo de contacto.
 
@@ -65,9 +71,15 @@ Datos más compactos.
 
 ## English
 
-**Name:** CALLE Madrid
+**Name:** Calles Madrid (offline)
 
-Street name, door number and the streets on each side, with no phone and no signal.
+**Fully offline.** The street map of all of Madrid ships inside the app: street name, door number and the streets
+on each side, with no phone, no signal and no mobile data.
+
+**Why offline:**
+- It works where your phone doesn't: no signal, no data, or the phone left at home.
+- It never waits for a network or a server: as soon as the watch has a position, you have the address.
+- Your position stays yours: the app has no internet access, so it cannot send it anywhere.
 
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the
   corner.
@@ -80,8 +92,7 @@ Street name, door number and the streets on each side, with no phone and no sign
 Area: the whole municipality of Madrid, on the fēnix 6X and the whole fēnix 7 family. More watches will
 follow. The interface is in Spanish.
 
-Privacy: the only permission is position. No network access: your position never leaves the watch. No
-activity recording.
+Permissions: position only. No internet access and no activity recording.
 
 First release: please send bugs and suggestions to the contact email.
 

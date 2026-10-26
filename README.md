@@ -1,15 +1,15 @@
-# CALLE
+# Calles
 
 Callejero sin conexión para relojes Garmin fēnix (app de Connect IQ). Al abrirla dice en qué calle está,
 el número del portal más cercano y entre qué calles, sin teléfono ni cobertura: el callejero viaja dentro
 de la app y la posición no sale nunca del reloj.
 
-> **English.** CALLE is an offline street finder for Garmin fēnix watches. It shows the street you are on,
+> **English.** Calles is an offline street finder for Garmin fēnix watches. It shows the street you are on,
 > the nearest door number and the cross streets on each side. The street data ships inside the app, it
 > needs no phone or network, and your position never leaves the watch. Areas: Santiago de Compostela and
 > Madrid (Spain). The interface is in Spanish.
 
-![Pantallas de CALLE](docs/tienda/ficha_1.png)
+![Pantallas de Calles](docs/tienda/ficha_1.png)
 
 ## Qué hace
 
@@ -41,7 +41,7 @@ de la app y la posición no sale nunca del reloj.
 |---|---|
 | fēnix 7X Pro (y su variante sin Wi-Fi) | Santiago de Compostela y alrededores; término municipal de Madrid |
 | fēnix 6X Pro | una parte de Madrid |
-| fēnix 7X Pro, app aparte (CALLE Galicia, en beta) | Galicia entera, en teselas adaptativas y zonas de 10 km |
+| fēnix 7X Pro, app aparte (Calles Galicia, en beta) | Galicia entera, en teselas adaptativas y zonas de 10 km |
 
 El fēnix 6X no admite más de 254 recursos de datos por app, así que lleva datos compactos y solo los
 distritos de `compacta.distritos` en `tools/regiones.json`.
@@ -142,5 +142,5 @@ en el repositorio.
 
 Herramienta de apoyo, sin garantía (véase `LICENSE`). Los datos de OpenStreetMap y de las fuentes
 oficiales pueden tener errores u omisiones. La guía a hospitales y comisarías es en línea recta, no por
-calles. Compruebe siempre la dirección antes de darla por buena. CALLE no está afiliada a Garmin ni a
+calles. Compruebe siempre la dirección antes de darla por buena. Calles no está afiliada a Garmin ni a
 ningún organismo público.

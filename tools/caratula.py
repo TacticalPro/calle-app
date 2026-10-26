@@ -5,7 +5,7 @@
                                  y tools/out/caratula_<X>.png / icono_<X>.png
     tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png,
                                  docs/tienda/portada_500.png (Madrid) y el icono del lanzador,
-                                 resources/drawables/launcher_icon.png (de todas las apps CALLE)
+                                 resources/drawables/launcher_icon.png (de todas las apps Calles)
 
 El fondo es el callejero real de cada app (tools/out/geom-<región>.json, ODbL), dibujado tenue: el casco de
 Santiago en Galicia y la Puerta del Sol en Madrid.
@@ -140,7 +140,7 @@ def caratula_b(region="galicia"):
     d = ImageDraw.Draw(img)
     d.ellipse((250 - 60, 175 - 60, 250 + 60, 175 + 60), outline=AMBAR + (255,), width=3)
     marcador(d, 250, 140, 38, AMBAR + (255,), hueco=FONDO + (255,))
-    texto(d, (250, 382), "CALLE", fuente(78), BLANCO, espacio=8)
+    texto(d, (250, 382), "CALLES", fuente(78), BLANCO, espacio=8)
     texto(d, (250, 432), region.upper(), fuente(28, 500), AMBAR, espacio=12)
     texto(d, (250, 470), "LA CALLE Y EL PORTAL, SIN COBERTURA", fuente(21, 500), GRIS, espacio=1)
     return img.convert("RGB")

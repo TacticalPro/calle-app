@@ -15,6 +15,7 @@ Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproxim
     tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
     tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
     tools/mockup.py --ficha galicia  las de CALLE Galicia               → docs/tienda/galicia/
+    tools/mockup.py --ficha murcia   las de Calles Murcia               → docs/tienda/murcia/
 """
 import json
 import math
@@ -599,6 +600,18 @@ ESCENAS_GALICIA = [
                                               tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
                                               destino=145, i=1, n=8))),
 ]
+# Calles Murcia: lo que dicen los datos reales (tools/ref.py --region murcia) en sitios públicos, 2026-10-26.
+ESCENAS_MURCIA = [
+    ("Murcia: Calle Trapería", dict(calle1="Calle Trapería", num1="nº 19", tramo=("Calle Andrés Baquero", "Calle Platería"))),
+    ("Cartagena: Calle Mayor", dict(calle1="Calle Mayor", num1="nº 14", barrio="Casco Antiguo",
+                                    tramo=("Calle Medieras", "Calle Andino"))),
+    ("Pedanía y término", dict(lugar="El Moral", sub="término de Caravaca de la Cruz", pie="30S 569078 4205422")),
+    # Desde la calle San José (Yecla, centro): el de urgencias más cercano está a 660 m, rumbo 73°. (El Morales
+    # Meseguer, desde la Gran Vía de Murcia, no cabe: «Hospital General Universitario…» se corta.)
+    ("Yecla: hospital", dict(anillo=dict(nombre="Hospital Virgen del Castillo", dir="Avenida de la Feria",
+                                         tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="660 m", rumbo=0, destino=73,
+                                         i=1, n=8))),
+]
 FICHAS = {
     "madrid": ("", ESCENARIOS, None, (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
                                                    ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
@@ -609,6 +622,11 @@ FICHAS = {
                  ("Cities and towns: street, number and neighbourhood", "A Coruña: Rúa Real"),
                  ("Outside town: village and parish", "Aldea y parroquia"),
                  ("Nearest hospital with A&E: arrow and distance", "Pontevedra: hospital"))),
+    "murcia": ("murcia", ESCENAS_MURCIA, None,
+               (("Street, door number and the streets on each side", "Murcia: Calle Trapería"),
+                ("Cities and towns: street, number and neighbourhood", "Cartagena: Calle Mayor"),
+                ("Outside town: hamlet and municipality", "Pedanía y término"),
+                ("Nearest hospital with A&E: arrow and distance", "Yecla: hospital"))),
 }
 
 

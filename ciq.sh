@@ -96,7 +96,11 @@ case "${1:-build}" in
     release) privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w --build-stats 0
              ls -la bin/calle-release.prg ;;
     test)    sdk; mkdir -p bin; monkeyc -o bin/test.prg -t -w; simulador
-             "$BIN/monkeydo" bin/test.prg "$DEV" -t ;;
+             # Con tope de tiempo (TEST_MAX s, 600 por defecto): un test colgado retenía el simulador y el candado
+             # (fēnix 6S, 22 min, 2026-10-26). macOS no trae «timeout»: se vigila en segundo plano.
+             "$BIN/monkeydo" bin/test.prg "$DEV" -t & md=$!
+             ( sleep "${TEST_MAX:-600}"; kill -0 $md 2>/dev/null && { echo "test: más de ${TEST_MAX:-600} s; lo corto" >&2; pkill -P $md; kill $md; } ) & vig=$!
+             wait $md; rc=$?; kill $vig 2>/dev/null; exit $rc ;;
     sim)     sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w; simulador
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
     package) privacidad; sdk; mkdir -p bin

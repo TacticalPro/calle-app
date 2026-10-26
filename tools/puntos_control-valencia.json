@@ -1,0 +1,122 @@
+[
+ {
+  "id": "ajuntament",
+  "lat": 39.470808,
+  "lon": -0.3763583,
+  "nota": "mitad de Plaça de l'Ajuntament",
+  "espera": "Plaça de l'Ajuntament",
+  "num": "18"
+ },
+ {
+  "id": "ciutatvella",
+  "lat": 39.4739937,
+  "lon": -0.3753135,
+  "nota": "mitad de Plaça de la Reina",
+  "espera": "Plaça de la Reina",
+  "num": "1"
+ },
+ {
+  "id": "cruce",
+  "lat": 39.4728125,
+  "lon": -0.3706825,
+  "nota": "cruce de Carrer de la Pau con Plaça d'Alfons el Magnànim",
+  "espera": "Plaça d'Alfons el Magnànim",
+  "tambien": "Carrer de la Pau",
+  "num": "1"
+ },
+ {
+  "id": "alacant",
+  "lat": 38.3442979,
+  "lon": -0.4830833,
+  "nota": "Rambla de Méndez Núñez 8, 5 m desde el portal hacia la calle",
+  "espera": "Carrer de Rafael Altamira",
+  "tambien": "Rambla de Méndez Núñez",
+  "num": "1"
+ },
+ {
+  "id": "alacant_centre",
+  "lat": 38.3449306,
+  "lon": -0.4855329,
+  "nota": "mitad de Carrer de Santa Bàrbara",
+  "espera": "Carrer de Santa Bàrbara"
+ },
+ {
+  "id": "castello",
+  "lat": 39.9855865,
+  "lon": -0.0379493,
+  "nota": "mitad de Plaça de la Pescateria",
+  "espera": "Plaça de la Pescateria"
+ },
+ {
+  "id": "elx",
+  "lat": 38.2651631,
+  "lon": -0.6990729,
+  "nota": "mitad de Plaça de Baix",
+  "espera": "Plaça de Baix",
+  "num": "12 AC"
+ },
+ {
+  "id": "benidorm",
+  "lat": 38.5357122,
+  "lon": -0.1197217,
+  "nota": "mitad de Paseo Marítimo de Levante",
+  "espera": "Paseo Marítimo de Levante",
+  "tambien": "Avenida de Madrid"
+ },
+ {
+  "id": "gandia",
+  "lat": 38.9681086,
+  "lon": -0.1821793,
+  "nota": "mitad de Carrer del Trapig",
+  "espera": "Carrer del Trapig"
+ },
+ {
+  "id": "torrevieja",
+  "lat": 37.9797442,
+  "lon": -0.6716488,
+  "nota": "mitad de Calle Vicente Blasco Ibáñez",
+  "espera": "Calle Vicente Blasco Ibáñez"
+ },
+ {
+  "id": "horta",
+  "lat": 39.4922271,
+  "lon": -0.3525187,
+  "nota": "mitad de Camí de Barrina",
+  "espera": "Camí de Barrina"
+ },
+ {
+  "id": "morella",
+  "lat": 40.6193395,
+  "lon": -0.1001254,
+  "nota": "mitad de Plaça de les Escoles Pies",
+  "espera": "Plaça de les Escoles Pies"
+ },
+ {
+  "id": "ademuz",
+  "lat": 40.0743068,
+  "lon": -1.2967416,
+  "nota": "mitad de Camino de la Atalaya",
+  "espera": "Camino de la Atalaya"
+ },
+ {
+  "id": "denso",
+  "lat": 40.3341149,
+  "lon": -0.0963294,
+  "nota": "mitad de Carretera Sant Pau d'Albocàsser - CV-166",
+  "espera": "Carretera Sant Pau d'Albocàsser - CV-166"
+ },
+ {
+  "id": "lejos",
+  "lat": 37.8456203,
+  "lon": -0.7732282,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 37.8,
+  "lon": -0.9,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

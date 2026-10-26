@@ -58,5 +58,24 @@
       "fenix7xpro"
     ],
     "relojes_nota": "2026-10-26: medición de tamaño solo con el 7X Pro"
+  },
+  "valencia": {
+    "id": "f435ba19fe1541c7a2ac3bdeedf78b6e",
+    "nombre": "Calles C. Valenciana",
+    "nombre_nota": "nombre provisional en el reloj (lo decide el autor; se cambia solo aquí). En la tienda: «Calles Comunitat Valenciana (offline)», en docs/tienda/calle-valencia.md",
+    "zonas": [
+      "valencia"
+    ],
+    "relojes": [
+      "fenix7",
+      "fenix7s",
+      "fenix7x",
+      "fenix7pro",
+      "fenix7pronowifi",
+      "fenix7spro",
+      "fenix7xpro",
+      "fenix7xpronowifi"
+    ],
+    "relojes_nota": "2026-10-26: la familia fēnix 7, como Galicia (768 KB, 64 MB de programa; pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; la Comunitat usa 1.951) y los fēnix 8, 9 y E (faltan sus tests)."
   }
 }

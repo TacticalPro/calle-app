@@ -15,6 +15,8 @@ Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproxim
     tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
     tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
     tools/mockup.py --ficha galicia  las de CALLE Galicia               → docs/tienda/galicia/
+    tools/mockup.py --ficha barcelona  las de Calles Barcelona        → docs/tienda/barcelona/
+    tools/mockup.py --ficha murcia   las de Calles Murcia               → docs/tienda/murcia/
     tools/mockup.py --ficha valencia las de Calles Comunitat Valenciana → docs/tienda/valencia/
 """
 import json
@@ -600,6 +602,31 @@ ESCENAS_GALICIA = [
                                               tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
                                               destino=145, i=1, n=8))),
 ]
+# Calles Barcelona: lo que dicen los datos reales (tools/ref.py --region barcelona) en sitios públicos, 2026-10-26.
+ESCENAS_BARCELONA = [
+    ("Barcelona: Carrer de Ferran", dict(calle1="Carrer de Ferran", num1="nº 41", barrio="el Gòtic · Ciutat Vella",
+                                         tramo=("Passatge del Crèdit", "Carrer d'Avinyó"))),
+    ("Barcelona: La Rambla", dict(calle1="La Rambla", num1="nº 61", barrio="el Raval · Ciutat Vella",
+                                  tramo=("Carrer de Sant Pau",))),
+    ("Gràcia: Carrer de Verdi", dict(calle1="Carrer de Verdi", num1="nº 32", barrio="la Vila de Gràcia · Gràcia",
+                                     tramo=("Carrer de la Perla", "Carrer de l'Or"))),
+    # Desde la plaça de Catalunya: el de urgencias más cercano es el Clínic, a 1,5 km, rumbo 281°.
+    ("Barcelona: hospital", dict(anillo=dict(nombre="Hospital Clínic", dir="Carrer de Villarroel 170-166",
+                                             tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
+                                             destino=281, i=1, n=8))),
+]
+# Calles Murcia: lo que dicen los datos reales (tools/ref.py --region murcia) en sitios públicos, 2026-10-26.
+ESCENAS_MURCIA = [
+    ("Murcia: Calle Trapería", dict(calle1="Calle Trapería", num1="nº 19", tramo=("Calle Andrés Baquero", "Calle Platería"))),
+    ("Cartagena: Calle Mayor", dict(calle1="Calle Mayor", num1="nº 14", barrio="Casco Antiguo",
+                                    tramo=("Calle Medieras", "Calle Andino"))),
+    ("Pedanía y término", dict(lugar="El Moral", sub="término de Caravaca de la Cruz", pie="30S 569078 4205422")),
+    # Desde la Gran Vía de Murcia (nº 23): el de urgencias más cercano está a 750 m, rumbo 18°. El nombre va con la
+    # forma corta de overrides-murcia.json (poi_abrev), que cabe entera en 240, 260 y 280.
+    ("Murcia: hospital", dict(anillo=dict(nombre="Hosp. Morales Meseguer", dir="Avenida Marqués de los Vélez",
+                                          tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="750 m", rumbo=0, destino=18,
+                                          i=1, n=8))),
+]
 # Calles Comunitat Valenciana: lo que dicen los datos reales (tools/ref.py --region valencia) en sitios públicos, 2026-10-26.
 ESCENAS_VALENCIA = [
     # València, 39.4727 -0.3765: el 21 a 13 m; la segunda calle, a 7 m más que la primera (no hay duda).
@@ -627,6 +654,16 @@ FICHAS = {
                  ("Cities and towns: street, number and neighbourhood", "A Coruña: Rúa Real"),
                  ("Outside town: village and parish", "Aldea y parroquia"),
                  ("Nearest hospital with A&E: arrow and distance", "Pontevedra: hospital"))),
+    "barcelona": ("barcelona", ESCENAS_BARCELONA, None,
+                  (("Street, door number and the streets on each side", "Barcelona: Carrer de Ferran"),
+                   ("Neighbourhood and district, offline", "Barcelona: La Rambla"),
+                   ("Every street of the city, with no signal", "Gràcia: Carrer de Verdi"),
+                   ("Nearest hospital with A&E: arrow and distance", "Barcelona: hospital"))),
+    "murcia": ("murcia", ESCENAS_MURCIA, None,
+               (("Street, door number and the streets on each side", "Murcia: Calle Trapería"),
+                ("Cities and towns: street, number and neighbourhood", "Cartagena: Calle Mayor"),
+                ("Outside town: hamlet and municipality", "Pedanía y término"),
+                ("Nearest hospital with A&E: arrow and distance", "Murcia: hospital"))),
     "valencia": ("valencia", ESCENAS_VALENCIA, None,
                  (("Street, door number and the streets on each side", "València: Sant Vicent Màrtir"),
                   ("Cities and towns: street, number and neighbourhood", "Alacant: Canalejas"),

@@ -17,8 +17,8 @@ function fuenteVectorial(logger as Test.Logger) as Boolean {
     return w > 0 && s.length() == 15 && s.substring(0, 3).equals("Rúa");
 }
 
-// P73: las caras de la v3.4 (Noto Sans en nombres, Bionic en cifras) existen en el reloj, y no han caído en la
-// Roboto (si getVectorFont no tiene la cara, toma la siguiente: el ancho lo delata). Mayúsculas con tildes.
+// P73: la cara de los nombres de la v3.4 (Noto Sans) existe en el reloj y no ha caído en la Roboto; la de las cifras
+// (Bionic) se registra (si getVectorFont no tiene la cara, toma la siguiente: el ancho lo delata). Mayúsculas con tildes.
 (:test)
 function fuentesV34(logger as Test.Logger) as Boolean {
     var dc = Lienzo.dc();
@@ -39,5 +39,8 @@ function fuentesV34(logger as Test.Logger) as Boolean {
     var wr2 = dc.getTextWidthInPixels("1048", rob32);
     logger.debug("FUENTES v3.4: Noto " + wn + " px / Roboto " + wr + " px; Bionic 1048 " + wb + " / Roboto " + wr2
         + "; alto hora " + dc.getFontHeight(Fuentes.hora(dc)));
-    return ok && wn != wr && wb != wr2;
+    // La Bionic no está en todos (el FR 570 no la trae; el Enduro 3 y el fēnix 8 Solar, en SemiBold): sin ella, las
+    // cifras van en Roboto, que es el respaldo previsto. La Noto de los nombres sí se exige.
+    logger.debug("FUENTES v3.4: cifras en " + (wb != wr2 ? "Bionic" : "Roboto (sin Bionic)"));
+    return ok && wn != wr;
 }

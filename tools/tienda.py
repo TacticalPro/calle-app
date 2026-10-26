@@ -7,6 +7,9 @@ ajustadas a esa carpeta y el recurso con el nombre de la app. Antes comprueba qu
 para cada reloj tengan exactamente las zonas de la app: si no, para.
 
 Lo llama `APP=<app> ./ciq.sh tienda`, que compila con lo que este script deja. Imprime la carpeta.
+
+Con --beta (`APP=<app> ./ciq.sh beta`): la beta privada de esa app, con su "beta_id" (otro id, que no se cambia
+nunca) y sus "beta_relojes" (por defecto, solo el fēnix 7X Pro), en bin/tienda/<app>-beta/.
 """
 import json
 import re
@@ -57,16 +60,21 @@ def solo_zonas(carpeta, zonas, out):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("uso: tienda.py <app de tools/catalogo.json>")
+    beta = "--beta" in sys.argv[2:]
+    if len(sys.argv) != 2 + beta:
+        sys.exit("uso: tienda.py <app de tools/catalogo.json> [--beta]")
     clave = sys.argv[1]
     app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8")).get(clave)
     if not isinstance(app, dict) or not re.fullmatch(r"[0-9a-f]{32}", app.get("id", "")):
         sys.exit(f"{clave}: no está en tools/catalogo.json o no tiene un id válido")
+    if beta:
+        if not re.fullmatch(r"[0-9a-f]{32}", app.get("beta_id", "")) or app["beta_id"] == app["id"]:
+            sys.exit(f"{clave}: sin \"beta_id\" propio en tools/catalogo.json")
+        app = dict(app, id=app["beta_id"], relojes=app.get("beta_relojes", ["fenix7xpro"]))
 
     jungle = (ROOT / "monkey.jungle").read_text("utf-8")
     rutas = rutas_jungle(jungle)
-    out = ROOT / "bin" / "tienda" / clave
+    out = ROOT / "bin" / "tienda" / (clave + ("-beta" if beta else ""))
     filtro = {}   # carpeta source-gen* con más zonas que la app → carpeta de out con solo las de la app
     for reloj in app["relojes"]:
         carpetas = rutas.get(reloj, rutas["base"])
@@ -107,6 +115,12 @@ def main():
                 carpetas.append("res")
             linea = f"{m.group(1)} = {';'.join(carpetas)}"
         lineas.append(linea)
+    # El icono a la medida de cada reloj (resources-<reloj>/, tools/caratula.py --instalar): el compilador solo lo
+    # busca junto a un «resources» al lado del jungle, no en ../../../resources; aquí se añade a mano.
+    propias = {m.group(1) for m in (re.match(r"^(\w+)\.resourcePath", l.strip()) for l in lineas) if m}
+    for r in app["relojes"]:
+        if (ROOT / f"resources-{r}").is_dir() and r not in propias:
+            lineas.append(f"{r}.resourcePath = $(base.resourcePath);{SUBIR}resources-{r}")
     (out / "monkey.jungle").write_text("\n".join(lineas) + "\n", "utf-8")
 
     (out / "res" / "strings" / "strings.xml").write_text(

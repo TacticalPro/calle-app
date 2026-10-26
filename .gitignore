@@ -21,3 +21,10 @@ resources-gen-b/
 source-gen-b/
 test-gen-b/
 .venv/
+
+# Metadatos de macOS y claves: nunca al repositorio público
+.DS_Store
+*.der
+*.pem
+*.p12
+.env*

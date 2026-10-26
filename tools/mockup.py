@@ -15,6 +15,7 @@ Los menús (anotaciones y acciones) son Menu2 del sistema: su maqueta es aproxim
     tools/mockup.py --brujula        la guía con y sin anillo          → tools/out/mockups-brujula.png
     tools/mockup.py --ficha          imágenes de la tienda (7X Pro)    → docs/tienda/
     tools/mockup.py --ficha galicia  las de CALLE Galicia               → docs/tienda/galicia/
+    tools/mockup.py --ficha valencia las de Calles Comunitat Valenciana → docs/tienda/valencia/
 """
 import json
 import math
@@ -599,6 +600,23 @@ ESCENAS_GALICIA = [
                                               tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,5 km", rumbo=0,
                                               destino=145, i=1, n=8))),
 ]
+# Calles Comunitat Valenciana: lo que dicen los datos reales (tools/ref.py --region valencia) en sitios públicos, 2026-10-26.
+ESCENAS_VALENCIA = [
+    # València, 39.4727 -0.3765: el 21 a 13 m; la segunda calle, a 7 m más que la primera (no hay duda).
+    ("València: Sant Vicent Màrtir", dict(calle1="Carrer de Sant Vicent Màrtir", num1="nº 21", barrio="el Mercat",
+                                         tramo=("Carrer dels Manyans", "Carrer de Sant Ferran"))),
+    # Alacant, 38.3425 -0.48693.
+    ("Alacant: Canalejas", dict(calle1="Carrer de Canalejas", num1="nº 5", barrio="Raval de Sant Francesc",
+                                tramo=("Carrer de Rafael Terol", "Carrer de Sant Ferran"))),
+    # L'Horta Nord, 39.4930 -0.3530: sin calle a 50 m; el poblado más cercano y el término.
+    ("Huerta: lugar y término", dict(lugar="Camí de Vera", sub="término de Alboraia / Alboraya",
+                                     pie="30S 727625 4374833")),
+    # Desde el centro de Manises (39.4925 -0.4630): el de urgencias más cercano, a 1,2 km, rumbo 130°. (El General
+    # d'Elx no cabe entero en la línea: el escaparate pide un nombre que se lea.)
+    ("Manises: hospital", dict(anillo=dict(nombre="Hospital de Manises", dir="Carrer de Jorge Juan",
+                                           tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,2 km", rumbo=0,
+                                           destino=130, i=1, n=8))),
+]
 FICHAS = {
     "madrid": ("", ESCENARIOS, None, (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
                                                    ("Neighbourhood and district, offline", "Madrid: barrio · distrito"),
@@ -609,6 +627,11 @@ FICHAS = {
                  ("Cities and towns: street, number and neighbourhood", "A Coruña: Rúa Real"),
                  ("Outside town: village and parish", "Aldea y parroquia"),
                  ("Nearest hospital with A&E: arrow and distance", "Pontevedra: hospital"))),
+    "valencia": ("valencia", ESCENAS_VALENCIA, None,
+                 (("Street, door number and the streets on each side", "València: Sant Vicent Màrtir"),
+                  ("Cities and towns: street, number and neighbourhood", "Alacant: Canalejas"),
+                  ("Outside town: nearest place and municipality", "Huerta: lugar y término"),
+                  ("Nearest hospital with A&E: arrow and distance", "Manises: hospital"))),
 }
 
 

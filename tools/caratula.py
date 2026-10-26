@@ -6,6 +6,7 @@
     tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png,
                                  docs/tienda/portada_500.png (Madrid) y el icono del lanzador,
                                  resources/drawables/launcher_icon.png (de todas las apps Calles)
+    tools/caratula.py --region valencia   solo la carátula B de esa app: docs/tienda/<región>/portada_500.png
 
 El fondo es el callejero real de cada app (tools/out/geom-<región>.json, ODbL), dibujado tenue: el casco de
 Santiago en Galicia y la Puerta del Sol en Madrid.
@@ -26,7 +27,9 @@ NEGRO, FONDO = (0, 0, 0), (17, 17, 17)
 BLANCO, GRIS, GRIS_OSC = (255, 255, 255), (0xAA, 0xAA, 0xAA), (0x55, 0x55, 0x55)
 AMBAR, AZUL_PLACA = (0xFF, 0xAA, 0x00), (0x1F, 0x3B, 0x73)
 CENTRO = (42.8792, -8.5446)   # casco de Santiago, entre el Obradoiro y la Quintana
-CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035)}   # Madrid: la Puerta del Sol
+CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035),   # Madrid: la Puerta del Sol
+           "valencia": (39.4697, -0.3765)}                      # València: la Plaça de l'Ajuntament
+TITULOS = {"valencia": "COMUNITAT VALENCIANA"}                  # el rótulo ámbar; si no, la región en mayúsculas
 LADO_M = 900                  # metros de mapa que caben en la carátula
 
 
@@ -141,7 +144,11 @@ def caratula_b(region="galicia"):
     d.ellipse((250 - 60, 175 - 60, 250 + 60, 175 + 60), outline=AMBAR + (255,), width=3)
     marcador(d, 250, 140, 38, AMBAR + (255,), hueco=FONDO + (255,))
     texto(d, (250, 382), "CALLES", fuente(78), BLANCO, espacio=8)
-    texto(d, (250, 432), region.upper(), fuente(28, 500), AMBAR, espacio=12)
+    titulo = TITULOS.get(region, region.upper())
+    # Con el espaciado de siempre (12) si cabe en 440 px; un rótulo largo se aprieta.
+    f28 = fuente(28, 500)
+    espacio = min(12, max(2, (440 - sum(d.textlength(ch, font=f28) for ch in titulo)) // max(1, len(titulo) - 1)))
+    texto(d, (250, 432), titulo, f28, AMBAR, espacio=espacio)
     texto(d, (250, 470), "LA CALLE Y EL PORTAL, SIN COBERTURA", fuente(21, 500), GRIS, espacio=1)
     return img.convert("RGB")
 
@@ -204,6 +211,13 @@ def hoja(propuestas):
 
 def main():
     import sys
+    if "--region" in sys.argv:
+        region = sys.argv[sys.argv.index("--region") + 1]
+        out = ROOT / "docs" / "tienda" / region
+        out.mkdir(parents=True, exist_ok=True)
+        caratula_b(region).save(out / "portada_500.png", optimize=True)
+        print(f"escrito {out / 'portada_500.png'}")
+        return
     if "--instalar" in sys.argv:
         caratula_b().save(ROOT / "docs" / "tienda" / "galicia" / "portada_500.png", optimize=True)
         caratula_b("madrid").save(ROOT / "docs" / "tienda" / "portada_500.png", optimize=True)

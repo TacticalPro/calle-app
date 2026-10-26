@@ -24,6 +24,10 @@ ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
 OUT = TOOLS / "out"
 TOL = 1.0  # m: la cuantización a metro entero de las teselas mueve las distancias menos que esto
+# Dos portales, cada uno redondeado al metro (hasta 0,71 m), pueden cambiar su diferencia de distancias hasta
+# 2 · 0,71 ≈ 1,41 m: más cerca que eso, el orden entre ellos no se compara (Barcelona, 2026-10-26: el 30 y el 32
+# de Fastenrath a 4,9 y 6,0 m).
+TOL_PORTAL = 1.5
 
 
 def dseg2(px, py, ax, ay, bx, by):
@@ -501,7 +505,7 @@ def fuerza_bruta(ref, n, semilla=1):
                         if tuple(r["t1"]) != tg:
                             fallos.append((x, y, ti, f"tramo {r['t1']} ≠ global {tg}"))
                     ps = portal(orden[0])
-                    if ps and ps[0][0] <= m["portal_r"] - TOL and (len(ps) == 1 or ps[1][0] - ps[0][0] > TOL):
+                    if ps and ps[0][0] <= m["portal_r"] - TOL and (len(ps) == 1 or ps[1][0] - ps[0][0] > TOL_PORTAL):
                         portales_cmp += 1
                         esperado = ps[0][1][4] if ps[0][1][3] == 0 else f"{ps[0][1][3]}{ps[0][1][4]}"
                         if r["p1"] and r["p1"][0] == esperado:
@@ -689,8 +693,14 @@ def derivar_control_cfg(ref, region, specs):
         elif t == "cerca":
             x, y = ref.xy(sp["lat"], sp["lon"])
             best, orden, _, _ = ref.global_(x, y, radio=400)
-            x, y = _mitad(_larga(g, orden[0], (x, y)))
-            anadir(id_, x, y, f"mitad de {orden[0]}")
+            # La más cercana que sea calle (no solo área) aquí: junto a una plaza que en OSM es solo área (Barcelona,
+            # «Plaça de Pau Casals»), no hay calle lineal con ese nombre que partir por la mitad, aunque la haya en
+            # otro municipio.
+            lineales = {c["n"] for c in g["calles"] if not c["a"] and len(c["p"]) > 1
+                        and min(math.dist(q, (x, y)) for q in c["p"]) <= 2000.0}
+            n = next(n for n in orden if n in lineales)
+            x, y = _mitad(_larga(g, n, (x, y)))
+            anadir(id_, x, y, f"mitad de {n}")
         elif t == "cruce":
             propia = {tuple(q) for c in g["calles"] if c["n"] == sp["calle"] for q in c["p"]}
             otro = next((tuple(q), c["n"]) for c in g["calles"] if c["n"] != sp["calle"] and not c["a"]

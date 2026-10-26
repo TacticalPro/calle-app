@@ -382,7 +382,7 @@ class VistaCalle extends WatchUi.View {
     // debajo y la UTM al pie.
     private function dibujarLejos(dc as Graphics.Dc) as Void {
         var m = _m;
-        var sub = Fmt.mayus(m.parroquia != null ? "parroquia de " + m.parroquia
+        var sub = Fmt.mayus(m.parroquia != null ? Callejero.ZPREF + m.parroquia
             : (m.barrio != null ? m.barrio as String : "a menos de " + Callejero.MAXD + " m"));
         if (m.lugar == null) {
             aviso(dc, "SIN CALLE", Graphics.COLOR_WHITE, sub);

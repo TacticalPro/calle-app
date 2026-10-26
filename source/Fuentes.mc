@@ -8,7 +8,7 @@ import Toybox.Lang;
 // Si el reloj no tiene una cara, getVectorFont toma la siguiente de la lista: Roboto Condensed, la de la v3.
 module Fuentes {
     const NOMBRES = ["NotoSansSCMedium", "RobotoCondensedBold"];
-    const CIFRAS = ["BionicBold", "RobotoCondensedBold"];
+    const CIFRAS = ["BionicBold", "BionicSemiBold", "RobotoCondensedBold"];   // SemiBold: Enduro 3, fēnix 8 Solar
     const ROBOTO = ["RobotoCondensedBold"];
     const BIONIC = " #%+-./0123456789:°";
 

@@ -45,6 +45,8 @@ function notasTope(logger as Test.Logger) as Boolean {
 function notasTexto(logger as Test.Logger) as Boolean {
     var m = new Modelo();
     var t = [] as Array<String>;
+    var pref = Callejero.ZPREF;
+    Callejero.ZPREF = "parroquia de ";   // el de Galicia; lo pone la región activa (Cataluña: «término de »)
     t.add(Notas.texto(m));                                    // buscando
     m.estado = EST_FUERA;
     t.add(Notas.texto(m));
@@ -78,10 +80,22 @@ function notasTexto(logger as Test.Logger) as Boolean {
     m.semilla = true;
     m.tFix = 1;
     var viejo = Notas.texto(m);
+    m.limpiar();
+    m.semilla = false;
+    m.estado = EST_LEJOS;
+    m.lugar = "Mas Pujol";
+    m.parroquia = "Vic";
+    Callejero.ZPREF = "término de ";
+    var terme = Notas.texto(m);
+    Callejero.ZPREF = pref;
     var esperado = ["sin posición", "fuera de zona", "sin calle", "Mazas (parroquia de Marrozos)",
         "Rúa do Franco 33", "Rúa do Franco, entre Rúa do Vilar y Rúa da Raíña", "Rúa do Franco, cerca de Rúa do Vilar",
         "Rúa do Franco 54, esq. Rúa da Raíña", "Rúa do Vilar 44 / Rúa Nova ~11"] as Array<String>;
     var ok = viejo.find("(posición de hace ") != null;
+    if (terme.find("Mas Pujol (término de Vic)") != 0) {
+        logger.error("término: «" + terme + "»");
+        ok = false;
+    }
     if (!Fmt.legible("Rúa Nova ≈11 / ≈3").equals("Rúa Nova ~11 / ~3")) {
         logger.error("legible: «" + Fmt.legible("Rúa Nova ≈11 / ≈3") + "»");
         ok = false;

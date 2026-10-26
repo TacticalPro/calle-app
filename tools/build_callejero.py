@@ -1983,7 +1983,7 @@ module {mod} {{
             ] as Array<ResourceId or Null>,
             Rez.JsonData.{pref}z{zmayor},
             Rez.JsonData.{pref}poi,
-            {"true" if zbarrio else "false"},
+            {"true" if zbarrio else (mc_str(cfg["zonas"]["prefijo"]) if cfg["zonas"].get("prefijo") else "false")},
             // Teselas adaptativas (variante c): recurso con x0 | y0 << 16, x1 | y1 << 16 de cada una, en unidades
             // de TESELA m (Geo.celda lo carga al cambiar de tesela); null = rejilla fija.
             {cajas_mc}{f""",
@@ -2089,6 +2089,7 @@ module Callejero {{
     var Z_MAYOR as ResourceId or Null = null;
     var POI as ResourceId or Null = null;
     var ZBARRIO as Boolean = false;       // el polígono de las zonas es el barrio (Madrid), no la parroquia
+    var ZPREF as String = "parroquia de ";   // cómo se nombra el polígono de las zonas («término de» en Cataluña)
     var CAJAS as ResourceId or Null = null;   // teselas adaptativas (Geo.celda); null = rejilla fija
 
     // Sin región activa (los tests miden así lo que ocupan los índices de cada una).
@@ -2122,7 +2123,11 @@ module Callejero {{
         ZIDX = d[16] as Array<ResourceId or Null>;
         Z_MAYOR = d[17] as ResourceId;
         POI = d[18] as ResourceId;
-        ZBARRIO = d[19] as Boolean;
+        // d[19]: true si el polígono es el barrio; o el prefijo con que se nombra (Cataluña: «término de», el
+        // municipio); false, la parroquia.
+        var zp = d[19];
+        ZBARRIO = zp instanceof Boolean ? zp as Boolean : false;
+        ZPREF = zp instanceof String ? zp as String : "parroquia de ";
         CAJAS = d[20] as ResourceId or Null;{act_zona}
     }}
 }}

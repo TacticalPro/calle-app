@@ -1383,6 +1383,9 @@ def extraer_zonas(elems, proy, overrides, cuenta, zcfg):
                 continue
             pts = [p for a in anillos for p in a]
             es_nivel = tags["admin_level"] == nivel
+            # Nombre en pantalla del polígono, si la región lo fija (overrides "nombre_termino": nombre de OSM → el que
+            # se muestra; Comunitat Valenciana, 2026-10-26: una sola forma de los términos bilingües).
+            nom = overrides.get("nombre_termino", {}).get(nom, nom)
             (parroquias if es_nivel else padres).append(dict(nombre=nom, anillos=anillos, bb=caja_de(pts)))
             cuenta[zcfg["poligono"] if es_nivel else "polígono padre"] += 1
         elif e["type"] == "node" and tags.get("place") in LUGAR_TIPOS | PARAJE_TIPOS | BARRIO_TIPOS:

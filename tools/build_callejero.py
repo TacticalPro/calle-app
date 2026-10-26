@@ -275,7 +275,10 @@ def clave(nombre):
 
 def clave_unir(nombre):
     """Clave de unificar_variantes(): la de clave() pero sin quitar las partículas de una letra, que en
-    los polígonos son nombres de calle («Rúa "E"» y «Rúa "D"» no son la misma)."""
+    los polígonos son nombres de calle («Rúa "E"» y «Rúa "D"» no son la misma). Las elididas con apóstrofo sí se
+    quitan: «Carrer d'Almansa» / «Carrer Almansa» y «Plaça de l'Ajuntament» / «Plaça del Ajuntament» son la misma
+    (Comunitat Valenciana, 2026-10-26: 111 pares que se tocaban sin unificar)."""
+    nombre = re.sub(r"(?i)\b[dl]['’]", " ", nombre)
     s = re.sub(r"[^a-z0-9]+", " ", sin_tildes(nombre).lower()).split()
     if not s:
         return ""

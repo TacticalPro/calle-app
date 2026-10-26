@@ -50,7 +50,21 @@ sdk() {
 
 monkeyc() { "$BIN/monkeyc" -d "$DEV" -f monkey.jungle -y "$KEY" "$@"; }
 
+# El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
+# /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
+# cierran a la vez y los tests salen en blanco (2026-10-26). Se toma al usarlo y se suelta al salir; si lo
+# tiene otro, se espera (SIM_ESPERA s, 1800 por defecto) y, si no lo suelta, se para.
+CANDADO=/tmp/calles-sim.lock
 simulador() {
+    local t=0
+    until mkdir "$CANDADO" 2>/dev/null; do
+        [ -f "$CANDADO/quien" ] && grep -q "^calle-fenix $$ " "$CANDADO/quien" && break
+        [ $t -eq 0 ] && echo "simulador ocupado por: $(cat "$CANDADO/quien" 2>/dev/null) — espero" >&2
+        t=$((t + 10)); [ $t -gt "${SIM_ESPERA:-1800}" ] && { echo "simulador: sigue ocupado; paro" >&2; exit 1; }
+        sleep 10
+    done
+    echo "calle-fenix $$ $(date +%H:%M)" > "$CANDADO/quien"
+    trap 'grep -q "^calle-fenix $$ " "$CANDADO/quien" 2>/dev/null && rm -r "$CANDADO"' EXIT
     pgrep -f "ConnectIQ.app" >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
 }
 

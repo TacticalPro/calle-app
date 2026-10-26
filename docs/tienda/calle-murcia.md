@@ -3,7 +3,7 @@
 App del catálogo por zonas (`tools/catalogo.json`): `APP=murcia ./ciq.sh tienda` → `bin/calle-murcia.iq`.
 Subida nueva en el portal (no es una versión de ninguna beta), con el id `e6ac6e68…`. **Sin subir**: la sube el autor.
 
-- **Título:** «Calles Murcia (offline)», en inglés y en español (provisional, como el resto del catálogo).
+- **Título:** «Calles Murcia (offline)», en inglés y en español (confirmado por el autor, 2026-10-26).
 - **Versión:** 3.4.0 (la interfaz 3.4, propuesta); la decide el autor al subirla.
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con los tests en verde
   en el 7S, el 7 y el 7X Pro. El `.iq` pasa de los 10 MB: se sube a mano o por trozos, como las demás apps del catálogo.
@@ -16,7 +16,9 @@ Subida nueva en el portal (no es una versión de ninguna beta), con el id `e6ac6
   1. Murcia, Calle Trapería 19, entre la Calle Andrés Baquero y la Calle Platería;
   2. Cartagena, Calle Mayor 14, Casco Antiguo, entre la Calle Medieras y la Calle Andino;
   3. la pedanía de El Moral (término de Caravaca de la Cruz), sin calle a 50 m, con su UTM;
-  4. desde la Calle San José (Yecla), el hospital con urgencias más cercano: el Virgen del Castillo, a 660 m hacia el ENE.
+  4. desde la Gran Vía de Murcia (nº 23), el hospital con urgencias más cercano: el Morales Meseguer, a 750 m hacia el N
+     (en el reloj, «Hosp. Morales Meseguer»: los nombres largos van abreviados para caber enteros, `poi_abrev` en
+     `tools/overrides-murcia.json`).
 - El portal puede avisar «Signature check failed» en la primera subida de una app nueva: es un fallo conocido suyo.
   La firma se comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2
   manifest.xml`.

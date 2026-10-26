@@ -75,6 +75,11 @@
       "fenix7xpro",
       "fenix7xpronowifi"
     ],
-    "relojes_nota": "2026-10-26: la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280), como Calles Galicia; tests en el 7X Pro, el 7 y el 7S. Fuera: el 6X y los de 128 KB (254 recursos como mucho; Murcia usa ~980) y los fēnix 8, 9 y E (faltan sus tests)."
+    "relojes_nota": "2026-10-26: la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280), como Calles Galicia; tests en el 7X Pro, el 7 y el 7S. Fuera: el 6X y los de 128 KB (254 recursos como mucho; Murcia usa ~980) y los fēnix 8, 9 y E (faltan sus tests).",
+    "beta_id": "fe5c0e8fdd164e23ba658fb0d382363d",
+    "beta_relojes": [
+      "fenix7xpro"
+    ],
+    "beta_nota": "Beta privada propia de Calles Murcia (2026-10-26), solo el fēnix 7X Pro: APP=murcia ./ciq.sh beta → bin/calle-murcia-beta.iq. El beta_id no se cambia nunca (la tienda trataría otro id como otra app); no es el de la beta de Galicia (19ddcb3e…)."
   }
 }

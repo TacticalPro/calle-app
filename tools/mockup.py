@@ -606,11 +606,11 @@ ESCENAS_MURCIA = [
     ("Cartagena: Calle Mayor", dict(calle1="Calle Mayor", num1="nº 14", barrio="Casco Antiguo",
                                     tramo=("Calle Medieras", "Calle Andino"))),
     ("Pedanía y término", dict(lugar="El Moral", sub="término de Caravaca de la Cruz", pie="30S 569078 4205422")),
-    # Desde la calle San José (Yecla, centro): el de urgencias más cercano está a 660 m, rumbo 73°. (El Morales
-    # Meseguer, desde la Gran Vía de Murcia, no cabe: «Hospital General Universitario…» se corta.)
-    ("Yecla: hospital", dict(anillo=dict(nombre="Hospital Virgen del Castillo", dir="Avenida de la Feria",
-                                         tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="660 m", rumbo=0, destino=73,
-                                         i=1, n=8))),
+    # Desde la Gran Vía de Murcia (nº 23): el de urgencias más cercano está a 750 m, rumbo 18°. El nombre va con la
+    # forma corta de overrides-murcia.json (poi_abrev), que cabe entera en 240, 260 y 280.
+    ("Murcia: hospital", dict(anillo=dict(nombre="Hosp. Morales Meseguer", dir="Avenida Marqués de los Vélez",
+                                          tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="750 m", rumbo=0, destino=18,
+                                          i=1, n=8))),
 ]
 FICHAS = {
     "madrid": ("", ESCENARIOS, None, (("Street, door number and the streets on each side", "Madrid: Gran Vía"),
@@ -626,7 +626,7 @@ FICHAS = {
                (("Street, door number and the streets on each side", "Murcia: Calle Trapería"),
                 ("Cities and towns: street, number and neighbourhood", "Cartagena: Calle Mayor"),
                 ("Outside town: hamlet and municipality", "Pedanía y término"),
-                ("Nearest hospital with A&E: arrow and distance", "Yecla: hospital"))),
+                ("Nearest hospital with A&E: arrow and distance", "Murcia: hospital"))),
 }
 
 

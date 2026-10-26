@@ -12,6 +12,8 @@
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
 #   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
+#                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
+#                         → bin/calle-<zona>-beta.iq
 #   ./ciq.sh prg6x        .prg para un fēnix 6X → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
@@ -87,7 +89,14 @@ case "${1:-build}" in
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
     package) privacidad; sdk; mkdir -p bin
              "$BIN/monkeyc" -e -f monkey.jungle -y "$KEY" -o bin/calle.iq -r -O 2 -w ;;
-    beta)    privacidad; sdk; mkdir -p bin/beta
+    beta)    if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
+                 privacidad; sdk
+                 dir="$($PY tools/tienda.py "$APP" --beta)"
+                 "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP-beta.iq" -r -O 2 -w 2>&1 \
+                     | { grep -v "is large (> 8kb)" || true; }
+                 ls -la "bin/calle-$APP-beta.iq"; exit 0
+             fi
+             privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
              # Ni los de 128 KB (fēnix 5/5S y 6/6S): la beta es la del 7X Pro y el 6X.

@@ -27,13 +27,13 @@ function utmFrenteAMgrs(logger as Test.Logger) as Boolean {
         var u = Utm.calcular(lat, lon);
         var g = new Position.Location({:latitude => lat, :longitude => lon, :format => :degrees})
             .toGeoString(Position.GEO_MGRS);
-        var s = _sinEspacios(g);
+        var s = UtmAux._sinEspacios(g);
         var n = s.length();
         var e5 = s.substring(n - 10, n - 5).toNumber();
         var n5 = s.substring(n - 5, n).toNumber();
         var cab = (u[0] as Number).toString() + (u[1] as String);
-        var de = _mod100k(Math.round(u[2] as Double).toNumber() - (e5 as Number));
-        var dn = _mod100k(Math.round(u[3] as Double).toNumber() - (n5 as Number));
+        var de = UtmAux._mod100k(Math.round(u[2] as Double).toNumber() - (e5 as Number));
+        var dn = UtmAux._mod100k(Math.round(u[3] as Double).toNumber() - (n5 as Number));
         var bien = s.substring(0, cab.length()).equals(cab) && de <= 1 && dn <= 1;
         logger.debug("UTM " + Utm.texto(lat, lon) + "  MGRS " + g + (bien ? "" : "  ← NO"));
         ok = ok && bien;
@@ -41,19 +41,23 @@ function utmFrenteAMgrs(logger as Test.Logger) as Boolean {
     return ok;
 }
 
-function _sinEspacios(s as String) as String {
-    var out = "";
-    var cs = s.toCharArray();
-    for (var i = 0; i < cs.size(); i++) {
-        if (cs[i] != ' ') {
-            out += cs[i].toString();
+// Auxiliares del test: en un módulo (:test) para que no entren en el paquete publicado.
+(:test)
+module UtmAux {
+    function _sinEspacios(s as String) as String {
+        var out = "";
+        var cs = s.toCharArray();
+        for (var i = 0; i < cs.size(); i++) {
+            if (cs[i] != ' ') {
+                out += cs[i].toString();
+            }
         }
+        return out;
     }
-    return out;
-}
 
-function _mod100k(d as Number) as Number {
-    var r = d % 100000;
-    r = r < 0 ? -r : r;
-    return r > 50000 ? 100000 - r : r;
+    function _mod100k(d as Number) as Number {
+        var r = d % 100000;
+        r = r < 0 ? -r : r;
+        return r > 50000 ? 100000 - r : r;
+    }
 }

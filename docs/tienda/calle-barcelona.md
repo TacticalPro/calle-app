@@ -1,7 +1,13 @@
 # Calles Barcelona — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=barcelona ./ciq.sh tienda` → `bin/calle-barcelona.iq`.
-App nueva en el portal, con su propio id. **Borrador del 2026-10-26, sin subir.**
+App nueva en el portal, con su propio id. **La pública, sin subir.** De momento va como **beta privada**
+(«Calles Barcelona (offline) (beta)», id `prueba` del catálogo, [ficha](https://apps.garmin.com/apps/04d18329-ddd9-49a5-80a2-dcdfb9493a3e)):
+3.4.0 (2026-10-26, sirvió para medir el límite: 174 MB aceptados) y 3.4.1 (iconos a medida), con la ficha en
+inglés y español. **Con paquetes de ~174 MB, el primer «Upload» suele devolver «trouble communicating with our
+servers» a los ~40 s; el segundo intento, con el mismo fichero en el formulario, entra y pasa a «Your file is
+being validated».** Antes de reintentar, comprobar en el formulario de *Upload New Version* que la «Latest app
+version» no ha cambiado, para no subirla dos veces.
 
 - **Título:** «Calles Barcelona (offline)», en inglés y en español.
 - **Datos:** el término municipal de Barcelona, del extracto de Cataluña de Geofabrik (OSM del 2026-10-26),

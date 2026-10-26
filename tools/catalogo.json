@@ -160,6 +160,6 @@
       "instinct3amoled45mm",
       "instinct3amoled50mm"
     ],
-    "relojes_nota": "2026-10-26: beta privada SOLO para medir el tamaño máximo de .iq que acepta la tienda (~150 MB). No se publica."
+    "relojes_nota": "2026-10-26: beta privada de Calles Barcelona (id propio de beta, distinto del de la pública). Primero sirvió para medir el límite de la tienda: aceptó 174 MB. 3.4.1: con el icono a medida de cada reloj."
   }
 }

@@ -73,6 +73,17 @@ def main():
         app = dict(app, id=app["beta_id"], relojes=app.get("beta_relojes", ["fenix7xpro"]))
 
     jungle = (ROOT / "monkey.jungle").read_text("utf-8")
+    # "variante" de la app: {reloj: variante} cuyos datos lleva ese reloj en esta app, aunque el jungle diga otra
+    # (Galicia lleva el 6X Pro en la b; Madrid, en la c). Se rehacen sus rutas desde las de base.
+    base = {k: re.search(rf"^base\.{k}\s*=\s*(.+)$", jungle, re.M).group(1) for k in ("sourcePath", "resourcePath")}
+    for reloj, v in app.get("variante", {}).items():
+        if reloj not in app["relojes"] or v not in ("normal", "6x", "c", "b"):
+            sys.exit(f"{clave}: variante «{v}» para «{reloj}», que no está en sus relojes o no existe")
+        suf = "" if v == "normal" else "-" + v
+        jungle = re.sub(rf"^{reloj}\.(sourcePath|resourcePath)\s*=.*\n?", "", jungle, flags=re.M)
+        jungle += "".join(f"\n{reloj}.{k} = " + ";".join(
+            re.sub(r"^(source|test|resources)-gen(-\w+)?$", rf"\1-gen{suf}", c.strip()) for c in base[k].split(";"))
+            for k in ("sourcePath", "resourcePath")) + "\n"
     rutas = rutas_jungle(jungle)
     out = ROOT / "bin" / "tienda" / (clave + ("-beta" if beta else ""))
     filtro = {}   # carpeta source-gen* con más zonas que la app → carpeta de out con solo las de la app

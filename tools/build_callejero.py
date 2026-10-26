@@ -106,6 +106,14 @@ TOPE_RECURSOS_6X = 250     # el compilador corta en 254; margen para cadenas o i
 # Variante c (fēnix 5/5S y 6/6S: 128 KB por app, API 3.1 o 3.4, el mismo tope de recursos): teselas
 # adaptativas (teselar_kd) que caben en KD_TOPE bytes de heap estimado.
 KD_TOPE = 30 * 1024
+# Variante b (fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus: 1,25 MB por app y el tope de 254 recursos):
+# teselas adaptativas grandes y zonas grandes, para que una región entera (Galicia, 215 km) quepa en ~250
+# recursos. Cada tesela lleva su unidad U (1, 2 o 4 m; las de ≤ 7,9 km, 1 m como siempre) y K, el bit de V
+# donde empiezan los vértices de cada calle: así la búsqueda salta las calles lejanas sin recorrer sus tiradas,
+# que en una tesela grande dispararía el watchdog (120.000 instrucciones). Las zonas llevan su unidad ZU.
+B_UNIDADES = (1, 2, 4)
+B_LADO_U = 7900       # unidades: lado máximo de una tesela con su margen (13 bits, y la caja gruesa hasta 8.160)
+ZU = 1                # m por unidad de las coordenadas de los lugares de una zona (14 bits)
 KD_LADO_MAX = 7800     # m: las coordenadas de tirada son de 13 bits con el margen
 KD_LADO_MIN = 300      # m: más pequeña no se parte aunque pese más (no debería pasar)
 KD_PASO = 10           # m: los cortes caen en múltiplos de esto
@@ -1455,7 +1463,9 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
             c += n
     F.append(len(RL))
     S, O = cadena_nombres(N)
-    L = [int(round(l["x"] - ox)) | int(round(l["y"] - oy)) << 14 | l["tipo"] << 28 for l in aqui]
+    # En unidades de ZU m (variante b, zonas de más de 13 km); ZU va al final de la lista si no es 1.
+    L = [int(round((l["x"] - ox) / ZU)) | int(round((l["y"] - oy) / ZU)) << 14 | l["tipo"] << 28 for l in aqui]
+    assert all(0 <= round((l[k] - o) / ZU) < 1 << 14 for l in aqui for k, o in (("x", ox), ("y", oy)))
     LN = [ids[l["nombre"]] for l in aqui]
     FZ = [0] * (NFRANJAS + 1)   # primer lugar de cada franja, y uno final
     for l in aqui:
@@ -1463,6 +1473,8 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
     for k in range(NFRANJAS):
         FZ[k + 1] += FZ[k]
     lista = [FORMATO, S, O, pares16(F), pares16(RL), L, pares16(LN), ZFRANJA, pares16(FZ)]
+    if ZU > 1:
+        lista.append(ZU)
     nums = sum(len(x) if isinstance(x, list) else 1 for x in lista[2:])
     est = dict(parroquias=len(presentes), lugares=len(aqui), nombres=len(N), nums=nums, tramos=len(RL),
                heap=int(5 * (nums + 7) + len(S.encode()) + 20),
@@ -1563,6 +1575,8 @@ def teselar_kd(vias, portales, proy, tope):
     """Teselas adaptativas (variante c): se parte la región por la mitad del peso del eje largo hasta que
     cada tesela, empaquetada de verdad, cabe en tope bytes (heap estimado) y mide ≤ KD_LADO_MAX.
     Devuelve ({i: tesela}, [caja sin margen por i])."""
+    # Variante b: la tesela puede medir lo que quepa en 13 bits con la unidad mayor.
+    lado_max = B_LADO_U * B_UNIDADES[-1] - 2 * BUF if VARIANTE == "b" else KD_LADO_MAX
     # Peso aproximado para elegir dónde cortar: cada tirada cuesta su cabecera y cada portal, un número.
     pesos = [((v["bb"][0] + v["bb"][2]) / 2, (v["bb"][1] + v["bb"][3]) / 2, 3.0 + 0.4 * len(v["pts"])) for v in vias]
     pesos += [(p["x"], p["y"], 1.0) for p in portales]
@@ -1591,7 +1605,7 @@ def teselar_kd(vias, portales, proy, tope):
 
     def cabe(caja, t):
         nombres = len({r[0] for r in t["runs"]} | {n for r in t["runs"] for n in r[4] if n})
-        if nombres > MAX_NOMBRES or max(caja[2] - caja[0], caja[3] - caja[1]) > KD_LADO_MAX:
+        if nombres > MAX_NOMBRES or max(caja[2] - caja[0], caja[3] - caja[1]) > lado_max:
             return math.inf
         return empaquetar(caja, t, {})[1]["heap"]
 
@@ -1675,8 +1689,8 @@ def teselar_kd(vias, portales, proy, tope):
     return {i: t for i, (_, t) in enumerate(hojas)}, [c for c, _ in hojas]
 
 
-def q(v, origen, lado):
-    return max(0, min(lado, int(round(v - origen))))
+def q(v, origen, lado, u=1):
+    return max(0, min(lado, int(round((v - origen) / u))))
 
 
 class Bits:
@@ -1732,7 +1746,11 @@ def empaquetar(caja, t, sufijos):
     """Tesela (caja sin margen: x0, y0, x1, y1) → lista JSON del FORMATO 4 (ver la cabecera del módulo).
     Devuelve (lista, estadísticas)."""
     ox, oy = caja[0] - BUF, caja[1] - BUF
-    lado = max(caja[2] - caja[0], caja[3] - caja[1]) + 2 * BUF
+    lado_m = max(caja[2] - caja[0], caja[3] - caja[1]) + 2 * BUF
+    # Unidad de la tesela (variante b): la menor con la que el lado cabe en 13 bits. En las demás, 1 m.
+    U = next((u for u in B_UNIDADES if math.ceil(lado_m / u) <= B_LADO_U), None) if VARIANTE == "b" else 1
+    assert U, f"tesela {caja}: {lado_m} m no caben ni con {B_UNIDADES[-1]} m de unidad"
+    lado = math.ceil(lado_m / U)
     assert lado < 1 << 13, "las coordenadas de tirada son de 13 bits"
     # Bits por coordenada de portal: 12 (salto de 5 bits) o, si la tesela pasa de 4.095 m, 13 (salto de 3).
     pb = 12 if lado <= 4095 else 13
@@ -1747,10 +1765,11 @@ def empaquetar(caja, t, sufijos):
     V = Bits()
     lados = Counter()
     nruns = nvert = 0
+    inicio_v = [None] * len(calles_runs)   # bit de V donde empiezan los vértices de cada calle (K)
     for nombre, clase, area, pts, (ta, tb) in sorted(t["runs"], key=lambda r: (ids[r[0]], r[1], r[3][0])):
         qp = []
         for x, y in pts:
-            p = (q(x, ox, lado), q(y, oy, lado))
+            p = (q(x, ox, lado, U), q(y, oy, lado, U))
             if not qp or qp[-1] != p:
                 qp.append(p)
         if area and len(qp) < 4:
@@ -1760,6 +1779,7 @@ def empaquetar(caja, t, sufijos):
             k = ids[nombre]
             if inicio_r[k] is None:
                 inicio_r[k] = len(R)
+                inicio_v[k] = V.n
             x0, y0 = tr[0]
             ext = max(max(abs(x - x0), abs(y - y0)) for x, y in tr)
             ext = -(-ext // RUN_EXT_U)
@@ -1797,8 +1817,8 @@ def empaquetar(caja, t, sufijos):
         if k != prev_calle:
             prev_calle, prev = k, 0
             inicio_p[k] = len(P)
-        x = q(p["x"], ox, lado)
-        y = q(p["y"], oy, lado)
+        x = q(p["x"], ox, lado, U)
+        y = q(p["y"], oy, lado, U)
         salto = p["num"] - prev
         sc = sufs.index(p["suf"]) + 1 if p["suf"] else 0
         if 0 <= salto < salto_esc and sc < PORTAL_SUF_ESC:
@@ -1831,10 +1851,21 @@ def empaquetar(caja, t, sufijos):
             a1, b1 = min(255, -(-cc[2] // CB_U)), min(255, -(-cc[3] // CB_U))
             CB.append(int32(a0 | b0 << 8 | a1 << 16 | b1 << 24))
     Vl = V.lista()
-    lista = [FORMATO, len(calles_runs), pb, S, O, C, CB, R, Vl, P, E]
-    nums = len(O) + len(C) + len(CB) + len(R) + len(Vl) + len(P) + len(E)
+    # PB lleva la unidad en sus bits altos (pb | U << 8) cuando no es 1: los datos de siempre no cambian.
+    lista = [FORMATO, len(calles_runs), pb | (U << 8 if U > 1 else 0), S, O, C, CB, R, Vl, P, E]
+    if VARIANTE == "b":
+        # K: por calle, más una final, el bit de V donde empiezan sus vértices (una sin tiradas, el de la siguiente).
+        K, fin_v = [], V.n
+        for k in range(len(calles_runs) - 1, -1, -1):
+            fin_v = inicio_v[k] if inicio_v[k] is not None else fin_v
+            K.append(fin_v)
+        K.reverse()
+        K.append(V.n)
+        assert V.n < 1 << 31
+        lista.append(K)
+    nums = len(O) + len(C) + len(CB) + len(R) + len(Vl) + len(P) + len(E) + (len(lista[11]) if len(lista) > 11 else 0)
     est = dict(runs=nruns, vert=nvert, portales=len(P), nombres=len(calles_runs), lados=lados, escapes=len(E) // 2,
-               nums=nums, bytes_nombres=len(S.encode()))
+               nums=nums, bytes_nombres=len(S.encode()), u=U)
     # Medido en el simulador del fēnix 6 (2026-10-25): 5 B por número de un array de JSON; una cadena, su
     # longitud más ~20 B. Las tablas por calle de la búsqueda (mejor, mejorRun) añaden 10 B por calle.
     est["heap"] = int(5 * (nums + 10) + len(S.encode()) + 20 + 10 * len(calles_runs))
@@ -2036,23 +2067,28 @@ def escribir_comun(recien=None, solo=None, salida=None):
     recursos = sum(sum(1 for v in m["idx"] if v) + sum(1 for v in m["zidx"] if v) + 1 + bool(m.get("cajas"))
                    for m in metas)
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
-          + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c") else ""))
+          + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c", "b") else ""))
     # Callejero.ZONA es una para todas, salvo las regiones con zona propia (Galicia), que la dan en datos().
     zonas = {(m["zona"], m["rn"]) for m in metas if not m.get("zona_propia")}
     if len(zonas) > 1:
         sys.exit(f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una.")
     propia = any(m.get("zona_propia") for m in metas)
     zona, rn = (zonas.pop() if zonas else (next(((m["zona"], m["rn"]) for m in metas), (ZONA, RN))))
+    # La celda del raster también es una (variante b: 100 m, con zonas de 20 km); los datos viejos no la guardan.
+    rceles = {m.get("rcel", 50) for m in metas}
+    if len(rceles) > 1:
+        sys.exit(f"Las regiones de la variante {VARIANTE} tienen celdas de raster distintas {rceles}: Callejero.RCEL es una.")
+    rcel = rceles.pop() if rceles else RCEL
     decl_zona = (f"""    var ZONA as Number = {zona};             // la de la región activa (activar)
-    const RCEL = {RCEL};
+    const RCEL = {rcel};
     var RN as Number = {rn};""" if propia else f"""    const ZONA = {zona};
-    const RCEL = {RCEL};
+    const RCEL = {rcel};
     const RN = {rn};""")
     act_zona = (f"""
         // Zonas propias (Galicia, 10 km); las demás regiones, las de siempre.
         ZONA = d.size() > 21 ? d[21] as Number : {zona};
         RN = d.size() > 21 ? d[22] as Number : {rn};""" if propia else "")
-    if VARIANTE in ("6x", "c") and recursos > TOPE_RECURSOS_6X:
+    if VARIANTE in ("6x", "c", "b") and recursos > TOPE_RECURSOS_6X:
         if recien:
             # Se retira lo que se acaba de escribir: con ello dentro, el 6X no compilaría.
             import shutil
@@ -2076,6 +2112,9 @@ module Callejero {{
     const EXT_U = {RUN_EXT_U};
     const EXT_SIN = {RUN_EXT_SIN};
     const CB_U = {CB_U};
+    // Tope de la tesela y la zona mayores cargadas a la vez (MemoriaTest): 200 KB en los de 768 KB y en los de
+    // 128 KB (teselas y zonas pequeñas); 400 KB en la variante b (1,25 MB: pico de ~455 KB con la app).
+    const MEM_DOS = {400 if VARIANTE == "b" else 200} * 1024;
 {decl_zona}
     const ZMARGEN = {ZMARGEN};
     const LUGAR_R = {LUGAR_R};
@@ -2313,11 +2352,13 @@ def main():
     ap.add_argument("--comun", action="store_true", help="solo rehace Callejero.mc, Regiones.mc y el ajuste")
     ap.add_argument("--solo", help="con --comun: solo estas regiones, separadas por comas (tools/tienda.py)")
     ap.add_argument("--salida", help="con --solo: carpeta donde escribir source/ y res/ajustes/")
-    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal",
+    ap.add_argument("--variante", choices=("normal", "6x", "c", "b"), default="normal",
                     help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/); c: teselas "
-                         "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/)")
+                         "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/); b: teselas y zonas "
+                         "grandes, con unidad por tesela, para los de 1,25 MB y 254 recursos: fēnix 6 Pro y 5X/5 Plus "
+                         "(resources-gen-b/, source-gen-b/)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -2342,15 +2383,19 @@ def main():
         print(f"Variante 6x de {a.region}: teselas de {TESELA} m, zonas de {ZONA} m, caja {cfg['bbox']}")
     if VARIANTE == "c" and not cfg.get("c"):
         sys.exit(f"La región {a.region} no tiene \"c\" en tools/regiones.json: no va en los relojes de 128 KB.")
+    if VARIANTE == "b" and not cfg.get("b"):
+        sys.exit(f"La región {a.region} no tiene \"b\" en tools/regiones.json: no va en el fēnix 6 Pro ni en el 5X/5 Plus.")
     if VARIANTE == "6x" and cfg.get("adaptativa"):
         sys.exit(f"La región {a.region} es de teselas adaptativas: en el fēnix 6X va con la variante c.")
-    vc = cfg.get("c") if VARIANTE == "c" else cfg.get("adaptativa") if VARIANTE == "normal" else None
+    vc = cfg.get(VARIANTE) if VARIANTE in ("c", "b") else cfg.get("adaptativa") if VARIANTE == "normal" else None
     if vc:
         KD = True
         ZONA, KD_TOPE = vc["zona"], vc["tope_kb"] * 1024
+        RCEL, ZU = vc.get("rcel", RCEL), vc.get("zu", 1)
+        assert ZONA % RCEL == 0 and ZONA + 2 * ZMARGEN < (1 << 14) * ZU
         TESELA = KD_PASO    # unidad de las cajas; COLS × FILAS es la región entera
         RN = ZONA // RCEL
-        assert RN < 256 and ZONA + 2 * ZMARGEN < 1 << 14
+        assert RN < 256
         print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m")
     proy = Proy(cfg["bbox"])
     area = cfg.get("area_osm")

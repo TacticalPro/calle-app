@@ -33,9 +33,19 @@
       "fenix7pronowifi",
       "fenix7spro",
       "fenix7xpro",
-      "fenix7xpronowifi"
+      "fenix7xpronowifi",
+      "fenix6pro",
+      "fenix6spro",
+      "fenix6xpro",
+      "fenix5x",
+      "fenix5plus",
+      "fenix5splus",
+      "fenix5xplus"
     ],
-    "relojes_nota": "2026-10-25: la beta 3.3.x es solo del fēnix 7X Pro; el catálogo lleva toda la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; Galicia usa ~2.150) y los fēnix 8, 9 y E (faltan sus tests)."
+    "relojes_nota": "2026-10-26: familia fēnix 7 (768 KB; variante normal) y, desde la 3.5.0, los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus, con la variante b (Galicia entera en 216 recursos; el 6X Pro, que en Madrid va con la c, aquí va con la b por \"variante\"). Fuera: los de 128 KB (fēnix 5/5S y 6/6S; P73) y los fēnix 8, 9 y E (faltan sus tests).",
+    "variante": {
+      "fenix6xpro": "b"
+    }
   },
   "cataluna": {
     "id": "eb3617983d984d05bda9fb9b9b8818ec",

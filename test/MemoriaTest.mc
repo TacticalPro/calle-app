@@ -3,9 +3,9 @@ import Toybox.System;
 import Toybox.Test;
 import Toybox.WatchUi;
 
-// En cada región, la tesela más pesada y la zona más pesada caben a la vez holgadamente (el fēnix 7X Pro
-// da 768 KB a una watch-app; el 6X, 1,25 MB). En la calle nunca coinciden: la tesela mayor es del centro
-// y la zona, del rural. Mide también lo que ocupan los índices de la región activa (Callejero.activar).
+// En cada región, la tesela más pesada y la zona más pesada caben a la vez holgadamente, por debajo de
+// Callejero.MEM_DOS (el fēnix 7X Pro da 768 KB a una watch-app; el 6X y el 6 Pro, 1,25 MB). En la calle nunca
+// coinciden: la tesela mayor es del centro y la zona, del rural. Mide también lo que ocupan los índices de la región activa (Callejero.activar).
 (:test)
 function memoriaTeselaMayor(logger as Test.Logger) as Boolean {
     var ok = true;
@@ -39,7 +39,7 @@ function memoriaTeselaMayor(logger as Test.Logger) as Boolean {
         logger.debug("MEMORIA " + Callejero.ETIQUETA + ": zona mayor " + (s2 - s1) + " B, carga " + cargaZ + " ms, búsqueda "
             + buscaZ + " ms, " + (z[5] as Array).size() + " lugares; las dos: " + (s2 - s0) + " B; en uso "
             + System.getSystemStats().usedMemory / 1024 + " de " + System.getSystemStats().totalMemory / 1024 + " KB");
-        ok = ok && s2 - s0 < 200 * 1024;
+        ok = ok && s2 - s0 < Callejero.MEM_DOS;
         t = null;
         z = null;
     }

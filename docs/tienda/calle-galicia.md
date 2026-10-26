@@ -2,14 +2,17 @@
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tienda` → `bin/calle-galicia.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `50da24c1…`. **Subida el 2026-10-26** como
-3.4.0: [ficha en la tienda](https://apps.garmin.com/apps/13c5de1f-6ebf-4264-8b3f-91a8b0bf33dd), pendiente de
-aprobación (hasta 3 días). Subida por trozos con la extensión de Chrome (método en `calle-madrid.md`). La beta privada «Calles Galicia (offline) (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
+3.4.0: [ficha en la tienda](https://apps.garmin.com/apps/13c5de1f-6ebf-4264-8b3f-91a8b0bf33dd), aprobada el mismo
+día. La 3.5.0 añade los fēnix 6 Pro y 5X/5 Plus (abajo) y se sube con *Upload New Version*. Subida por trozos con la extensión de Chrome (método en `calle-madrid.md`). La beta privada «Calles Galicia (offline) (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
 
 - **Título:** «Calles Galicia (offline)», en inglés y en español (el autor, 2026-10-26; antes «CALLE Galicia (offline)»).
   Que no usa red es su punto fuerte. La beta pasa a «Calles Galicia (offline) (beta)» con *Edit Details*.
-- **Versión:** 3.4.0 (la interfaz nueva, P73), cuando pase la prueba en la muñeca.
+- **Versión:** 3.5.0 (3.4.0, la primera pública, con la interfaz nueva de P73).
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
-  en el 7S, el 7 y el 7X Pro. El `.iq` pesa 87 MB: se sube a mano, porque el navegador automatizado no pasa de 10 MB.
+  en el 7S, el 7 y el 7X Pro. Desde la 3.5.0, además, los de 1,25 MB y tope de 254 recursos, con la variante `b`
+  (Galicia entera en 216 recursos, `VARIANTE=b REGION=galicia ./ciq.sh datos`): fēnix 6 Pro, 6S Pro y 6X Pro, 5X, 5 Plus,
+  5S Plus y 5X Plus, con 54/54 tests en los siete. Los de 128 KB (fēnix 5, 5S, 6 y 6S) aún no: P73. El `.iq` se sube a
+  mano, porque el navegador automatizado no pasa de 10 MB.
 - **Ficha:** categoría Navigation, sin migración automática a relojes nuevos, avisos de reseñas al correo de contacto.
 - **Portada:** la carátula «el marcador en el cruce», sobre el callejero real del casco de Santiago, con «CALLES / GALICIA / LA
   CALLE Y EL PORTAL, SIN COBERTURA», todo en mayúsculas (elegida el 2026-10-25). Se genera con `tools/caratula.py --instalar`, que pone
@@ -49,18 +52,22 @@ cada lado, sin teléfono, sin cobertura y sin datos móviles. Y fuera de la ciud
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
 
-Zona: Galicia entera, las cuatro provincias, en toda la familia fēnix 7. Se irán añadiendo relojes.
+Zona: Galicia entera, las cuatro provincias. Relojes: familia fēnix 7, fēnix 6 Pro, 6S Pro y 6X Pro, y fēnix 5X,
+5 Plus, 5S Plus y 5X Plus. Se irán añadiendo más.
 
 Los números de portal salen de OpenStreetMap y, en Santiago y su entorno, también del Catastro. En muchos pueblos y
 aldeas el mapa aún no tiene números: ahí la app da la calle, la aldea y la parroquia, pero no el portal.
 
 Permisos: solo la posición. Sin acceso a internet y sin grabar actividades.
 
-Primera versión: los fallos y las sugerencias, al correo de contacto.
+Los fallos y las sugerencias, al correo de contacto.
 
 Código y método de generación de los datos: https://github.com/TacticalPro/calle-app
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Dirección General del Catastro.
+
+**Novedades (3.5.0):** ahora también en los fēnix 6 Pro, 6S Pro y 6X Pro, y en los fēnix 5X, 5 Plus, 5S Plus y 5X
+Plus, con Galicia entera.
 
 **Novedades (3.4.0):** primera versión pública. Galicia entera, con parroquias y aldeas, y números de portal del
 Catastro en Santiago y su entorno.
@@ -85,8 +92,8 @@ on each side, with no phone, no signal and no mobile data. Outside town, the vil
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.
 
-Area: all of Galicia, the four provinces, on the whole fēnix 7 family. More watches will follow. The interface is in
-Spanish.
+Area: all of Galicia, the four provinces. Watches: the fēnix 7 family, fēnix 6 Pro, 6S Pro and 6X Pro, and fēnix 5X,
+5 Plus, 5S Plus and 5X Plus. More will follow. The interface is in Spanish.
 
 Door numbers come from OpenStreetMap and, in Santiago de Compostela and its surroundings, also from the Spanish
 Cadastre. Many villages still have no door numbers on the map: there the app gives the street, village and parish,
@@ -94,11 +101,14 @@ but no number.
 
 Permissions: position only. No internet access and no activity recording.
 
-First release: please send bugs and suggestions to the contact email.
+Please send bugs and suggestions to the contact email.
 
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Dirección General del Catastro.
+
+**What's new (3.5.0):** now also on the fēnix 6 Pro, 6S Pro and 6X Pro, and on the fēnix 5X, 5 Plus, 5S Plus and
+5X Plus, with all of Galicia.
 
 **What's new (3.4.0):** first public release. All of Galicia, with parishes and villages, and Cadastre door numbers
 in Santiago de Compostela and its surroundings.

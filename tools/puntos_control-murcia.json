@@ -1,0 +1,113 @@
+[
+ {
+  "id": "belluga",
+  "lat": 37.9838643,
+  "lon": -1.1294158,
+  "nota": "centro de Plaza del Cardenal Belluga",
+  "espera": "Plaza del Cardenal Belluga",
+  "num": "1"
+ },
+ {
+  "id": "granvia",
+  "lat": 37.9883652,
+  "lon": -1.1321608,
+  "nota": "mitad de Gran Vía Escultor Francisco Salzillo",
+  "espera": "Gran Vía Escultor Francisco Salzillo",
+  "num": "23"
+ },
+ {
+  "id": "traperia",
+  "lat": 37.9862565,
+  "lon": -1.1293557,
+  "nota": "Calle Trapería 19, 5 m desde el portal hacia la calle",
+  "espera": "Calle Trapería",
+  "num": "19"
+ },
+ {
+  "id": "cartagena",
+  "lat": 37.6009302,
+  "lon": -0.9866687,
+  "nota": "mitad de Calle Mayor",
+  "espera": "Calle Mayor",
+  "num": "27"
+ },
+ {
+  "id": "lorca",
+  "lat": 37.6776069,
+  "lon": -1.7009268,
+  "nota": "mitad de Calle Sicilia",
+  "espera": "Calle Sicilia",
+  "tambien": "Calle Duende"
+ },
+ {
+  "id": "molina",
+  "lat": 38.0531242,
+  "lon": -1.2071502,
+  "nota": "mitad de Calle Juan de Austria",
+  "espera": "Calle Juan de Austria"
+ },
+ {
+  "id": "aguilas",
+  "lat": 37.4059883,
+  "lon": -1.5827062,
+  "nota": "mitad de Calle del Águila",
+  "espera": "Calle del Águila"
+ },
+ {
+  "id": "mazarron",
+  "lat": 37.5984376,
+  "lon": -1.3148188,
+  "nota": "mitad de Calle Pino",
+  "espera": "Calle Pino"
+ },
+ {
+  "id": "huerta",
+  "lat": 37.9928231,
+  "lon": -1.0990043,
+  "nota": "mitad de Plaza Región Murciana",
+  "espera": "Plaza Región Murciana"
+ },
+ {
+  "id": "caravaca",
+  "lat": 38.1051764,
+  "lon": -1.861699,
+  "nota": "mitad de Calle Rafael Tejeo",
+  "espera": "Calle Rafael Tejeo",
+  "num": "19"
+ },
+ {
+  "id": "moratalla",
+  "lat": 38.1892539,
+  "lon": -1.8908492,
+  "nota": "mitad de calle Alfredo Rubio",
+  "espera": "calle Alfredo Rubio"
+ },
+ {
+  "id": "denso",
+  "lat": 38.09435,
+  "lon": -1.68794,
+  "nota": "punto exacto de la ventana de ±1,5 km con más lugares (z125, 43 lugares; Cehegín): sin calle a 50 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "vegabaja",
+  "lat": 38.0848,
+  "lon": -0.944,
+  "nota": "Orihuela (Alicante), dentro de la caja: sin calles (recortadas al polígono de la Región)",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "lejos",
+  "lat": 37.3740001,
+  "lon": -1.6290505,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 38.19,
+  "lon": -0.56,
+  "nota": "Santa Pola (Alicante), fuera de la caja",
+  "espera": "FUERA"
+ }
+]

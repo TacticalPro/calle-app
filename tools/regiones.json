@@ -424,5 +424,136 @@
     "pbf": "geofabrik/cataluna-261026.osm.pbf",
     "pbf_recorte": true,
     "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona"
+  },
+  "murcia": {
+    "id": 6,
+    "etiqueta": "Murcia",
+    "prefijo": "u",
+    "bbox": [
+      37.369,
+      -2.351,
+      38.76,
+      -0.642
+    ],
+    "bbox_nota": "Región de Murcia (relación OSM 349047) más ~500 m",
+    "area_osm": 349047,
+    "pbf": "geofabrik/murcia-261025.osm.pbf",
+    "pbf_poligono": true,
+    "pbf_nota": "Geofabrik (europe/spain/murcia, datos OSM del 2026-10-25, MD5 027e82418c0a20ea0dd5518dea87062d comprobado), recortado al polígono de la comunidad (pbf_poligono): el de Geofabrik lleva un margen con trozos de Alicante (Vega Baja), Almería, Granada y Albacete. .venv/bin/python tools/pbf_a_json.py --region murcia",
+    "grande": true,
+    "overrides": "overrides-murcia.json",
+    "zonas": {
+      "poligono": "parroquia",
+      "admin_level": [
+        "8"
+      ],
+      "prefijo": "término de "
+    },
+    "zonas_nota": "el polígono es el municipio (admin_level 8): las pedanías (Murcia, Lorca) y diputaciones (Cartagena) solo existen en algunos municipios; el lugar sale de los nodos place",
+    "ruta": "Calle Trapería",
+    "adaptativa": {
+      "zona": 10000,
+      "tope_kb": 30,
+      "nota": "como Galicia: teselas adaptativas y zonas de 10 km"
+    },
+    "control": [
+      {
+        "id": "belluga",
+        "tipo": "area",
+        "calle": "Plaza del Cardenal Belluga"
+      },
+      {
+        "id": "granvia",
+        "tipo": "mitad",
+        "calle": "Gran Vía Escultor Francisco Salzillo"
+      },
+      {
+        "id": "traperia",
+        "tipo": "portal",
+        "calle": "Calle Trapería",
+        "num": 19
+      },
+      {
+        "id": "cartagena",
+        "tipo": "cerca",
+        "lat": 37.5996,
+        "lon": -0.9859,
+        "nota": "Cartagena, calle Mayor"
+      },
+      {
+        "id": "lorca",
+        "tipo": "cerca",
+        "lat": 37.6776,
+        "lon": -1.7005,
+        "nota": "Lorca, centro"
+      },
+      {
+        "id": "molina",
+        "tipo": "cerca",
+        "lat": 38.0542,
+        "lon": -1.207,
+        "nota": "Molina de Segura, centro"
+      },
+      {
+        "id": "aguilas",
+        "tipo": "cerca",
+        "lat": 37.4065,
+        "lon": -1.5825,
+        "nota": "Águilas, centro"
+      },
+      {
+        "id": "mazarron",
+        "tipo": "cerca",
+        "lat": 37.5985,
+        "lon": -1.315,
+        "nota": "Mazarrón, centro"
+      },
+      {
+        "id": "huerta",
+        "tipo": "cerca",
+        "lat": 37.9923,
+        "lon": -1.0995,
+        "nota": "Puente Tocinos, pedanía de la huerta de Murcia"
+      },
+      {
+        "id": "caravaca",
+        "tipo": "cerca",
+        "lat": 38.1058,
+        "lon": -1.8616,
+        "nota": "Caravaca de la Cruz, centro"
+      },
+      {
+        "id": "moratalla",
+        "tipo": "cerca",
+        "lat": 38.1895,
+        "lon": -1.891,
+        "nota": "Moratalla, Noroeste"
+      },
+      {
+        "id": "denso",
+        "tipo": "fuera",
+        "lat": 38.09435,
+        "lon": -1.68794,
+        "nota": "punto exacto (tipo fuera: sin moverlo a una calle) de la ventana de ±1,5 km con más lugares (z125, 43 lugares; Cehegín); sin calle a 50 m"
+      },
+      {
+        "id": "vegabaja",
+        "tipo": "fuera",
+        "lat": 38.0848,
+        "lon": -0.944,
+        "nota": "Orihuela (Alicante), dentro de la caja: sin calles, recortadas al polígono"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 38.19,
+        "lon": -0.56,
+        "nota": "Santa Pola (Alicante), fuera de la caja"
+      }
+    ]
   }
 }

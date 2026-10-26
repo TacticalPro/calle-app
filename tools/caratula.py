@@ -3,6 +3,7 @@
 
     tools/caratula.py            las tres propuestas → tools/out/caratulas.png (hoja para elegir)
                                  y tools/out/caratula_<X>.png / icono_<X>.png
+    tools/caratula.py --region murcia   solo la carátula B de esa región → docs/tienda/murcia/portada_500.png
     tools/caratula.py --instalar la elegida (B, 2026-10-25): docs/tienda/galicia/portada_500.png,
                                  docs/tienda/portada_500.png (Madrid) y el icono del lanzador,
                                  resources/drawables/launcher_icon.png (de todas las apps Calles) y,
@@ -28,7 +29,8 @@ BLANCO, GRIS, GRIS_OSC = (255, 255, 255), (0xAA, 0xAA, 0xAA), (0x55, 0x55, 0x55)
 AMBAR, AZUL_PLACA = (0xFF, 0xAA, 0x00), (0x1F, 0x3B, 0x73)
 CENTRO = (42.8792, -8.5446)   # casco de Santiago, entre el Obradoiro y la Quintana
 CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035),   # Madrid: la Puerta del Sol
-           "barcelona": (41.3830, 2.1750)}                   # Barcelona: el Gòtic
+           "barcelona": (41.3830, 2.1750),                   # Barcelona: el Gòtic
+           "murcia": (37.9838, -1.1294)}                          # Murcia: la plaza del Cardenal Belluga
 LADO_M = 900                  # metros de mapa que caben en la carátula
 
 
@@ -226,6 +228,13 @@ def iconos_por_reloj():
 
 def main():
     import sys
+    if "--region" in sys.argv:
+        region = sys.argv[sys.argv.index("--region") + 1]
+        out = ROOT / "docs" / "tienda" / region / "portada_500.png"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        caratula_b(region).save(out, optimize=True)
+        print(f"escrito {out.relative_to(ROOT)}")
+        return
     if "--instalar" in sys.argv:
         caratula_b().save(ROOT / "docs" / "tienda" / "galicia" / "portada_500.png", optimize=True)
         caratula_b("madrid").save(ROOT / "docs" / "tienda" / "portada_500.png", optimize=True)

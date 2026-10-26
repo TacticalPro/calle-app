@@ -1,0 +1,106 @@
+{
+  "_que_es": "Correcciones locales al callejero de OSM de la Región de Murcia. alias_calle: addr:street tal cual -> nombre de la vía. nombre_mostrar: nombre OSM -> nombre en pantalla (aquí, la grafía correcta de las variantes que unificar_variantes() habría elegido mal). excluir_vias, barrios_extra, poi: como en overrides-santiago.json. poi_abrev: [expresión regular, sustitución], en orden, sobre el nombre de cada hospital o comisaría: la forma corta que cabe entera en las dos líneas de la guía en 240, 260 y 280 (medida con tools/mockup.py, 2026-10-26).",
+  "alias_calle": {
+    "Calle Pascual Amarat": "Calle Pascual Amat",
+    "Calle Ntra. Sra. de las Mercedes": "Calle Nuestra Señora de las Mercedes",
+    "Calle Vicente Alexandre": "Calle Vicente Aleixandre"
+  },
+  "nombre_mostrar": {
+    "Subida A COntadores": "Subida a Contadores",
+    "senda de la bermeja": "Senda de la Bermeja",
+    "Calle cuatro esquinas": "Calle Cuatro Esquinas",
+    "Calle San Jose": "Calle San José",
+    "Calle Telegrafos": "Calle Telégrafos",
+    "Calle Mojacar": "Calle Mojácar",
+    "Calle Tio Viruta": "Calle Tío Viruta",
+    "Plaza Musico Diaz Cano": "Plaza Músico Díaz Cano",
+    "Calle Dolores Perez Guijarro": "Calle Dolores Pérez Guijarro",
+    "Calle Fernandez Caballero": "Calle Fernández Caballero",
+    "Vía Verde del Noroeste (Antigua vía Murcia-Caravaca": "Vía Verde del Noroeste (Antigua vía Murcia-Caravaca)"
+  },
+  "excluir_vias": [],
+  "barrios_extra": [],
+  "poi": {},
+  "poi_abrev": [
+    [
+      "^Hospital General Universitario (Morales Meseguer|Los Arcos del Mar Menor)$",
+      "Hosp. \\1"
+    ],
+    [
+      "^Hospital (General |Clínico )?Universitario ",
+      "Hospital "
+    ],
+    [
+      "^Hospital Perpetuo Socorro",
+      "Hosp. Perpetuo Socorro"
+    ],
+    [
+      "^Hospital Comarcal del Noroeste$",
+      "Hospital del Noroeste"
+    ],
+    [
+      "^Hospital de la Vega Lorenzo Guirao$",
+      "Hospital Lorenzo Guirao"
+    ],
+    [
+      "^Complejo Hospitalario Cartagena$",
+      "Complejo Hosp. Cartagena"
+    ],
+    [
+      "^Santo y Real Hospital de Caridad$",
+      "Hospital de Caridad"
+    ],
+    [
+      "^Polic[ií]a Local (de )?(Cartagena|Murcia) - ",
+      "\\2 · "
+    ],
+    [
+      "^Cartagena · Departamento de Tráfico y Atención Ciudadana$",
+      "Cartagena · Tráfico"
+    ],
+    [
+      "^Cartagena · Servicio Integral de Atención Familiar \\(SIAF\\)$",
+      "Cartagena · SIAF"
+    ],
+    [
+      "^Murcia · Comisaría de Los Martínez del Puerto$",
+      "Los Martínez del Puerto"
+    ],
+    [
+      "^Murcia · Cuartel (de )?",
+      "Murcia · "
+    ],
+    [
+      "^Comisaría de Policía \\(DNI, Pasaporte\\)$",
+      "Comisaría (DNI y pasaporte)"
+    ],
+    [
+      "^Comisaría de Policía de ",
+      "Comisaría "
+    ],
+    [
+      "^Jefatura Superior de Policía$",
+      "Jefatura Superior"
+    ],
+    [
+      "^Comandancia de la Guardia Civil$",
+      "Comandancia"
+    ],
+    [
+      "^Policía Municipal Alguazas$",
+      "P. Municipal Alguazas"
+    ],
+    [
+      "^Base de la Fica \\(Protección Civil Murcia\\)$",
+      "Protección Civil La Fica"
+    ],
+    [
+      "^DIEM (I+) - PROTECCIÓN CIVIL MURCIA$",
+      "Protección Civil DIEM \\1"
+    ],
+    [
+      "^Puesto de Cabezo de Torres$",
+      "Puesto Cabezo de Torres"
+    ]
+  ]
+}

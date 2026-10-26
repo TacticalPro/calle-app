@@ -174,32 +174,39 @@ SENDA = {"footway", "path", "steps", "cycleway", "bridleway"}
 VIA_RAPIDA = re.compile(r"^(motorway|trunk)(_link)?$")
 CON_REF = re.compile(r"^(motorway|trunk|primary|secondary|tertiary)(_link)?$")
 
-# Sinónimos del tipo de vía (primera palabra), gallego, castellano y abreviaturas de Catastro.
+# Sinónimos del tipo de vía (primera palabra), gallego, castellano, catalán/valenciano y abreviaturas de Catastro.
+# Carril, vereda, senda, rambla y partida (huerta de Murcia y Valencia) van con canon propio: no son un camino
+# cualquiera, y con el mismo canon unificar_variantes() juntaría «Carril de X» con «Camino de X» si se tocan.
 TIPOS = {
-    "rua": "r rua ru calle c cl cll",
-    "avenida": "av avda avd avenida",
-    "praza": "pr praza plaza pza pl pz prza",
-    "praciña": "pracina plazuela",
-    "travesa": "trav travesia travesa tr tv",
-    "camino": "camino camiño camino cm cno cmno",
-    "paseo": "ps paseo pso po",
+    "rua": "r rua ru calle c cl cll carrer",
+    "avenida": "av avda avd avenida avinguda avgda",
+    "praza": "pr praza plaza pza pl pz prza placa",
+    "praciña": "pracina plazuela placeta plazoleta",
+    "travesa": "trav travesia travesa tr tv travessia travessera",
+    "camino": "camino camiño camino cm cno cmno cami",
+    "paseo": "ps paseo pso po passeig pg psg",
     "ronda": "rda ronda rolda rd",
     "lugar": "lg lugar",
     "estrada": "ctra carretera estrada cr est",
     "glorieta": "gl glorieta rotonda",
     "costa": "costa cuesta cta",
-    "calexon": "calexon callejon cjon",
-    "pasaxe": "pasaxe pasaje psje",
-    "urbanizacion": "urb urbanizacion",
-    "poligono": "pol poligono",
+    "calexon": "calexon callejon cjon carrero",
+    "pasaxe": "pasaxe pasaje psje passatge ptge",
+    "urbanizacion": "urb urbanizacion urbanitzacio",
+    "poligono": "pol poligono poligon",
     "carreiro": "carreiro sendeiro",
+    "carril": "carril",
+    "vereda": "vereda vda",
+    "senda": "senda",
+    "rambla": "rambla rbla",
+    "partida": "partida pda ptda",
 }
 SINON = {}
 for canon, alias in TIPOS.items():
     for a in alias.split():
         SINON[unicodedata.normalize("NFKD", a).encode("ascii", "ignore").decode()] = canon
 CANON = set(TIPOS)
-PARTICULAS = {"de", "do", "da", "dos", "das", "del", "la", "las", "los", "el", "o", "a", "os", "as", "e", "y", "d", "en"}
+PARTICULAS = {"de", "do", "da", "dos", "das", "del", "la", "las", "los", "el", "o", "a", "os", "as", "e", "y", "d", "en", "l", "els", "les", "dels", "al", "i"}
 
 
 def sin_tildes(s):
@@ -1201,6 +1208,9 @@ def tipo_policia(tags):
         return None
     op = sin_tildes(" ".join(tags.get(k, "") for k in ("operator", "operator:short"))).lower()
     t = nom + " " + op + " " + sin_tildes(tags.get("official_name", "") + " " + tags.get("police", "")).lower()
+    # «Policía Local de Murcia - Cuartel La Flota» es municipal: el nombre manda sobre «cuartel» (Murcia, 2026-10-26).
+    if re.search(r"\bpolicia (local|municipal)\b", nom):
+        return POI_LOCAL
     if "guardia civil" in t or "garda civil" in t or "cuartel" in t:
         return POI_GC
     if ("municipal" in t or "local" in t or "ayuntamiento" in op or "concello" in op or "policia de barrio" in t
@@ -1254,6 +1264,10 @@ def extraer_poi(elems, proy, vias, portales, overrides, cuenta, ancho, alto):
             cuenta["punto excluido (override)"] += 1
             continue
         nom = tags.get("name") or tags.get("official_name") or tags.get("operator") or POI_ETIQUETA[tipo].capitalize()
+        # Forma corta para la pantalla, si la región la trae (overrides "poi_abrev": [expresión, sustitución], en
+        # orden): en la guía el nombre tiene dos líneas, y «Hospital General Universitario …» no cabe (Murcia).
+        for pat, rep in overrides.get("poi_abrev", []):
+            nom = re.sub(pat, rep, nom)
         dirc = fijo.get("direccion", "")
         if dirc:
             cuenta["punto: dirección de overrides"] += 1

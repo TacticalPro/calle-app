@@ -13,7 +13,11 @@ tools/regiones.json (relativo a tools/cache/) y escribe en tools/cache/:
 Con el mismo formato que «out geom» y «out center tags» de Overpass: vías con "nodes" y "geometry",
 relaciones con "members" (y la "geometry" de cada vía miembro), centros como el de Overpass (el de la caja).
 Sin la caja de la región: el extracto ya viene recortado al polígono de la comunidad. Con "pbf_recorte"
-en la región (Barcelona, del extracto de Cataluña), se queda solo lo que toca su caja.
+en la región (Barcelona, del extracto de Cataluña), se queda solo lo que toca su caja. Con "pbf_poligono", se
+queda lo que cae dentro del polígono de "area_osm" (Murcia, 2026-10-26: el polígono de Geofabrik lleva un margen
+con trozos de Alicante, Almería, Granada y Albacete): nodos y centros dentro, vías y relaciones de calles con
+algún vértice dentro, y los polígonos administrativos con la mayoría de sus vértices propios (los que no son
+de la frontera de la región) dentro.
 
 Necesita pyosmium (`python3 -m venv .venv && .venv/bin/pip install osmium`); el generador sigue siendo
 solo biblioteca estándar.
@@ -53,14 +57,18 @@ def es_poi(t):
 class Relaciones(osmium.SimpleHandler):
     """Primera pasada: las relaciones que interesan y las vías miembro cuya geometría hará falta."""
 
-    def __init__(self, niveles):
+    def __init__(self, niveles, area=None):
         super().__init__()
         self.niveles = niveles
         self.rels = {"calles": [], "zonas": [], "poi": []}
         self.miembros = set()
+        self.area_id, self.frontera = area, []  # «area» es un método de SimpleHandler
 
     def relation(self, r):
         t = dict(r.tags)
+        if r.id == self.area_id:
+            self.frontera = [m.ref for m in r.members if m.type == "w"]
+            self.miembros.update(self.frontera)
         destinos = []
         if es_calle_rel(t):
             destinos.append("calles")
@@ -124,6 +132,28 @@ class Resto(osmium.SimpleHandler):
                 self.out["poi"].append({"type": "way", "id": w.id, "center": c, "tags": t})
 
 
+class Poligono:
+    """Punto dentro de los anillos de una relación (regla par-impar), con las aristas indexadas por franjas de
+    latitud: el polígono de una comunidad tiene decenas de miles de vértices."""
+    H = 0.002   # grados de latitud por franja
+
+    def __init__(self, anillos):
+        self.franjas = {}
+        self.vertices = set()
+        for a in anillos:
+            for (x0, y0), (x1, y1) in zip(a, a[1:]):
+                self.vertices.add((x0, y0))
+                for k in range(int(min(y0, y1) // self.H), int(max(y0, y1) // self.H) + 1):
+                    self.franjas.setdefault(k, []).append((x0, y0, x1, y1))
+
+    def dentro(self, lon, lat):
+        c = False
+        for x0, y0, x1, y1 in self.franjas.get(int(lat // self.H), ()):
+            if (y0 > lat) != (y1 > lat) and lon < (x1 - x0) * (lat - y0) / (y1 - y0) + x0:
+                c = not c
+        return c
+
+
 def centro(geo):
     """El de Overpass («out center»): el centro de la caja."""
     g = [p for p in geo if p]
@@ -143,7 +173,8 @@ def main():
     fecha = f"20{m.group(1)}-{m.group(2)}-{m.group(3)}T00:00:00Z" if m else None
     niveles = set(cfg["zonas"]["admin_level"])
 
-    r = Relaciones(niveles)
+    area = cfg.get("area_osm") if cfg.get("pbf_poligono") else None
+    r = Relaciones(niveles, area)
     r.apply_file(str(pbf))
     print(f"relaciones: {', '.join(f'{k} {len(v)}' for k, v in r.rels.items())}; {len(r.miembros)} vías miembro")
     o = Resto(r.miembros)
@@ -162,6 +193,37 @@ def main():
                     o.out["poi"].append({"type": "relation", "id": e["id"], "center": c, "tags": e["tags"]})
             else:
                 o.out[destino].append(e)
+    if area:
+        from build_callejero import unir_anillos
+        anillos = unir_anillos([[(g["lon"], g["lat"]) for g in o.geom.get(w) or [] if g] for w in r.frontera])
+        if not anillos:
+            sys.exit(f"pbf_poligono: la relación {area} no está entera en el extracto")
+        pol = Poligono(anillos)
+        todos = [p for a in anillos for p in a]
+        print(f"polígono {area}: {len(anillos)} anillos, {len(todos)} vértices, caja lat "
+              f"{min(p[1] for p in todos):.4f}–{max(p[1] for p in todos):.4f}, lon "
+              f"{min(p[0] for p in todos):.4f}–{max(p[0] for p in todos):.4f}")
+
+        def pts(e):
+            if e["type"] == "node":
+                return [(e["lon"], e["lat"])]
+            if "center" in e:
+                return [(e["center"]["lon"], e["center"]["lat"])]
+            if e["type"] == "way":
+                return [(g["lon"], g["lat"]) for g in e.get("geometry") or [] if g]
+            return [(g["lon"], g["lat"]) for mm in e.get("members", []) for g in mm.get("geometry") or [] if g]
+
+        def toca(e):
+            return any(pol.dentro(*p) for p in pts(e))
+
+        def admin_dentro(e):
+            propios = [p for p in pts(e) if p not in pol.vertices]
+            return bool(propios) and 2 * sum(pol.dentro(*p) for p in propios) > len(propios)
+        for destino in o.out:
+            antes = len(o.out[destino])
+            o.out[destino] = [e for e in o.out[destino]
+                              if (admin_dentro(e) if destino == "zonas" and e["type"] == "relation" else toca(e))]
+            print(f"recorte al polígono: {destino} {antes} → {len(o.out[destino])}")
     if cfg.get("pbf_recorte"):
         # Una región dentro de un extracto mayor (Barcelona en el de Cataluña): se queda lo que toca su caja.
         s_, w_, n_, e_ = cfg["bbox"]

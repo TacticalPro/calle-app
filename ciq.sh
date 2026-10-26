@@ -67,7 +67,9 @@ simulador() {
     done
     echo "calle-fenix $$ $(date +%H:%M)" > "$CANDADO/quien"
     trap 'grep -q "^calle-fenix $$ " "$CANDADO/quien" 2>/dev/null && rm -r "$CANDADO"' EXIT
-    pgrep -f "ConnectIQ.app" >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
+    # Por el nombre del proceso, no con -f: la línea de órdenes de otras sesiones que esperan el candado contiene
+    # «ConnectIQ.app» y daba el simulador por abierto sin estarlo («Unable to connect to simulator», 2026-10-26).
+    pgrep -x simulator >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
 }
 
 # La app no debe poder sacar nada del reloj: sin red, sin grabar actividad, sin

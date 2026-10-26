@@ -1,7 +1,375 @@
 {
+  "_que_es": "Correcciones locales al callejero de OSM de la Comunitat Valenciana. alias_calle, nombre_mostrar, excluir_vias, barrios_extra y poi: como en overrides-santiago.json. poi_abrev: [expresión regular, sustitución], en orden, sobre el nombre de cada hospital o comisaría: solo los 81 que no cabían enteros en las dos líneas de la guía en 240, 260 y 280 (medido con tools/mockup.py, 2026-10-26), con la forma más larga que cabe; el tipo (HOSPITAL, COMISARÍA CNP, GUARDIA CIVIL, POLICÍA MUNICIPAL/LOCAL) ya va en la línea de encima. nombre_termino: nombre en pantalla de cada término municipal (ver su nota).",
   "alias_calle": {},
   "nombre_mostrar": {},
   "excluir_vias": [],
   "barrios_extra": [],
-  "poi": {}
+  "poi": {},
+  "poi_abrev": [
+    [
+      "^Casa Cuartel Guardia Civil Benicasim$",
+      "Cuartel de Benicasim"
+    ],
+    [
+      "^Casa Cuartel de la Guardia Civil de Alcalá de Chivert$",
+      "Alcalá de Chivert"
+    ],
+    [
+      "^Central de Policía Local de Valencia$",
+      "Central de València"
+    ],
+    [
+      "^Centro Penitenciario de Alicante II \\- Villena$",
+      "Penitenciario Villena"
+    ],
+    [
+      "^Comandància de la Guàrdia Civil$",
+      "Comandància"
+    ],
+    [
+      "^Comisaría Provincial de Castellón$",
+      "Comisaría Prov. Castellón"
+    ],
+    [
+      "^Comisaría de Distrito Valencia Marítimo$",
+      "Comisaría Marítimo"
+    ],
+    [
+      "^Comisaría de Distrito Valencia Tránsitos$",
+      "Comisaría Tránsitos"
+    ],
+    [
+      "^Comisaría de Policía Local de Cheste$",
+      "Comisaría Cheste"
+    ],
+    [
+      "^Comisaría de Policía Nacional de Vila\\-real$",
+      "Comisaría Vila-real"
+    ],
+    [
+      "^Comisaría de Policía Nacional del distrito de Abastos$",
+      "Comisaría Abastos"
+    ],
+    [
+      "^Comissaria de Policia Nacional de Russafa$",
+      "Comisaría Russafa"
+    ],
+    [
+      "^Comissaria de Policia Nacional de Xirivella$",
+      "Comisaría Xirivella"
+    ],
+    [
+      "^Comissaria de Policia de Paterna$",
+      "Comisaría Paterna"
+    ],
+    [
+      "^Cuartel de Avenidas Policía Local\\.$",
+      "Cuartel de Avenidas"
+    ],
+    [
+      "^Cuartel de la Guardia Civil Sección Fiscal El Grao de Castellón$",
+      "Fiscal Grau de Castelló"
+    ],
+    [
+      "^Cuartel de la Guardia Civil de Alcora$",
+      "Cuartel de Alcora"
+    ],
+    [
+      "^Cuartel de la Guardia Civil de Vall d'Alba$",
+      "Cuartel de Vall d'Alba"
+    ],
+    [
+      "^Cuartel de la Guardia Civil de Vall de Uxó$",
+      "Cuartel de Vall de Uxó"
+    ],
+    [
+      "^Cuerpo Nacional de Policia$",
+      "Policía Nacional"
+    ],
+    [
+      "^Cuerpo Nacional de Policía$",
+      "Policía Nacional"
+    ],
+    [
+      "^Dirección General De La Policía$",
+      "Policía Nacional"
+    ],
+    [
+      "^Dirección General de la Policía Abastos$",
+      "Policía Nacional Abastos"
+    ],
+    [
+      "^Guardia Civil Puesto de Muro de Alcoy$",
+      "Puesto de Muro de Alcoy"
+    ],
+    [
+      "^Guardia Civil Puesto de Xátiva$",
+      "Puesto de Xátiva"
+    ],
+    [
+      "^Guardia Civil San Miguel de Salinas$",
+      "San Miguel de Salinas"
+    ],
+    [
+      "^Guardia Civil de Tavernes de la Valldigna$",
+      "Tavernes de la Valldigna"
+    ],
+    [
+      "^Guardia Civil de Teulada\\-Moraira$",
+      "Teulada - Moraira"
+    ],
+    [
+      "^Guardia Civil\\. Delegación de Tráfico y Seprona$",
+      "Tráfico y Seprona"
+    ],
+    [
+      "^Hospital Comarcal Francesc De Borja$",
+      "Hosp. Francesc de Borja"
+    ],
+    [
+      "^Hospital Comarcal de Vinaròs$",
+      "Hospital de Vinaròs"
+    ],
+    [
+      "^Hospital Comarcal de la Marina Baixa$",
+      "Hospital de la Marina Baixa"
+    ],
+    [
+      "^Hospital Complementario de Segorbe$",
+      "Hospital de Segorbe"
+    ],
+    [
+      "^Hospital General Universitari$",
+      "General de València"
+    ],
+    [
+      "^Hospital General Universitari d'Elx$",
+      "Hospital d'Elx"
+    ],
+    [
+      "^Hospital General Universitario de Alicante$",
+      "Hospital de Alicante"
+    ],
+    [
+      "^Hospital General Universitario de Elda Virgen de la Salud$",
+      "Hospital de Elda"
+    ],
+    [
+      "^Hospital General d'Ontinyent$",
+      "Hospital d'Ontinyent"
+    ],
+    [
+      "^Hospital Internacional Vithas Medimar \\- II$",
+      "Vithas Medimar - II"
+    ],
+    [
+      "^Hospital Internacional Vithas Medimar I$",
+      "Vithas Medimar I"
+    ],
+    [
+      "^Hospital Provincial de Castelló$",
+      "Provincial de Castelló"
+    ],
+    [
+      "^Hospital Psiquátrico de Bétera$",
+      "Psiquiátrico de Bétera"
+    ],
+    [
+      "^Hospital Quirón/USP Hospital San Jaime$",
+      "Quirón San Jaime"
+    ],
+    [
+      "^Hospital San Vicente del Raspeig$",
+      "Hospital San Vicente"
+    ],
+    [
+      "^Hospital Universitari Doctor Peset$",
+      "Hospital Doctor Peset"
+    ],
+    [
+      "^Hospital Universitari La Plana$",
+      "Hospital La Plana"
+    ],
+    [
+      "^Hospital Universitari de Sant Joan D'Alacant$",
+      "Hospital de Sant Joan"
+    ],
+    [
+      "^Hospital Universitari de la Ribera$",
+      "Hospital de la Ribera"
+    ],
+    [
+      "^Hospital Universitari i Politècnic La Fe$",
+      "Hospital La Fe"
+    ],
+    [
+      "^Hospital Universitario Vega Baja$",
+      "Hospital Vega Baja"
+    ],
+    [
+      "^Hospital Universitario Vega Baja: Urgencias$",
+      "Hospital Vega Baja"
+    ],
+    [
+      "^Hospital Universitario de Torrevieja$",
+      "Hospital de Torrevieja"
+    ],
+    [
+      "^Hospital Vithas Nisa Valencia al Mar$",
+      "Vithas Nisa Valencia al Mar"
+    ],
+    [
+      "^Hospital Vithas Valencia 9 de Octubre$",
+      "Vithas Valencia 9 de Octubre"
+    ],
+    [
+      "^Hospital Vithas Valencia Consuelo$",
+      "Vithas Valencia Consuelo"
+    ],
+    [
+      "^Hospital de Día de Salud Mental Cardenal Costa$",
+      "Salud Mental Cardenal Costa"
+    ],
+    [
+      "^Instituto de Traumatología Unión de Mutuas \\(ITUM\\)$",
+      "Unión de Mutuas (ITUM)"
+    ],
+    [
+      "^Jefatura Superior de Policía Nacional de la Comunidad Valenciana$",
+      "Jefatura Superior"
+    ],
+    [
+      "^Jefatura de la Policía Local de Elche$",
+      "P. Local Elche"
+    ],
+    [
+      "^Jefatura superior de policia local Algemesí$",
+      "P. Local Algemesí"
+    ],
+    [
+      "^Policia Local Districte de Patraix$",
+      "Districte de Patraix"
+    ],
+    [
+      "^Policia Local de Canet d'en Berenguer$",
+      "P. Local Canet d'en Berenguer"
+    ],
+    [
+      "^Policia Local de Castelló de la Plana$",
+      "Castelló de la Plana"
+    ],
+    [
+      "^Policia Local de Tavernes de la Valldigna$",
+      "Tavernes de la Valldigna"
+    ],
+    [
+      "^Policia Local de Tavernes de la Valldigna \\(platja\\)$",
+      "Tavernes (platja)"
+    ],
+    [
+      "^Policia Local de la Pobla Vallbona$",
+      "P. Local Pobla Vallbona"
+    ],
+    [
+      "^Policia Local i Protecció Civil d'Asp$",
+      "P. Local Asp"
+    ],
+    [
+      "^Policia Local\\. Unitat de Districte 5\\. Trànsits$",
+      "Districte 5 · Trànsits"
+    ],
+    [
+      "^Policia Municipal de Burjassot$",
+      "P. Municipal Burjassot"
+    ],
+    [
+      "^Policia Nacional\\. Brigada Provincial de Seguretat Ciutadana$",
+      "Seguretat Ciutadana"
+    ],
+    [
+      "^Policia de la Generalitat Valenciana$",
+      "Policia de la Generalitat"
+    ],
+    [
+      "^Policia local de Simat de la Valldigna$",
+      "P. Local Simat de la Valldigna"
+    ],
+    [
+      "^Policía Local \\- Unidad Molí del Sol$",
+      "Unidad Molí del Sol"
+    ],
+    [
+      "^Policía Local de Sant Vicent del Raspeig$",
+      "Sant Vicent del Raspeig"
+    ],
+    [
+      "^Policía Local de Santa Pola Gran Alacant$",
+      "Santa Pola · Gran Alacant"
+    ],
+    [
+      "^Policía portuaria de la Autoridad Portuaria de Valencia$",
+      "Policía Portuaria"
+    ],
+    [
+      "^Prefectura de Policía Local de Puçol$",
+      "P. Local Puçol"
+    ],
+    [
+      "^Puesto Auxiliar de Simat de Valldigna$",
+      "Puesto Simat de Valldigna"
+    ],
+    [
+      "^Puesto de Policía Local de Borriol$",
+      "P. Local Borriol"
+    ],
+    [
+      "^Puesto de Riba\\-roja \\(Cuartel de la Guardia Civil\\)$",
+      "Puesto de Riba-roja"
+    ],
+    [
+      "^Unidad Provincial de Policía Autonómica$",
+      "Policía Autonómica"
+    ]
+  ],
+  "nombre_termino_nota": "En pantalla, el nombre oficial del término según el nomenclátor del INE (relación de municipios a 1-1-2026); si el oficial es bilingüe, la forma que OSM pone primero en name (orden del autor, 2026-10-26). 35 términos bilingües («X / Y» en OSM) y 3 con un solo nombre oficial distinto del de OSM. Para volver al nombre de OSM, quitar esta tabla.",
+  "nombre_termino": {
+    "Alacant / Alicante": "Alacant",
+    "Alboraia / Alboraya": "Alboraia",
+    "Alcoi / Alcoy": "Alcoi",
+    "Benicàssim / Benicasim": "Benicàssim",
+    "Beniflà": "Beniflá",
+    "Borriana / Burriana": "Borriana",
+    "Castelló de la Plana / Castellón de la Plana": "Castelló de la Plana",
+    "Elx / Elche": "Elx",
+    "Llucena / Lucena del Cid": "Llucena",
+    "Moixent / Mogente": "Moixent",
+    "Montcada / Moncada": "Montcada",
+    "Montitxelvo / Montichelvo": "Montitxelvo",
+    "Montroi / Montroy": "Montroi",
+    "Monòver / Monóvar": "Monòver",
+    "Nàquera / Náquera": "Nàquera",
+    "Orpesa / Oropesa del Mar": "Orpesa",
+    "Peníscola / Peñíscola": "Peníscola",
+    "Sagunt / Sagunto": "Sagunt",
+    "Sant Jordi / San Jorge": "Sant Jordi",
+    "Sant Rafel del Riu": "San Rafael del Río",
+    "Sant Vicent del Raspeig / San Vicente del Raspeig": "Sant Vicent del Raspeig",
+    "Suera / Sueras": "Suera",
+    "Vilafranca / Villafranca del Cid": "Vilafranca",
+    "Vilallonga / Villalonga": "Vilallonga",
+    "Xilxes / Chilches": "Xilxes",
+    "Xixona / Jijona": "Xixona",
+    "Xodos / Chodos": "Xodos",
+    "Xàbia / Jávea": "Xàbia",
+    "el Camp de Mirra / Campo de Mirra": "el Camp de Mirra",
+    "el Fondó de les Neus / Hondón de las Nieves": "el Fondó de les Neus",
+    "el Pinós / Pinoso": "el Pinós",
+    "el Poble Nou de Benitatxell / Benitachell": "el Poble Nou de Benitatxell",
+    "el Ràfol de Salem": "Ráfol de Salem",
+    "l'Orxa / Lorcha": "l'Orxa",
+    "la Torre de les Maçanes / Torremanzanas": "la Torre de les Maçanes",
+    "la Vila Joiosa / Villajoyosa": "la Vila Joiosa",
+    "les Alqueries / Alquerías del Niño Perdido": "les Alqueries",
+    "les Useres / Useras": "les Useres"
+  }
 }

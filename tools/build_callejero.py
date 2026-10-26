@@ -1261,6 +1261,9 @@ def tipo_policia(tags):
         return None
     op = sin_tildes(" ".join(tags.get(k, "") for k in ("operator", "operator:short"))).lower()
     t = nom + " " + op + " " + sin_tildes(tags.get("official_name", "") + " " + tags.get("police", "")).lower()
+    # «Policía Local de Murcia - Cuartel La Flota» es municipal: el nombre manda sobre «cuartel» (Murcia, 2026-10-26).
+    if re.search(r"\bpolicia (local|municipal)\b", nom):
+        return POI_LOCAL
     if "guardia civil" in t or "garda civil" in t or "cuartel" in t:
         return POI_GC
     if ("municipal" in t or "local" in t or "ayuntamiento" in op or "concello" in op or "policia de barrio" in t
@@ -1314,6 +1317,10 @@ def extraer_poi(elems, proy, vias, portales, overrides, cuenta, ancho, alto):
             cuenta["punto excluido (override)"] += 1
             continue
         nom = texto(tags.get("name") or tags.get("official_name") or tags.get("operator") or POI_ETIQUETA[tipo].capitalize())
+        # Forma corta para la pantalla, si la región la trae (overrides "poi_abrev": [expresión, sustitución], en
+        # orden): en la guía el nombre tiene dos líneas, y «Hospital General Universitario …» no cabe (Murcia).
+        for pat, rep in overrides.get("poi_abrev", []):
+            nom = re.sub(pat, rep, nom)
         dirc = fijo.get("direccion", "")
         if dirc:
             cuenta["punto: dirección de overrides"] += 1

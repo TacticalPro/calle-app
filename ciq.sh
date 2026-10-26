@@ -12,6 +12,8 @@
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
 #   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
+#                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
+#                         → bin/calle-<zona>-beta.iq
 #   ./ciq.sh prg6x        .prg para un fēnix 6X → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
@@ -50,8 +52,24 @@ sdk() {
 
 monkeyc() { "$BIN/monkeyc" -d "$DEV" -f monkey.jungle -y "$KEY" "$@"; }
 
+# El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
+# /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
+# cierran a la vez y los tests salen en blanco (2026-10-26). Se toma al usarlo y se suelta al salir; si lo
+# tiene otro, se espera (SIM_ESPERA s, 1800 por defecto) y, si no lo suelta, se para.
+CANDADO=/tmp/calles-sim.lock
 simulador() {
-    pgrep -f "ConnectIQ.app" >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
+    local t=0
+    until mkdir "$CANDADO" 2>/dev/null; do
+        [ -f "$CANDADO/quien" ] && grep -q "^calle-fenix $$ " "$CANDADO/quien" && break
+        [ $t -eq 0 ] && echo "simulador ocupado por: $(cat "$CANDADO/quien" 2>/dev/null) — espero" >&2
+        t=$((t + 10)); [ $t -gt "${SIM_ESPERA:-1800}" ] && { echo "simulador: sigue ocupado; paro" >&2; exit 1; }
+        sleep 10
+    done
+    echo "calle-fenix $$ $(date +%H:%M)" > "$CANDADO/quien"
+    trap 'grep -q "^calle-fenix $$ " "$CANDADO/quien" 2>/dev/null && rm -r "$CANDADO"' EXIT
+    # Por el nombre del proceso, no con -f: la línea de órdenes de otras sesiones que esperan el candado contiene
+    # «ConnectIQ.app» y daba el simulador por abierto sin estarlo («Unable to connect to simulator», 2026-10-26).
+    pgrep -x simulator >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
 }
 
 # La app no debe poder sacar nada del reloj: sin red, sin grabar actividad, sin
@@ -82,12 +100,23 @@ case "${1:-build}" in
     release) privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w --build-stats 0
              ls -la bin/calle-release.prg ;;
     test)    sdk; mkdir -p bin; monkeyc -o bin/test.prg -t -w; simulador
-             "$BIN/monkeydo" bin/test.prg "$DEV" -t ;;
+             # Con tope de tiempo (TEST_MAX s, 600 por defecto): un test colgado retenía el simulador y el candado
+             # (fēnix 6S, 22 min, 2026-10-26). macOS no trae «timeout»: se vigila en segundo plano.
+             "$BIN/monkeydo" bin/test.prg "$DEV" -t & md=$!
+             ( sleep "${TEST_MAX:-600}"; kill -0 $md 2>/dev/null && { echo "test: más de ${TEST_MAX:-600} s; lo corto" >&2; pkill -P $md; kill $md; } ) & vig=$!
+             wait $md; rc=$?; kill $vig 2>/dev/null; exit $rc ;;
     sim)     sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w; simulador
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
     package) privacidad; sdk; mkdir -p bin
              "$BIN/monkeyc" -e -f monkey.jungle -y "$KEY" -o bin/calle.iq -r -O 2 -w ;;
-    beta)    privacidad; sdk; mkdir -p bin/beta
+    beta)    if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
+                 privacidad; sdk
+                 dir="$($PY tools/tienda.py "$APP" --beta)"
+                 "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP-beta.iq" -r -O 2 -w 2>&1 \
+                     | { grep -v "is large (> 8kb)" || true; }
+                 ls -la "bin/calle-$APP-beta.iq"; exit 0
+             fi
+             privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
              # Ni los de 128 KB (fēnix 5/5S y 6/6S): la beta es la del 7X Pro y el 6X.

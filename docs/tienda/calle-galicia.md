@@ -3,7 +3,9 @@
 App del catálogo por zonas (`tools/catalogo.json`): `APP=galicia ./ciq.sh tienda` → `bin/calle-galicia.iq`.
 Subida nueva en el portal (no es una versión de la beta), con el id `50da24c1…`. **Subida el 2026-10-26** como
 3.4.0: [ficha en la tienda](https://apps.garmin.com/apps/13c5de1f-6ebf-4264-8b3f-91a8b0bf33dd), aprobada el mismo
-día. La 3.5.0 añade los fēnix 6 Pro y 5X/5 Plus (abajo) y se sube con *Upload New Version*. Subida por trozos con la extensión de Chrome (método en `calle-madrid.md`). La beta privada «Calles Galicia (offline) (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
+día. **3.5.0 subida el 2026-10-26** con *Upload New Version* (commit `fa70bc9`; 120 MB, 20 piezas, firma «Verified»
+en el portal): añade los fēnix 6 Pro y 5X/5 Plus (abajo). Pendiente de aprobación; al aprobarse, comprobar en la ficha los
+relojes nuevos. Subida por trozos con la extensión de Chrome (método en `calle-madrid.md`). La beta privada «Calles Galicia (offline) (beta)» (id `19ddcb3e…`) es solo del fēnix 7X Pro.
 
 - **Título:** «Calles Galicia (offline)», en inglés y en español (el autor, 2026-10-26; antes «CALLE Galicia (offline)»).
   Que no usa red es su punto fuerte. La beta pasa a «Calles Galicia (offline) (beta)» con *Edit Details*.

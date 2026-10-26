@@ -12,7 +12,8 @@ tools/regiones.json (relativo a tools/cache/) y escribe en tools/cache/:
     pbf-<region>-poi.json      lo de consulta_poi(): hospitales y comisarías, con su centro
 Con el mismo formato que «out geom» y «out center tags» de Overpass: vías con "nodes" y "geometry",
 relaciones con "members" (y la "geometry" de cada vía miembro), centros como el de Overpass (el de la caja).
-Sin la caja de la región: el extracto ya viene recortado al polígono de la comunidad.
+Sin la caja de la región: el extracto ya viene recortado al polígono de la comunidad. Con "pbf_recorte"
+en la región (Barcelona, del extracto de Cataluña), se queda solo lo que toca su caja.
 
 Necesita pyosmium (`python3 -m venv .venv && .venv/bin/pip install osmium`); el generador sigue siendo
 solo biblioteca estándar.
@@ -161,6 +162,25 @@ def main():
                     o.out["poi"].append({"type": "relation", "id": e["id"], "center": c, "tags": e["tags"]})
             else:
                 o.out[destino].append(e)
+    if cfg.get("pbf_recorte"):
+        # Una región dentro de un extracto mayor (Barcelona en el de Cataluña): se queda lo que toca su caja.
+        s_, w_, n_, e_ = cfg["bbox"]
+
+        def dentro(g):
+            return g and s_ <= g["lat"] <= n_ and w_ <= g["lon"] <= e_
+
+        def toca(e):
+            if e["type"] == "node":
+                return dentro(e)
+            if "center" in e:
+                return dentro(e["center"])
+            if e["type"] == "way":
+                return any(dentro(g) for g in e.get("geometry") or [])
+            return any(dentro(g) for mm in e.get("members", []) for g in mm.get("geometry") or [])
+        for destino in o.out:
+            antes = len(o.out[destino])
+            o.out[destino] = [e for e in o.out[destino] if toca(e)]
+            print(f"recorte a la caja: {destino} {antes} → {len(o.out[destino])}")
     for destino, elems in o.out.items():
         f = CACHE / f"pbf-{a.region}-{destino}.json"
         f.write_text(json.dumps({"osm3s": {"timestamp_osm_base": fecha}, "elements": elems}, ensure_ascii=False,

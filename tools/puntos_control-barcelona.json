@@ -1,0 +1,56 @@
+[
+ {
+  "id": "plcat",
+  "lat": 41.3867147,
+  "lon": 2.1694506,
+  "nota": "mitad de Plaça de Catalunya",
+  "espera": "Plaça de Catalunya"
+ },
+ {
+  "id": "ferran",
+  "lat": 41.3818203,
+  "lon": 2.1760421,
+  "nota": "mitad de Carrer de Ferran",
+  "espera": "Carrer de Ferran",
+  "num": "34"
+ },
+ {
+  "id": "eixample",
+  "lat": 41.3884852,
+  "lon": 2.1690611,
+  "nota": "mitad de Passeig de Gràcia",
+  "espera": "Passeig de Gràcia",
+  "num": "5"
+ },
+ {
+  "id": "gracia",
+  "lat": 41.403544,
+  "lon": 2.1564116,
+  "nota": "mitad de Carrer de les Guilleries",
+  "espera": "Carrer de les Guilleries",
+  "num": "25"
+ },
+ {
+  "id": "nou_barris",
+  "lat": 41.4443612,
+  "lon": 2.1789918,
+  "nota": "mitad de Via Júlia",
+  "espera": "Via Júlia",
+  "tambien": "Carrer de Joaquim Valls",
+  "num": "146"
+ },
+ {
+  "id": "lejos",
+  "lat": 41.3367611,
+  "lon": 2.1456448,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 41.2,
+  "lon": 2.0,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

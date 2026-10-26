@@ -1,0 +1,63 @@
+[
+ {
+  "id": "plcat",
+  "lat": 41.3867147,
+  "lon": 2.1694506,
+  "nota": "mitad de Plaça de Catalunya",
+  "espera": "Plaça de Catalunya"
+ },
+ {
+  "id": "eixample",
+  "lat": 41.3884852,
+  "lon": 2.1690611,
+  "nota": "mitad de Passeig de Gràcia",
+  "espera": "Passeig de Gràcia",
+  "num": "5"
+ },
+ {
+  "id": "girona",
+  "lat": 41.9830551,
+  "lon": 2.8245614,
+  "nota": "mitad de Plaça del Vi",
+  "espera": "Plaça del Vi",
+  "num": "9"
+ },
+ {
+  "id": "lleida",
+  "lat": 41.6164475,
+  "lon": 0.6206336,
+  "nota": "mitad de Avinguda de Balmes",
+  "espera": "Avinguda de Balmes",
+  "tambien": "Plaça de Cervantes",
+  "num": "2"
+ },
+ {
+  "id": "tarragona",
+  "lat": 41.1185634,
+  "lon": 1.2418573,
+  "nota": "mitad de Avinguda de Roma",
+  "espera": "Avinguda de Roma",
+  "num": "7"
+ },
+ {
+  "id": "rural",
+  "lat": 42.3519308,
+  "lon": 1.4520644,
+  "nota": "mitad de Passeig de l'Horta de la Valira",
+  "espera": "Passeig de l'Horta de la Valira"
+ },
+ {
+  "id": "lejos",
+  "lat": 40.5259813,
+  "lon": 0.5113743,
+  "nota": "sin calles a 200 m",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 40.45,
+  "lon": 0.3,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

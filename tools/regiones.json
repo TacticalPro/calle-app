@@ -265,5 +265,164 @@
         "lon": -8.4
       }
     ]
+  },
+  "cataluna": {
+    "id": 4,
+    "etiqueta": "Cataluña",
+    "prefijo": "k",
+    "bbox": [
+      40.51,
+      0.15,
+      42.87,
+      3.34
+    ],
+    "bbox_nota": "Comunidad Autónoma de Cataluña (relación OSM 349053) más ~500 m",
+    "area_osm": 349053,
+    "pbf": "geofabrik/cataluna-261026.osm.pbf",
+    "pbf_nota": "Geofabrik (europe/spain/cataluna, datos OSM del 2026-10-26, MD5 comprobado), recortado al polígono de la comunidad. Se convierte con .venv/bin/python tools/pbf_a_json.py --region cataluna",
+    "grande": true,
+    "overrides": "overrides-cataluna.json",
+    "zonas": {
+      "poligono": "parroquia",
+      "admin_level": [
+        "8"
+      ],
+      "prefijo": "término de "
+    },
+    "zonas_nota": "el polígono es el municipio (admin_level 8): en Cataluña no hay parroquias; el barrio sale de los nodos place",
+    "ruta": "Carrer de Ferran",
+    "adaptativa": {
+      "zona": 10000,
+      "tope_kb": 30,
+      "nota": "como Galicia: teselas adaptativas y zonas de 10 km"
+    },
+    "control": [
+      {
+        "id": "plcat",
+        "tipo": "cerca",
+        "lat": 41.387,
+        "lon": 2.17,
+        "nota": "Barcelona, plaça de Catalunya"
+      },
+      {
+        "id": "eixample",
+        "tipo": "cerca",
+        "lat": 41.3925,
+        "lon": 2.164,
+        "nota": "Barcelona, Eixample"
+      },
+      {
+        "id": "girona",
+        "tipo": "cerca",
+        "lat": 41.9831,
+        "lon": 2.8249,
+        "nota": "Girona, centre"
+      },
+      {
+        "id": "lleida",
+        "tipo": "cerca",
+        "lat": 41.6176,
+        "lon": 0.62,
+        "nota": "Lleida, centre"
+      },
+      {
+        "id": "tarragona",
+        "tipo": "cerca",
+        "lat": 41.1189,
+        "lon": 1.2445,
+        "nota": "Tarragona, centre"
+      },
+      {
+        "id": "rural",
+        "tipo": "cerca",
+        "lat": 42.35,
+        "lon": 1.45,
+        "nota": "Pirineu (Alt Urgell)"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 40.45,
+        "lon": 0.3
+      }
+    ]
+  },
+  "barcelona": {
+    "id": 5,
+    "etiqueta": "Barcelona",
+    "prefijo": "b",
+    "bbox": [
+      41.312,
+      2.047,
+      41.474,
+      2.234
+    ],
+    "bbox_nota": "término municipal de Barcelona (relación OSM 347950) más ~500 m",
+    "area_osm": 347950,
+    "grande": true,
+    "overrides": "overrides-barcelona.json",
+    "zonas": {
+      "poligono": "barrio",
+      "admin_level": [
+        "9",
+        "10"
+      ]
+    },
+    "zonas_nota": "barri (admin_level 10) y districte (9), como Madrid: «Gòtic · Ciutat Vella»",
+    "ruta": "Carrer de Ferran",
+    "control": [
+      {
+        "id": "plcat",
+        "tipo": "cerca",
+        "lat": 41.387,
+        "lon": 2.17,
+        "nota": "plaça de Catalunya"
+      },
+      {
+        "id": "ferran",
+        "tipo": "cerca",
+        "lat": 41.3818,
+        "lon": 2.176,
+        "nota": "carrer de Ferran (Gòtic)"
+      },
+      {
+        "id": "eixample",
+        "tipo": "cerca",
+        "lat": 41.3925,
+        "lon": 2.164,
+        "nota": "Eixample"
+      },
+      {
+        "id": "gracia",
+        "tipo": "cerca",
+        "lat": 41.4036,
+        "lon": 2.1566,
+        "nota": "Gràcia"
+      },
+      {
+        "id": "nou_barris",
+        "tipo": "cerca",
+        "lat": 41.441,
+        "lon": 2.177,
+        "nota": "Nou Barris"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 41.2,
+        "lon": 2.0
+      }
+    ],
+    "pbf": "geofabrik/cataluna-261026.osm.pbf",
+    "pbf_recorte": true,
+    "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona"
   }
 }

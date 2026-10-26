@@ -36,5 +36,27 @@
       "fenix7xpronowifi"
     ],
     "relojes_nota": "2026-10-25: la beta 3.3.x es solo del fēnix 7X Pro; el catálogo lleva toda la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280). Fuera: el 6X y los de 128 KB (254 recursos como mucho; Galicia usa ~2.150) y los fēnix 8, 9 y E (faltan sus tests)."
+  },
+  "cataluna": {
+    "id": "eb3617983d984d05bda9fb9b9b8818ec",
+    "nombre": "Calles Cataluña",
+    "zonas": [
+      "cataluna"
+    ],
+    "relojes": [
+      "fenix7xpro"
+    ],
+    "relojes_nota": "2026-10-26: medición de tamaño solo con el 7X Pro; la lista definitiva depende del peso del .iq"
+  },
+  "barcelona": {
+    "id": "982fed7ac03b4eb7bfc681e71ebce81c",
+    "nombre": "Calles Barcelona",
+    "zonas": [
+      "barcelona"
+    ],
+    "relojes": [
+      "fenix7xpro"
+    ],
+    "relojes_nota": "2026-10-26: medición de tamaño solo con el 7X Pro"
   }
 }

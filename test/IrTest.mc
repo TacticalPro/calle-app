@@ -62,7 +62,9 @@ function activaPorPosicion(logger as Test.Logger) as Boolean {
         var lat = (c[4 * i] + c[4 * i + 2]) / 2.0d;
         var lon = (c[4 * i + 1] + c[4 * i + 3]) / 2.0d;
         Activa.paraPosicion(lat, lon);
-        ok = ok && Callejero.ID == Regiones.IDS[i] && Ajustes.ultima() == Regiones.IDS[i];
+        // Las cajas pueden anidarse (Santiago en Galicia, Barcelona en Cataluña): vale cualquier región que
+        // contenga el punto, y la última usada es la activa.
+        ok = ok && Activa.contiene(Callejero.ID, lat, lon) && Ajustes.ultima() == Callejero.ID;
     }
     // Fuera de todas: se queda la última.
     var antes = Callejero.ID;

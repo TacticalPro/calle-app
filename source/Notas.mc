@@ -81,7 +81,7 @@ module Notas {
         if (m.estado == EST_LEJOS) {
             s = m.lugar != null ? m.lugar as String : "sin calle";
             if (m.parroquia != null) {
-                s += " (parroquia de " + m.parroquia + ")";
+                s += " (" + Callejero.ZPREF + m.parroquia + ")";
             } else if (m.barrio != null) {
                 s += " (" + m.barrio + ")";     // Madrid: barrio · distrito
             }

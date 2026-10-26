@@ -107,6 +107,12 @@ def main():
                 carpetas.append("res")
             linea = f"{m.group(1)} = {';'.join(carpetas)}"
         lineas.append(linea)
+    # El icono a la medida de cada reloj (resources-<reloj>/, tools/caratula.py --instalar): el compilador solo lo
+    # busca junto a un «resources» al lado del jungle, no en ../../../resources; aquí se añade a mano.
+    propias = {m.group(1) for m in (re.match(r"^(\w+)\.resourcePath", l.strip()) for l in lineas) if m}
+    for r in app["relojes"]:
+        if (ROOT / f"resources-{r}").is_dir() and r not in propias:
+            lineas.append(f"{r}.resourcePath = $(base.resourcePath);{SUBIR}resources-{r}")
     (out / "monkey.jungle").write_text("\n".join(lineas) + "\n", "utf-8")
 
     (out / "res" / "strings" / "strings.xml").write_text(

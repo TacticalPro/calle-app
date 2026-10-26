@@ -209,6 +209,56 @@ CANON = set(TIPOS)
 PARTICULAS = {"de", "do", "da", "dos", "das", "del", "la", "las", "los", "el", "o", "a", "os", "as", "e", "y", "d", "en", "l", "els", "les", "dels", "al", "i"}
 
 
+# Texto que va al reloj, en Latin-1: las fuentes de sistema son de página de códigos latina (CDPG) y pintan «�» lo
+# demás (el «≈», 2026-10-24). Con "texto_latin1" en la región (Comunitat Valenciana, 2026-10-26: 485 «’» solo en
+# addr:street, «n.ᵒ», «–», comillas tipográficas, una «ό» griega en «Carrerό») se normaliza todo nombre de calle,
+# lugar, término, punto y sufijo de portal. Sin él, el texto no cambia (la salida de las otras regiones, tampoco).
+TEXTO_LATIN1 = False
+LATIN1 = {"\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'", "\u2032": "'", "\u00b4": "'",
+          "\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"', "\u2033": '"',
+          "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2015": "-", "\u2212": "-",
+          "\u0140": "l\u00b7", "\u013f": "L\u00b7", "\u2027": "\u00b7", "\u2219": "\u00b7", "\u22c5": "\u00b7",
+          "\u1d52": "\u00ba", "\u2116": "n\u00ba", "\u2026": "...", "\u20ac": "EUR", "\u00a0": " ", "\u2009": " ",
+          "\u202f": " ", "\u200b": ""}
+# Letras griegas y cirílicas que se usan por error en lugar de las latinas («Carrerό»).
+PARECIDAS = dict(zip("οΟαΑεΕιΙкКмМнНоОрРсСтТхХуаАеЕіІı", "oOaAeEiIkKmMhHoOpPcCtTxXyaAeEiIi"))
+_avisados = Counter()
+
+
+def latin1(s):
+    """s con solo caracteres de Latin-1: LATIN1, y si no, la letra base (PARECIDAS) con su tilde si la compuesta
+    existe en Latin-1 («ό» → «ó»), sin ella si no («ŕ» → «r»); lo que no tiene equivalente se quita."""
+    if not s or all(ord(c) < 256 for c in s):
+        return s
+    out = []
+    for c in s:
+        if ord(c) < 256:
+            out.append(c)
+        elif c in LATIN1:
+            out.append(LATIN1[c])
+        elif unicodedata.combining(c):
+            # Tilde suelta tras su letra («e» + U+0301): se compone si cabe.
+            junto = unicodedata.normalize("NFC", (out.pop() if out else "") + c)
+            out.append(junto if all(ord(x) < 256 for x in junto) else junto[:1] if ord(junto[0]) < 256 else "")
+        else:
+            d = unicodedata.normalize("NFD", c)
+            base = PARECIDAS.get(d[0], d[0])
+            junto = unicodedata.normalize("NFC", base + d[1:])
+            if all(ord(x) < 256 for x in junto):
+                out.append(junto)
+            elif ord(base) < 256:
+                out.append(base)
+            else:
+                k = "".join(x for x in unicodedata.normalize("NFKD", c) if ord(x) < 256 and not unicodedata.combining(x))
+                out.append(k)
+            _avisados[c] += 1
+    return re.sub(r"\s+", " ", "".join(out)).strip()
+
+
+def texto(s):
+    return latin1(s) if TEXTO_LATIN1 and s else s
+
+
 def sin_tildes(s):
     return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
 
@@ -514,7 +564,7 @@ def nombre_via(tags, overrides):
         nom = ref.replace(";", " / ")
     if not nom:
         return None
-    return overrides["nombre_mostrar"].get(nom, nom)
+    return texto(overrides["nombre_mostrar"].get(nom, nom))
 
 
 def claves_via(tags, mostrado):
@@ -562,7 +612,7 @@ def extraer_vias(elems, proy, overrides, cuenta):
             nom = tags.get("name") or tags.get("name:gl") or tags.get("name:es")
             if not nom:
                 continue
-            nom = overrides["nombre_mostrar"].get(nom, nom)
+            nom = texto(overrides["nombre_mostrar"].get(nom, nom))
             anillos = []
             if e["type"] == "way":
                 anillos.append([proy.xy(g["lat"], g["lon"]) for g in e.get("geometry") or [] if g])
@@ -812,7 +862,7 @@ def extraer_portales(elems, proy, vias, overrides, cuenta, sin_pareja, por_lugar
     portales = []
     for e in elems:
         tags = e.get("tags", {})
-        hn = tags.get("addr:housenumber")
+        hn = texto(tags.get("addr:housenumber"))
         if not hn:
             continue
         calle = tags.get("addr:street")
@@ -1260,12 +1310,12 @@ def extraer_poi(elems, proy, vias, portales, overrides, cuenta, ancho, alto):
         if fijo.get("excluir"):
             cuenta["punto excluido (override)"] += 1
             continue
-        nom = tags.get("name") or tags.get("official_name") or tags.get("operator") or POI_ETIQUETA[tipo].capitalize()
+        nom = texto(tags.get("name") or tags.get("official_name") or tags.get("operator") or POI_ETIQUETA[tipo].capitalize())
         dirc = fijo.get("direccion", "")
         if dirc:
             cuenta["punto: dirección de overrides"] += 1
         elif tags.get("addr:street"):
-            dirc = tags["addr:street"] + (" " + tags["addr:housenumber"] if tags.get("addr:housenumber") else "")
+            dirc = texto(tags["addr:street"] + (" " + tags["addr:housenumber"] if tags.get("addr:housenumber") else ""))
         else:
             mejor = None
             for i in idx.cerca(x, y, x, y, 120):
@@ -1311,7 +1361,7 @@ def extraer_zonas(elems, proy, overrides, cuenta, zcfg):
         cuenta["barrio de overrides"] += 1
     for e in elems:
         tags = e.get("tags", {})
-        nom = tags.get("name") or tags.get("name:gl") or tags.get("name:es")
+        nom = texto(tags.get("name") or tags.get("name:gl") or tags.get("name:es"))
         if not nom:
             continue
         if e["type"] == "relation" and tags.get("admin_level") in (nivel, padre):
@@ -2310,7 +2360,7 @@ def main():
                     help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/); c: teselas "
                          "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, TEXTO_LATIN1
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -2319,6 +2369,7 @@ def main():
         return
     regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
     cfg = dict(regiones[a.region])
+    TEXTO_LATIN1 = bool(cfg.get("texto_latin1"))
     grande = bool(cfg.get("grande"))
     overrides = json.loads((TOOLS / cfg["overrides"]).read_text("utf-8"))
     bbox_datos = cfg["bbox"]            # la descarga es siempre la de la región entera (y su caché)

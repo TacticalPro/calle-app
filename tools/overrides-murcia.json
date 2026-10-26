@@ -1,0 +1,24 @@
+{
+  "_que_es": "Correcciones locales al callejero de OSM de la Región de Murcia. alias_calle: addr:street tal cual -> nombre de la vía. nombre_mostrar: nombre OSM -> nombre en pantalla (aquí, la grafía correcta de las variantes que unificar_variantes() habría elegido mal). excluir_vias, barrios_extra, poi: como en overrides-santiago.json.",
+  "alias_calle": {
+    "Calle Pascual Amarat": "Calle Pascual Amat",
+    "Calle Ntra. Sra. de las Mercedes": "Calle Nuestra Señora de las Mercedes",
+    "Calle Vicente Alexandre": "Calle Vicente Aleixandre"
+  },
+  "nombre_mostrar": {
+    "Subida A COntadores": "Subida a Contadores",
+    "senda de la bermeja": "Senda de la Bermeja",
+    "Calle cuatro esquinas": "Calle Cuatro Esquinas",
+    "Calle San Jose": "Calle San José",
+    "Calle Telegrafos": "Calle Telégrafos",
+    "Calle Mojacar": "Calle Mojácar",
+    "Calle Tio Viruta": "Calle Tío Viruta",
+    "Plaza Musico Diaz Cano": "Plaza Músico Díaz Cano",
+    "Calle Dolores Perez Guijarro": "Calle Dolores Pérez Guijarro",
+    "Calle Fernandez Caballero": "Calle Fernández Caballero",
+    "Vía Verde del Noroeste (Antigua vía Murcia-Caravaca": "Vía Verde del Noroeste (Antigua vía Murcia-Caravaca)"
+  },
+  "excluir_vias": [],
+  "barrios_extra": [],
+  "poi": {}
+}

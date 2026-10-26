@@ -58,5 +58,23 @@
       "fenix7xpro"
     ],
     "relojes_nota": "2026-10-26: medición de tamaño solo con el 7X Pro"
+  },
+  "murcia": {
+    "id": "e6ac6e6801864ecfb0ce4bab41705fef",
+    "nombre": "Calles Murcia",
+    "zonas": [
+      "murcia"
+    ],
+    "relojes": [
+      "fenix7",
+      "fenix7s",
+      "fenix7x",
+      "fenix7pro",
+      "fenix7pronowifi",
+      "fenix7spro",
+      "fenix7xpro",
+      "fenix7xpronowifi"
+    ],
+    "relojes_nota": "2026-10-26: la familia fēnix 7 (768 KB, pantallas de 240, 260 y 280), como Calles Galicia; tests en el 7X Pro, el 7 y el 7S. Fuera: el 6X y los de 128 KB (254 recursos como mucho; Murcia usa ~980) y los fēnix 8, 9 y E (faltan sus tests)."
   }
 }

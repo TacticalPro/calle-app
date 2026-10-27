@@ -9,6 +9,8 @@
 #   ./ciq.sh build        .prg de depuración        → bin/calle.prg
 #   ./ciq.sh release      .prg optimizado (-r -O 2) → bin/calle-release.prg  (el que va al reloj)
 #   ./ciq.sh test         compila con los tests y los ejecuta en el simulador
+#                         APP=<app>: con el jungle de esa app del catálogo (tools/tienda.py; las provincias de la c5:
+#                         APP=coruna DEV=fenix5 ./ciq.sh test). También vale para build, release y sim
 #   ./ciq.sh sim          abre el simulador con la app
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
@@ -51,7 +53,9 @@ sdk() {
     BIN="$s/bin"
 }
 
-monkeyc() { "$BIN/monkeyc" -d "$DEV" -f monkey.jungle -y "$KEY" "$@"; }
+monkeyc() { "$BIN/monkeyc" -d "$DEV" -f "$(jungle)" -y "$KEY" "$@"; }
+# El jungle: el del repositorio o, con APP, el de esa app del catálogo (tools/tienda.py lo escribe en bin/tienda/).
+jungle() { if [ -n "${APP:-}" ]; then echo "$($PY tools/tienda.py "$APP")/monkey.jungle"; else echo monkey.jungle; fi; }
 
 # El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
 # /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
@@ -80,10 +84,10 @@ simulador() {
 # con el reloj perdido y por USB, se leen) y la zona elegida del callejero (source/Ajustes.mc).
 privacidad() {
     local malo=0
-    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-gen; then
+    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-c5 source-gen*; then
         echo "privacidad: el código usa una API que puede sacar o guardar datos (arriba)." >&2; malo=1
     fi
-    if grep -rnE 'Storage|Properties' source source-gen | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
+    if grep -rnE 'Storage|Properties' source source-c5 source-gen* | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
         echo "privacidad: solo source/Notas.mc y source/Ajustes.mc pueden guardar en el reloj (arriba)." >&2; malo=1
     fi
     local perms; perms="$(grep -o 'uses-permission id="[^"]*"' manifest.xml | sed 's/.*id="//;s/"//' | sort -u | tr '\n' ' ')"

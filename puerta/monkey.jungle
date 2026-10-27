@@ -1,0 +1,6 @@
+# Puerta del plan c5: el lector del FORMATO 5 (../source-c5) con un Callejero mínimo y la tesela más pesada de
+# Galicia (tools/puerta_c5.py). Sin el resto de la app: solo tests.
+project.manifest = manifest.xml
+base.sourcePath = source;source-gen;../source-c5
+base.resourcePath = ../resources;resources-gen
+base.excludeAnnotations = modoapp

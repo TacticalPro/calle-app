@@ -562,5 +562,207 @@
         "nota": "Santa Pola (Alicante), fuera de la caja"
       }
     ]
+  },
+  "coruna": {
+    "id": 7,
+    "etiqueta": "A Coruña",
+    "prefijo": "c",
+    "datos_de": "galicia",
+    "provincia": "15",
+    "datos_nota": "los datos, la proyección y las zonas de galicia; solo lo de la provincia (ref:ine 15)",
+    "ruta": "Rúa do Franco",
+    "c5": {
+      "zona": 20000,
+      "zona_min": 2500,
+      "tope_kb": 22.8,
+      "tope_zona_kb": 20,
+      "rcel": 100,
+      "zu": 2,
+      "rural_u": 4,
+      "rural_dp": 8,
+      "urbana": [
+        "15030",
+        "15036",
+        "15054",
+        "15073",
+        "15078",
+        "27028",
+        "27031",
+        "27066",
+        "32054",
+        "36024",
+        "36026",
+        "36038",
+        "36045",
+        "36057",
+        "36060"
+      ],
+      "nota": "Variante c5 (fēnix 5/5S y 6/6S, 128 KB; plan 4 de la c5, 2026-10-27): una app por provincia. Zona urbana (urbana: ref:ine de los municipios con callejero completo): todo; fuera, las vías de cada calle encadenadas y sin sendas, portales ni parajes. Teselas ≤ 22,8 KB de heap estimado (1 m si tocan la zona urbana, 4 m si no) y zonas en árbol de 20 a 2,5 km, ≤ 20 KB, que se consultan con la tesela soltada (source-c5/Localizador.mc): medido con la app real en el fēnix 5 (2026-10-27), primera tesela ≤ 26,4 KB, menos ~1 KB de código del arreglo de textos y un 10 % de margen (source-c5/Zonas.mc)"
+    },
+    "control": [
+      {
+        "id": "obradoiro",
+        "tipo": "area",
+        "calle": "Praza do Obradoiro"
+      },
+      {
+        "id": "franco",
+        "tipo": "mitad",
+        "calle": "Rúa do Franco",
+        "lat": 42.878,
+        "lon": -8.5452
+      },
+      {
+        "id": "portal",
+        "tipo": "portal",
+        "calle": "Rúa do Vilar",
+        "num": 44
+      },
+      {
+        "id": "coruna",
+        "tipo": "cerca",
+        "lat": 43.37,
+        "lon": -8.399,
+        "nota": "A Coruña, Cidade Vella"
+      },
+      {
+        "id": "ferrol",
+        "tipo": "cerca",
+        "lat": 43.483,
+        "lon": -8.235,
+        "nota": "Ferrol, A Magdalena"
+      },
+      {
+        "id": "denso",
+        "tipo": "cerca",
+        "lat": 42.8352,
+        "lon": -8.6377,
+        "nota": "la zona con más lugares de Galicia"
+      },
+      {
+        "id": "rural",
+        "tipo": "cerca",
+        "lat": 43.12,
+        "lon": -8.1,
+        "nota": "aldea del interior, fuera de la zona urbana"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos",
+        "lat": 42.9,
+        "lon": -9.12,
+        "nota": "monte"
+      },
+      {
+        "id": "otra",
+        "tipo": "fuera",
+        "lat": 43.0105,
+        "lon": -7.556,
+        "nota": "Lugo: otra provincia"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 41.5,
+        "lon": -8.4
+      }
+    ],
+    "ruta_cerca": [
+      42.878,
+      -8.5452
+    ]
+  },
+  "pontevedra": {
+    "id": 8,
+    "etiqueta": "Pontevedra",
+    "prefijo": "p",
+    "datos_de": "galicia",
+    "provincia": "36",
+    "datos_nota": "los datos, la proyección y las zonas de galicia; solo lo de la provincia (ref:ine 36)",
+    "catastro": null,
+    "catastro_nota": "el Catastro de galicia es el de Santiago, que no está en la provincia",
+    "ruta": "Rúa do Príncipe",
+    "c5": {
+      "zona": 20000,
+      "zona_min": 2500,
+      "tope_kb": 20,
+      "tope_zona_kb": 10.8,
+      "rcel": 100,
+      "zu": 2,
+      "rural_u": 4,
+      "rural_dp": 8,
+      "urbana": [
+        "15030",
+        "15036",
+        "15054",
+        "15073",
+        "15078",
+        "27028",
+        "27031",
+        "27066",
+        "32054",
+        "36024",
+        "36026",
+        "36038",
+        "36045",
+        "36057",
+        "36060"
+      ],
+      "nota": "Variante c5 (fēnix 5/5S y 6/6S, 128 KB; plan 4 de la c5, 2026-10-27): una app por provincia. Zona urbana (urbana: ref:ine de los municipios con callejero completo): todo; fuera, las vías de cada calle encadenadas y sin sendas, portales ni parajes. Teselas ≤ 20 KB de heap estimado (1 m si tocan la zona urbana, 4 m si no) y zonas en árbol de 20 a 2,5 km, ≤ 10,8 KB: medido con la app real en el fēnix 5 (2026-10-27), primera tesela ≤ 26,4 KB y tesela + 2 × zona ≤ 46,2 KB, con un 10 % de margen (source-c5/Zonas.mc)"
+    },
+    "control": [
+      {
+        "id": "vigo",
+        "tipo": "cerca",
+        "lat": 42.237,
+        "lon": -8.7235,
+        "nota": "Vigo, Príncipe"
+      },
+      {
+        "id": "pontevedra",
+        "tipo": "cerca",
+        "lat": 42.431,
+        "lon": -8.644,
+        "nota": "Pontevedra, centro"
+      },
+      {
+        "id": "lalin",
+        "tipo": "cerca",
+        "lat": 42.6612,
+        "lon": -8.1105,
+        "nota": "Lalín, centro"
+      },
+      {
+        "id": "rural",
+        "tipo": "cerca",
+        "lat": 42.55,
+        "lon": -8.35,
+        "nota": "aldea del interior, fuera de la zona urbana"
+      },
+      {
+        "id": "lejos",
+        "tipo": "lejos",
+        "lat": 42.2,
+        "lon": -8.55,
+        "nota": "monte"
+      },
+      {
+        "id": "otra",
+        "tipo": "fuera",
+        "lat": 42.336,
+        "lon": -7.864,
+        "nota": "Ourense: otra provincia"
+      },
+      {
+        "id": "fuera",
+        "tipo": "fuera",
+        "lat": 41.5,
+        "lon": -8.4
+      }
+    ],
+    "ruta_cerca": [
+      42.237,
+      -8.7235
+    ]
   }
 }

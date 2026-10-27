@@ -252,7 +252,8 @@ class Ref:
             return (None, r[1], r[0]) + r[3:]
         return r
 
-    def _zona(self, x, y, margen):
+    def hoja(self, x, y):
+        """(nombre de la zona o None, ox, oy, lado) del punto; None si cae fuera de la rejilla de zonas."""
         m = self.m
         if x < 0 or y < 0:
             return None
@@ -260,12 +261,29 @@ class Ref:
         if zc >= m["zcols"] or zf >= m["zfilas"]:
             return None
         nom = m["zidx"][zf * m["zcols"] + zc]
+        ox, oy, lado = zc * m["zona"], zf * m["zona"], m["zona"]
+        while isinstance(nom, list):
+            # Árbol de zonas (variante c5): los cuatro hijos SO, SE, NO, NE, de la mitad de lado (Zonas.consultar).
+            lado //= 2
+            h = (x - ox >= lado) + 2 * (y - oy >= lado)
+            ox, oy = ox + (h & 1) * lado, oy + (h >> 1) * lado
+            nom = nom[h]
+        return nom, ox, oy, lado
+
+    def _zona(self, x, y, margen):
+        m = self.m
+        hj = self.hoja(x, y)
+        if hj is None:
+            return None
+        nom, ox, oy, lado = hj
         if nom is None:
             return (None, None, None)
         if nom not in self._z:
             self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
         fmt, S, O, F, RL, L, LN = self._z[nom][:7]   # H y FZ (franjas) solo aceleran el reloj
         zu = self._z[nom][9] if len(self._z[nom]) > 9 else 1   # unidad de los lugares (variante b)
+        assert len(self._z[nom]) <= 10 or self._z[nom][10] == lado, "el lado de la hoja no es el del árbol"
+        rn = lado // m["rcel"]
         assert fmt == m["formato"]
 
         def par16(A, k):
@@ -274,9 +292,8 @@ class Ref:
         n = S.count("\n") - 1
         N = [S[par16(O, k):par16(O, k + 1) - 1] for k in range(n)]
         LN = [par16(LN, j) for j in range(len(L))]
-        ox, oy = zc * m["zona"], zf * m["zona"]
-        c = min(m["rn"] - 1, int((x - ox) // m["rcel"]))
-        r = min(m["rn"] - 1, int((y - oy) // m["rcel"]))
+        c = min(rn - 1, int((x - ox) // m["rcel"]))
+        r = min(rn - 1, int((y - oy) // m["rcel"]))
         v, col = 0, 0
         for k in range(par16(F, r), par16(F, r + 1)):
             t = par16(RL, k)
@@ -716,6 +733,9 @@ def derivar_control_cfg(ref, region, specs):
             otro = next((tuple(q), c["n"]) for c in g["calles"] if c["n"] != sp["calle"] and not c["a"]
                         for q in c["p"] if tuple(q) in propia)
             anadir(id_, otro[0][0], otro[0][1], f"cruce de {sp['calle']} con {otro[1]}")
+        elif t == "lejos" and "lat" in sp:
+            # Con lat/lon (las provincias de la c5: la rejilla de 10 m de las teselas adaptativas no se recorre).
+            anadir(id_, *ref.xy(sp["lat"], sp["lon"]), sp.get("nota", "sin calles cerca"))
         elif t == "lejos":
             for f in range(m["filas"]):
                 for col in range(m["cols"]):
@@ -774,6 +794,46 @@ def control(ref, region):
 
 
 # ---------------------------------------------------------------- vectores para Monkey C
+
+
+def heap_tesela(t):
+    """Heap estimado de una tesela FORMATO 4, como build_callejero.empaquetar."""
+    return int(5 * (sum(len(x) for x in t[4:]) + 10) + len(t[3].encode()) + 20 + 10 * t[1])
+
+
+def heap_zona(z):
+    """Heap estimado de una zona, como build_callejero.empaquetar_zona (más 5 B por el lado de la c5)."""
+    return int(5 * (sum(len(x) if isinstance(x, list) else 1 for x in z[2:]) + 7) + len(z[1].encode()) + 20)
+
+
+def pares_mayores(ref, n=5):
+    """Los n pares (tesela, zona) más pesados en heap estimado que conviven en algún punto: el reloj carga la tesela
+    y, con ella en memoria, la zona del punto (Localizador). Por cada tesela, las zonas (hojas) que tocan su caja,
+    muestreadas cada 250 m. [(tesela, zona, heap de la tesela, heap de la zona, lat, lon)] (tools/medida_c5.py)."""
+    m = ref.m
+    pares, hz = {}, {}
+    for ti, (x0, y0, x1, y1) in enumerate(m["cajas"]):
+        if not m["idx"][ti]:
+            continue
+        ht = heap_tesela(json.loads((ref.tdir / f"{m['idx'][ti]}.json").read_text("utf-8")))
+        nx, ny = max(1, int((x1 - x0) // 250)), max(1, int((y1 - y0) // 250))
+        for i in range(nx + 1):
+            for j in range(ny + 1):
+                x, y = x0 + (x1 - x0) * i / nx, y0 + (y1 - y0) * j / ny
+                x, y = min(x, x1 - 0.5), min(y, y1 - 0.5)
+                hoja = ref.hoja(x, y)[0]
+                if hoja and (ti, hoja) not in pares:
+                    if hoja not in hz:
+                        hz[hoja] = heap_zona(json.loads((ref.zdir / f"{hoja}.json").read_text("utf-8")))
+                    pares[(ti, hoja)] = (ht + hz[hoja], ht, hz[hoja], x, y)
+    return [(f"t{ti}", hoja, ht, hz_, *ref.latlon(x, y))
+            for (ti, hoja), (_, ht, hz_, x, y) in sorted(pares.items(), key=lambda kv: -kv[1][0])[:n]]
+
+
+def par_mayor(ref, n=5):
+    """Imprime los pares de pares_mayores, para llevar allí el reloj."""
+    for t, z, ht, hz, lat, lon in pares_mayores(ref, n):
+        print(f"{t} {ht} B + {z} {hz} B = {ht + hz} B ({(ht + hz) / 1024:.1f} KB)  en {lat:.6f},{lon:.6f}")
 
 
 def mc(s):
@@ -855,7 +915,11 @@ def gen_tests(ref, region, n=40, semilla=3):
     # Paseo por una calle (la "ruta" de la región; en Santiago, la Rúa do Franco), un fix cada 2 m con
     # ruido lateral de ±3 m: la histéresis no debe hacer bailar el nombre (sustituye a reproducir un GPX).
     calle_ruta = cfg.get("ruta", "Rúa do Franco")
-    c = max((c for c in g["calles"] if c["n"] == calle_ruta and len(c["p"]) > 1),
+    # "ruta_cerca" [lat, lon]: la de ese sitio, no la homónima más larga (en la c5, una rural encadenada de Pontevedra
+    # era más larga que la Rúa do Príncipe de Vigo, que va en trozos de tramo).
+    cerca = ref.xy(*cfg["ruta_cerca"]) if cfg.get("ruta_cerca") else None
+    c = max((c for c in g["calles"] if c["n"] == calle_ruta and len(c["p"]) > 1
+             and (cerca is None or min(math.dist(q, cerca) for q in c["p"]) <= 500.0)),
             key=lambda c: sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1)))
     ruta = []
     for j in range(len(c["p"]) - 1):
@@ -883,16 +947,20 @@ def gen_tests(ref, region, n=40, semilla=3):
     else:
         x0, y0 = (ti % m["cols"]) * m["tesela"], (ti // m["cols"]) * m["tesela"]
         x1, y1 = x0 + m["tesela"], y0 + m["tesela"]
-    zi = int(m["z_mayor"][1:])
-    zx, zy = (zi % m["zcols"] + 0.5) * m["zona"], (zi // m["zcols"] + 0.5) * m["zona"]
+    if m.get("z_mayor_xy"):   # árbol de zonas (c5): el centro de la hoja más pesada
+        zx, zy = m["z_mayor_xy"]
+    else:
+        zi = int(m["z_mayor"][1:])
+        zx, zy = (zi % m["zcols"] + 0.5) * m["zona"], (zi // m["zcols"] + 0.5) * m["zona"]
     for id_, (x, y) in (("tmayor", ((x0 + x1) / 2, (y0 + y1) / 2)), ("zmayor", (zx, zy))):
         if ref.celda(x, y) >= 0:
             cad.append((id_, *[round(v, 7) for v in ref.latlon(x, y)]))
     for id_, lat, lon in cad:
         L += ["", "(:test)", f"function cadena{mod}_{re.sub(r'[^A-Za-z0-9]', '_', id_)}(logger as Test.Logger) as Boolean {{",
               f"    return Vectores.cadena(logger, {cfg['id']}, {lat!r}d, {lon!r}d);", "}"]
-    out = ROOT / f"test-gen{ref.suf}" / f"Vectores{mod}Test.mc"
-    out.parent.mkdir(exist_ok=True)
+    # c5: una carpeta por provincia, porque cada app lleva solo su región (tools/tienda.py).
+    out = ROOT / f"test-gen{ref.suf}" / (region if ref.suf == "-c5" else "") / f"Vectores{mod}Test.mc"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(L) + "\n", "utf-8")
     print(f"escrito {out.relative_to(ROOT)} ({len(filas)} vectores, ruta de {len(ruta)} fixes)")
 
@@ -904,7 +972,9 @@ def main():
     ap.add_argument("--derivar", action="store_true")
     ap.add_argument("--gen-tests", action="store_true")
     ap.add_argument("--n", type=int, default=10000, help="puntos de la fuerza bruta")
-    ap.add_argument("--variante", choices=("normal", "6x", "c", "b"), default="normal")
+    ap.add_argument("--variante", choices=("normal", "6x", "c", "b", "c5"), default="normal")
+    ap.add_argument("--par-mayor", action="store_true",
+                    help="el par (tesela, zona) más pesado que conviven en un punto: el peor caso de memoria del reloj")
     a = ap.parse_args()
     ref = Ref(a.region, a.variante)
     if a.punto:
@@ -913,6 +983,9 @@ def main():
         return
     if a.derivar:
         derivar_control(ref, a.region)
+        return
+    if a.par_mayor:
+        par_mayor(ref)
         return
     print(f"Fuerza bruta ({a.n} puntos, datos OSM {ref.m['datos']}):")
     comparados, fallos, pc, pok = fuerza_bruta(ref, a.n)

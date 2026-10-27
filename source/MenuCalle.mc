@@ -1,6 +1,7 @@
 import Toybox.Application;
 import Toybox.Lang;
 import Toybox.Position;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // Menú (mantener ARRIBA): ir al hospital o la comisaría más cercanos, las anotaciones (y volver a
@@ -9,17 +10,30 @@ module MenuCalle {
     function abrir() as Void {
         var menu = new WatchUi.Menu2({:title => "CALLES"});
         menu.addItem(new WatchUi.MenuItem("Hospital más cercano", "flecha y distancia", :hospital, null));
-        menu.addItem(new WatchUi.MenuItem("Comisaría más cercana", "CNP; al final, otras policías", :comisaria, null));
+        menu.addItem(new WatchUi.MenuItem(peq() ? "Comisaría cercana" : "Comisaría más cercana", "CNP; al final, otras policías",
+            :comisaria, null));
         menu.addItem(new WatchUi.MenuItem(etiquetaNotas(), "START anota en la pantalla de calle", :notas, null));
-        menu.addItem(new WatchUi.MenuItem("Zona: " + etiquetaZona(), "dónde se usa el callejero", :zona, null));
-        menu.addItem(new WatchUi.MenuItem("Callejero: " + Callejero.ETIQUETA,
+        menu.addItem(new WatchUi.MenuItem("Zona: " + etiquetaZona(), peq() ? "del callejero" : "dónde se usa el callejero",
+            :zona, null));
+        menu.addItem(new WatchUi.MenuItem(etiquetaDatos(),
             Callejero.FUENTES + " " + Callejero.DATOS + " · " + Callejero.NTESELAS + " teselas", :datos, null));
         WatchUi.pushView(menu, new DelegadoMenu(menu), WatchUi.SLIDE_UP);
     }
 
+    // Pantallas de menos de 280 px (fēnix 5 y 6; también 7S y 7): el Menu2 del sistema corta por el borde redondo
+    // los textos que en la de 280 caben. Allí van más cortos; en la de 280, los de siempre.
+    function peq() as Boolean {
+        return System.getDeviceSettings().screenWidth < 280;
+    }
+
+    // En las pequeñas, sin la región entre paréntesis: ya la dice la línea siguiente («Datos: …»).
     function etiquetaZona() as String {
         var z = Ajustes.zona();
-        return z == Ajustes.AUTO ? "Automática (" + Callejero.ETIQUETA + ")" : Ajustes.etiqueta(z);
+        return z == Ajustes.AUTO ? (peq() ? "Automática" : "Automática (" + Callejero.ETIQUETA + ")") : Ajustes.etiqueta(z);
+    }
+
+    function etiquetaDatos() as String {
+        return (peq() ? "Datos: " : "Callejero: ") + Callejero.ETIQUETA;
     }
 
     // Automática: la región que contiene la posición (si no hay ninguna, la última usada). Fija: siempre
@@ -169,7 +183,7 @@ class DelegadoZona extends WatchUi.Menu2InputDelegate {
         i = _principal.findItemById(:datos);
         it = i >= 0 ? _principal.getItem(i) : null;
         if (it != null) {
-            it.setLabel("Callejero: " + Callejero.ETIQUETA);
+            it.setLabel(MenuCalle.etiquetaDatos());
             it.setSubLabel(Callejero.FUENTES + " " + Callejero.DATOS + " · " + Callejero.NTESELAS + " teselas");
             _principal.updateItem(it, i);
         }

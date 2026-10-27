@@ -132,9 +132,22 @@ class VistaIr extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         var nh = dc.getFontHeight(_fNombre);
         var aw = Texto.anchoR(dc, _y[2] - _lineas * nh / 2, _y[2] + _lineas * nh / 2, L.y(L.ANILLO_RI), 4);
-        dc.drawText(cx, _y[2], _fNombre, Graphics.fitTextToArea(Abrev.corta(e[0] as String), _fNombre, aw,
-            _lineas * nh, true),
- Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var s = Abrev.corta(e[0] as String);
+        var f = _fNombre;
+        var t = Graphics.fitTextToArea(s, f, aw, _lineas * nh, true);
+        // Si no cabe (fēnix 5 y 6: «Hospital Xeral…»), entero en la XTINY en esa misma altura; si tampoco, a trozos
+        // que cambian cada 2 s: lo que dice qué hospital o qué comisaría tiene que leerse.
+        if (t.find("…") != null) {
+            var fx = Graphics.FONT_XTINY;
+            var tx = Graphics.fitTextToArea(s, fx, aw, _lineas * nh, true);
+            if (tx.find("…") == null) {
+                f = fx;
+                t = tx;
+            } else {
+                t = Graphics.fitTextToArea(Texto.trozo(dc, s, f, aw), f, aw, _lineas * nh, true);
+            }
+        }
+        dc.drawText(cx, _y[2], f, t, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 
         if (!hay) {
             dc.setColor(Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
@@ -176,7 +189,7 @@ class VistaIr extends WatchUi.View {
         var aw = Texto.anchoR(dc, y - med, y + med, L.y(L.ANILLO_RI), 4);
         var alto = L.y(24) > h + 4 ? L.y(24) : h + 4;
         dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_XTINY,
-            Graphics.fitTextToArea(txt, Graphics.FONT_XTINY, aw, alto, true),
+            Graphics.fitTextToArea(Texto.trozo(dc, txt, Graphics.FONT_XTINY, aw), Graphics.FONT_XTINY, aw, alto, true),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 

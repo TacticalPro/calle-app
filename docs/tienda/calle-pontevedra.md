@@ -1,7 +1,7 @@
 # Calles Pontevedra — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=pontevedra ./ciq.sh tienda` → `bin/calle-pontevedra.iq`.
-Subida nueva en el portal (no es versión de otra app), con el id `2633a272…`. **Subida el 2026-10-27** como 3.5.1: [ficha en la tienda](https://apps.garmin.com/apps/bca0a882-cea9-44cd-9b63-a8bd51c365cc), pendiente de aprobación. El portal la dio por verificada (fēnix 5, 5S, 6 y 6S) y avisó «Signature check failed», el fallo conocido de la primera subida; en local, «Verified OK». Categoría Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas, la portada y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
+Subida nueva en el portal (no es versión de otra app), con el id `2633a272…`. **Subida el 2026-10-27** como 3.5.1: [ficha en la tienda](https://apps.garmin.com/apps/bca0a882-cea9-44cd-9b63-a8bd51c365cc), pendiente de aprobación. El portal la dio por verificada (fēnix 5, 5S, 6 y 6S) y avisó «Signature check failed», el fallo conocido de la primera subida; en local, «Verified OK», y la API del portal la da por buena (`signatureCheckSuccessFul`, versión 3.5.1, en y es). Categoría Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas, la portada y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
 
 - **Título:** «Calles Pontevedra (offline)», en inglés y en español, como las demás apps Calles.
 - **Versión:** 3.5.1 (la misma base que Calles Galicia 3.5.1, con los textos que no se salen del borde en las pantallas

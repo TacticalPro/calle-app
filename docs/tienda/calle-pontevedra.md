@@ -1,7 +1,7 @@
 # Calles Pontevedra — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=pontevedra ./ciq.sh tienda` → `bin/calle-pontevedra.iq`.
-Subida nueva en el portal (no es versión de otra app), con el id `2633a272…`. **Subida el 2026-10-27** como 3.5.1: [ficha en la tienda](https://apps.garmin.com/apps/bca0a882-cea9-44cd-9b63-a8bd51c365cc), pendiente de aprobación. El portal la dio por verificada (fēnix 5, 5S, 6 y 6S) y avisó «Signature check failed», el fallo conocido de la primera subida; en local, «Verified OK», y la API del portal la da por buena (`signatureCheckSuccessFul`, versión 3.5.1, en y es). Categoría Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas, la portada y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
+Subida nueva en el portal (no es versión de otra app), con el id `2633a272…`. **Subida el 2026-10-27** como 3.5.1: [ficha en la tienda](https://apps.garmin.com/apps/bca0a882-cea9-44cd-9b63-a8bd51c365cc); la 3.5.1 no se llegó a publicar. **Aprobada como 3.5.2 el 2026-10-27** (API: `APPROVED`, interna 2). Descripción reescrita el 2026-10-27 (lo que hace primero; sin «128 KB»). El portal la dio por verificada (fēnix 5, 5S, 6 y 6S) y avisó «Signature check failed», el fallo conocido de la primera subida; en local, «Verified OK», y la API del portal la da por buena (`signatureCheckSuccessFul`, versión 3.5.1, en y es). Categoría Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas, la portada y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
 
 - **Título:** «Calles Pontevedra (offline)», en inglés y en español, como las demás apps Calles.
 - **Versión:** 3.5.1 (la misma base que Calles Galicia 3.5.1, con los textos que no se salen del borde en las pantallas
@@ -32,39 +32,32 @@ Los datos de OSM vienen del extracto de Geofabrik de Galicia; la fuente y la lic
 
 **Nombre:** Calles Pontevedra (offline)
 
-**Sin conexión.** El callejero de la provincia de Pontevedra viaja dentro de la app: la calle, el número de portal y las
-calles a cada lado, sin teléfono, sin cobertura y sin datos móviles. Y fuera de la ciudad, la aldea y la parroquia.
-Hecha para los relojes de 128 KB: fēnix 5, 5S, 6 y 6S.
+**Sin conexión.** La calle y el portal en la muñeca, en toda la provincia de Pontevedra, sin teléfono, sin cobertura y sin datos. El callejero entero va dentro de la app. Sirve para cuando hay que decir dónde está (una llamada al 112, alguien que le espera) y el móvil no ayuda.
+
+Para fēnix 5, 5S, 6 y 6S. Los relojes con más memoria tienen «Calles Galicia», con toda Galicia.
+
+**Lo que le dice de un vistazo:**
+- La calle, el portal más cercano y entre qué dos calles está. En un cruce, la esquina.
+- Fuera de la ciudad, la aldea o el lugar más cercano y la parroquia; en las ciudades, el barrio. Aunque no haya ninguna calle cerca, le dice dónde está.
+- El hospital con urgencias más cercano, con flecha, anillo de brújula y distancia en línea recta.
+- Sus coordenadas UTM, redondeadas como las del propio reloj.
+- Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, con guía para volver a cada una.
+- La hora en grande, para usarla también como reloj.
 
 **Por qué sin conexión:**
-- Funciona donde el móvil no llega: sin cobertura, sin datos o con el teléfono en casa.
-- No espera a ninguna red ni a ningún servidor: en cuanto el reloj tiene posición, tiene la dirección.
-- Su posición es solo suya: la app no tiene acceso a internet, así que no puede enviarla a ningún sitio.
+- Funciona donde el móvil no llega: en el monte, en una aldea sin cobertura o con el teléfono en casa.
+- No espera a ninguna red: en cuanto el reloj tiene posición, tiene la dirección.
+- Su posición no sale del reloj, porque la app no tiene acceso a internet.
 
-- En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
-- Parroquia, aldea o lugar más cercano, y barrio en las ciudades. Lejos de cualquier calle, dice dónde está igualmente.
-- Hospital con urgencias más cercano: flecha y anillo de brújula, y distancia en línea recta.
-- Coordenadas UTM, redondeadas como las del propio reloj.
-- Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
-- Hora grande, para usarla también como reloj.
+**Dónde llega:** portal y calles a cada lado en Vigo, Pontevedra, Vilagarcía de Arousa, Redondela, Marín y Lalín. En el resto de la provincia, la calle o la carretera, la aldea y la parroquia. Los números de portal vienen de OpenStreetMap. En muchas aldeas el mapa aún no tiene números: ahí da la calle, la aldea y la parroquia, pero no el portal.
 
-Zona: la provincia de Pontevedra. Portal y calles a cada lado en Vigo, Pontevedra, Vilagarcía de Arousa, Redondela, Marín y Lalín; en el resto de la provincia, la calle o la
-carretera, la aldea y la parroquia. Para otras provincias, «Calles Galicia» en los relojes con más memoria.
+**Permisos:** solo la posición. No usa internet ni graba actividades.
 
-Los números de portal salen de OpenStreetMap. En muchos pueblos y aldeas el mapa aún no tiene números: ahí la
-app da la calle, la aldea y la parroquia, pero no el portal.
-
-Relojes: fēnix 5, 5S, 6 y 6S.
-
-Permisos: solo la posición. Sin acceso a internet y sin grabar actividades.
-
-Los fallos y las sugerencias, al correo de contacto.
-
-Código y método de generación de los datos: https://github.com/TacticalPro/calle-app
+Fallos y sugerencias, al correo de contacto. El código y el método de generación de los datos: https://github.com/TacticalPro/calle-app
 
 Datos: © colaboradores de OpenStreetMap (ODbL).
 
-**Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde), en revisión:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`ead5c7b`).
+**Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde) y aprobada ese día:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`ead5c7b`).
 
 **Novedades (3.5.1):** primera versión, para los fēnix 5, 5S, 6 y 6S.
 
@@ -72,36 +65,28 @@ Datos: © colaboradores de OpenStreetMap (ODbL).
 
 **Name:** Calles Pontevedra (offline)
 
-**Fully offline.** The street map of the province of Pontevedra ships inside the app: street name, door number and the
-streets on each side, with no phone, no signal and no mobile data. Outside town, the village and the parish. Made for
-the 128 KB watches: fēnix 5, 5S, 6 and 6S.
+**Fully offline.** The street and the door number on your wrist, across the whole province of Pontevedra, with no phone, no signal and no data. The whole street map ships inside the app. For when you have to say where you are (a 112 call, someone waiting for you) and your phone is no help.
+
+For fēnix 5, 5S, 6 and 6S. Watches with more memory have «Calles Galicia», covering all of Galicia.
+
+**What it tells you at a glance:**
+- The street, the nearest door number and the two cross streets you are between. At a junction, the corner.
+- Outside town, the nearest village or place and the parish; in towns, the neighbourhood. Even with no street nearby, it tells you where you are.
+- The nearest hospital with A&E, with arrow, compass ring and straight-line distance.
+- Your UTM coordinates, rounded like the watch's own.
+- Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
+- A large clock, so it works as a watch too.
 
 **Why offline:**
-- It works where your phone doesn't: no signal, no data, or the phone left at home.
-- It never waits for a network or a server: as soon as the watch has a position, you have the address.
-- Your position stays yours: the app has no internet access, so it cannot send it anywhere.
+- It works where your phone doesn't: in the hills, in a village with no signal, or with the phone left at home.
+- It never waits for a network: as soon as the watch has a position, you have the address.
+- Your position never leaves the watch, because the app has no internet access.
 
-- The street you are on, the nearest door number and the cross streets on each side; at a junction, the corner.
-- Parish, nearest village or place, and neighbourhood in towns. Far from any street, it still tells you where you are.
-- Nearest hospital with A&E: arrow, compass ring and straight-line distance.
-- UTM coordinates, rounded like the watch's own.
-- Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
-- Large clock, so it works as a watch too.
+**Coverage:** door numbers and cross streets in Vigo, Pontevedra, Vilagarcía de Arousa, Redondela, Marín and Lalín. In the rest of the province, the street or road, the village and the parish. Door numbers come from OpenStreetMap. Many villages still have no door numbers on the map: there it gives the street, village and parish, but no number. The interface is in Spanish.
 
-Area: the province of Pontevedra. Door numbers and cross streets in Vigo, Pontevedra, Vilagarcía de Arousa, Redondela, Marín and Lalín; in the rest of the province, the street or
-road, the village and the parish. For other provinces, «Calles Galicia» on watches with more memory. The interface is
-in Spanish.
+**Permissions:** position only. No internet use and no activity recording.
 
-Door numbers come from OpenStreetMap. Many villages still have no door numbers on the map: there the app gives
-the street, village and parish, but no number.
-
-Watches: fēnix 5, 5S, 6 and 6S.
-
-Permissions: position only. No internet access and no activity recording.
-
-Please send bugs and suggestions to the contact email.
-
-Source code and how the data is built: https://github.com/TacticalPro/calle-app
+Please send bugs and suggestions to the contact email. Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL).
 

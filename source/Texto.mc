@@ -81,8 +81,16 @@ module Texto {
             return txt;
         }
         var n = ls.size();
-        var p = (System.getTimer() / 2000) % n;
+        var p = turno(System.getTimer(), n);
         return (p > 0 ? "…" : "") + ls[p] + (p < n - 1 ? "…" : "");
+    }
+
+    // Qué trozo de n toca en el instante t (ms de System.getTimer()), cambiando cada 2 s. El contador da la vuelta a
+    // negativo a los ~24,8 días de reloj encendido y el % de Monkey C conserva el signo: sin corregirlo, el índice sale
+    // negativo (Array Out Of Bounds en el 7X Pro, 3.5.1, 2026-10-27; el simulador empieza en 0 y no lo ve).
+    function turno(t as Number, n as Number) as Number {
+        var p = (t / 2000) % n;
+        return p < 0 ? p + n : p;
     }
 
     // Busca la primera combinación (fuente, forma del nombre, nº de líneas) que cabe en la

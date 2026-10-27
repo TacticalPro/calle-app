@@ -120,3 +120,19 @@ function trozoCabe(logger as Test.Logger) as Boolean {
     return Texto.trozo(dc, "Rúa do Franco", f, 280).equals("Rúa do Franco") && dc.getTextWidthInPixels(t, f) <= w
         && t.find("…") != null && Texto.trozo(dc, "Supercalifragilístico", f, e).equals("Supercalifragilístico");
 }
+
+// System.getTimer() negativo (reloj encendido más de ~24,8 días): el trozo sigue dentro de [0, n).
+(:test)
+function trozoTurnoNegativo(logger as Test.Logger) as Boolean {
+    var ts = [0, 1999, 2000, 7999, -1, -2000, -2001, -7999, -2147483647, 2147483647] as Array<Number>;
+    for (var i = 0; i < ts.size(); i++) {
+        for (var n = 1; n <= 4; n++) {
+            var p = Texto.turno(ts[i], n);
+            if (p < 0 || p >= n) {
+                logger.debug("turno(" + ts[i] + ", " + n + ") = " + p);
+                return false;
+            }
+        }
+    }
+    return Texto.turno(4000, 3) == 2 && Texto.turno(-2000, 3) == 2;
+}

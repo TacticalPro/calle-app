@@ -61,9 +61,16 @@ jungle() { if [ -n "${APP:-}" ]; then echo "$($PY tools/tienda.py "$APP")/monkey
 # /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
 # cierran a la vez y los tests salen en blanco (2026-10-26). Se toma al usarlo y se suelta al salir; si lo
 # tiene otro, se espera (SIM_ESPERA s, 1800 por defecto) y, si no lo suelta, se para.
+# Con SIM_ESPERA=0 no se espera: si está ocupado, se para enseguida.
 CANDADO=/tmp/calles-sim.lock
 simulador() {
     local t=0
+    # Turno dado de antemano (SIM_TURNO=<nombre>): si el candado ya es de ese nombre (primer campo de «quien»),
+    # se usa sin esperar, sin reescribirlo y sin soltarlo al salir; lo suelta quien lo tomó.
+    if [ -n "${SIM_TURNO:-}" ] && [ "$(cut -d' ' -f1 "$CANDADO/quien" 2>/dev/null)" = "$SIM_TURNO" ]; then
+        pgrep -x simulator >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
+        return
+    fi
     until mkdir "$CANDADO" 2>/dev/null; do
         [ -f "$CANDADO/quien" ] && grep -q "^calle-fenix $$ " "$CANDADO/quien" && break
         [ $t -eq 0 ] && echo "simulador ocupado por: $(cat "$CANDADO/quien" 2>/dev/null) — espero" >&2

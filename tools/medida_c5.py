@@ -24,6 +24,18 @@ sys.path.insert(0, str(ROOT / "tools"))
 import ref as R  # noqa: E402
 
 
+# Escenas de la ficha de la tienda (2026-10-27, tools/ref.py --variante c5): portal a 5 m hacia la calle, o el lugar.
+FICHA = {
+    "coruna": [("A Coruña: Rúa Real 26", 43.37, -8.399937),
+               ("Aldea: Sisto (Brates)", 43.001927, -8.200776),
+               ("Santiago: Rúa do Franco 33", 42.878178, -8.545313),
+               ("Ferrol: Rúa Bon Xesús 13", 43.502019, -8.198472)],
+    "pontevedra": [("Vigo: Rúa Real 12", 42.239131, -8.727168),
+                   ("Aldea: Buezas (Nantes)", 42.418027, -8.798312),
+                   ("Pontevedra: Rúa dos Campos 19", 42.44106, -8.626043)],
+}
+
+
 def textos_largos(ref, tope=24000):
     """[(nombre, lat, lon)]: la calle con portal de nombre más largo, la calle con el tramo más largo y el lugar con la
     parroquia y el lugar más largos, en teselas de ≤ tope B de heap estimado."""
@@ -61,8 +73,9 @@ def main():
     primera = next((a[len("--primera="):] for a in sys.argv[2:] if a.startswith("--primera=")), None)
     capturas = "--capturas" in sys.argv[2:]
     ruta = "--ruta" in sys.argv[2:]
-    if len(sys.argv) != 2 + escalera + bool(primera) + capturas + ruta:
-        sys.exit("uso: medida_c5.py <app de tools/catalogo.json> [--escalera | --primera=t<n> | --capturas | --ruta]")
+    ficha = "--ficha" in sys.argv[2:]
+    if len(sys.argv) != 2 + escalera + bool(primera) + capturas + ruta + ficha:
+        sys.exit("uso: medida_c5.py <app de tools/catalogo.json> [--escalera | --primera=t<n> | --capturas | --ruta | --ficha]")
     clave = sys.argv[1]
     app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8"))[clave]
     if set(app.get("variante", {}).values()) != {"c5"} or len(app["zonas"]) != 1:
@@ -75,7 +88,11 @@ def main():
     rural = next(p for p in json.loads((ROOT / f"tools/puntos_control-{region}.json").read_text("utf-8"))
                  if p["id"] == "rural")
     m = ref.m
-    if ruta:
+    if ficha:
+        # Las escenas de la ficha de la tienda (docs/tienda/calle-<app>.md): sitios públicos, lo que dicen los datos.
+        # La última es desde donde se mira el hospital con urgencias más cercano (el menú se abre al final).
+        puntos += FICHA[clave]
+    elif ruta:
         # En coche: una vuelta de 60 fixes cada 10 s (10 min) en un círculo de 1,5 km alrededor del punto del peor par,
         # cada fix pegado al vértice de calle más cercano (≈ 160 m entre fixes: la zona se consulta en casi todos).
         import math
@@ -126,7 +143,8 @@ def main():
     src.mkdir(exist_ok=True)
     (src / "MedidaPuntos.mc").write_text(
         "import Toybox.Lang;\n\n// GENERADO por tools/medida_c5.py. No editar a mano.\nmodule MedidaPuntos {\n"
-        f"    const PASO_MS = {12000 if capturas else 10000 if ruta else 4000};\n    const MENU = {'true' if capturas else 'false'};\n"
+        f"    const PASO_MS = {12000 if capturas or ficha else 10000 if ruta else 4000};\n"
+        f"    const MENU = {'true' if capturas or ficha else 'false'};\n"
         "    const NOMBRES = [" + ", ".join(R.mc(n) for n, _, _ in puntos) + "] as Array<String>;\n"
         "    const PUNTOS = [" + ", ".join(f"{la!r}d, {lo!r}d" for _, la, lo in puntos) + "] as Array<Double>;\n}\n",
         "utf-8")

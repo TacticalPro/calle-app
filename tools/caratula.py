@@ -30,7 +30,9 @@ AMBAR, AZUL_PLACA = (0xFF, 0xAA, 0x00), (0x1F, 0x3B, 0x73)
 CENTRO = (42.8792, -8.5446)   # casco de Santiago, entre el Obradoiro y la Quintana
 CENTROS = {"galicia": CENTRO, "madrid": (40.4169, -3.7035),   # Madrid: la Puerta del Sol
            "barcelona": (41.3830, 2.1750),                   # Barcelona: el Gòtic
-           "murcia": (37.9838, -1.1294)}                          # Murcia: la plaza del Cardenal Belluga
+           "murcia": (37.9838, -1.1294),                          # Murcia: la plaza del Cardenal Belluga
+           "coruna": (43.3712, -8.3960),                          # A Coruña: la praza de María Pita (c5)
+           "pontevedra": (42.4318, -8.6449)}                      # Pontevedra: la praza da Ferrería (c5)
 LADO_M = 900                  # metros de mapa que caben en la carátula
 
 
@@ -42,8 +44,10 @@ def fuente(px, peso=700):
 
 def mapa(lado, color, ancho, centro=CENTRO, lado_m=LADO_M, esc=4, region="galicia"):
     """El callejero real alrededor de centro, lado_m metros en lado px (dibujado a esc× y reducido)."""
-    meta = json.loads((OUT / f"meta-{region}.json").read_text("utf-8"))
-    geom = json.loads((OUT / f"geom-{region}.json").read_text("utf-8"))
+    # Las provincias de la c5 (A Coruña, Pontevedra) solo tienen los datos de esa variante.
+    suf = "" if (OUT / f"meta-{region}.json").exists() else "-c5"
+    meta = json.loads((OUT / f"meta-{region}{suf}.json").read_text("utf-8"))
+    geom = json.loads((OUT / f"geom-{region}{suf}.json").read_text("utf-8"))
     cx = (centro[1] - meta["lon_min"]) * meta["kx"]
     cy = (centro[0] - meta["lat_min"]) * meta["ky"]
     g = lado * esc
@@ -145,7 +149,9 @@ def caratula_b(region="galicia"):
     d.ellipse((250 - 60, 175 - 60, 250 + 60, 175 + 60), outline=AMBAR + (255,), width=3)
     marcador(d, 250, 140, 38, AMBAR + (255,), hueco=FONDO + (255,))
     texto(d, (250, 382), "CALLES", fuente(78), BLANCO, espacio=8)
-    texto(d, (250, 432), region.upper(), fuente(28, 500), AMBAR, espacio=12)
+    # La etiqueta de tools/regiones.json, con sus tildes («A CORUÑA»).
+    regiones = json.loads((ROOT / "tools" / "regiones.json").read_text("utf-8"))
+    texto(d, (250, 432), regiones.get(region, {}).get("etiqueta", region).upper(), fuente(28, 500), AMBAR, espacio=12)
     texto(d, (250, 470), "LA CALLE Y EL PORTAL, SIN COBERTURA", fuente(21, 500), GRIS, espacio=1)
     return img.convert("RGB")
 

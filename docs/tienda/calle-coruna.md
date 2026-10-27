@@ -65,6 +65,8 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Dirección General del Catastro.
 
+**Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde), en revisión:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`ead5c7b`).
+
 **Novedades (3.5.1):** primera versión, para los fēnix 5, 5S, 6 y 6S.
 
 ## English
@@ -103,5 +105,7 @@ Please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Dirección General del Catastro.
+
+**What's new (3.5.2):** Fixes a crash with long street names when the watch had been on for more than about 25 days without a restart.
 
 **What's new (3.5.1):** first release, for the fēnix 5, 5S, 6 and 6S.

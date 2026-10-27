@@ -9,7 +9,8 @@ relojes nuevos. Subida por trozos con la extensión de Chrome (método en `calle
 
 - **Título:** «Calles Galicia (offline)», en inglés y en español (el autor, 2026-10-26; antes «CALLE Galicia (offline)»).
   Que no usa red es su punto fuerte. La beta pasa a «Calles Galicia (offline) (beta)» con *Edit Details*.
-- **Versión:** 3.5.0 (3.4.0, la primera pública, con la interfaz nueva de P73).
+- **Versión:** 3.5.1 (textos que no se salen del borde en las pantallas pequeñas; 3.5.0, los fēnix 6 Pro y 5X/5 Plus;
+  3.4.0, la primera pública, con la interfaz nueva de P73).
 - **Relojes:** la familia fēnix 7 (7, 7S, 7X, 7 Pro, 7S Pro, 7X Pro y los dos Pro sin Wi-Fi), con 108/108 tests
   en el 7S, el 7 y el 7X Pro. Desde la 3.5.0, además, los de 1,25 MB y tope de 254 recursos, con la variante `b`
   (Galicia entera en 216 recursos, `VARIANTE=b REGION=galicia ./ciq.sh datos`): fēnix 6 Pro, 6S Pro y 6X Pro, 5X, 5 Plus,
@@ -68,6 +69,8 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Dirección General del Catastro.
 
+**Novedades (3.5.1):** los nombres largos ya no se cortan en las pantallas redondas pequeñas.
+
 **Novedades (3.5.0):** ahora también en los fēnix 6 Pro, 6S Pro y 6X Pro, y en los fēnix 5X, 5 Plus, 5S Plus y 5X
 Plus, con Galicia entera.
 
@@ -108,6 +111,8 @@ Please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Dirección General del Catastro.
+
+**What's new (3.5.1):** long names no longer cut off on small round screens.
 
 **What's new (3.5.0):** now also on the fēnix 6 Pro, 6S Pro and 6X Pro, and on the fēnix 5X, 5 Plus, 5S Plus and
 5X Plus, with all of Galicia.

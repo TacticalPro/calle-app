@@ -194,5 +194,49 @@
       "fenix7xpro"
     ],
     "beta_nota": "Beta privada propia de Calles Murcia (2026-10-26), solo el fēnix 7X Pro: APP=murcia ./ciq.sh beta → bin/calle-murcia-beta.iq. El beta_id no se cambia nunca (la tienda trataría otro id como otra app); no es el de la beta de Galicia (19ddcb3e…)."
+  },
+  "coruna": {
+    "id": "d80e9f16aac24361a5951d6d1a51ea3a",
+    "nombre": "Calles A Coruña",
+    "zonas": [
+      "coruna"
+    ],
+    "relojes": [
+      "fenix5",
+      "fenix5s",
+      "fenix6",
+      "fenix6s"
+    ],
+    "relojes_nota": "2026-10-27: una app por provincia para los relojes de 128 KB (fēnix 5/5S y 6/6S), con la variante c5 (plan 4 de la c5): teselas FORMATO 4 del lector común y zonas en árbol (source-c5/Zonas.mc). Galicia entera no cabe en 250 recursos; Lugo y Ourense, más adelante. El resto de relojes, en «Calles Galicia».",
+    "variante": {
+      "fenix5": "c5",
+      "fenix5s": "c5",
+      "fenix6": "c5",
+      "fenix6s": "c5"
+    },
+    "c5_fuentes": [
+      "Localizador.mc"
+    ],
+    "c5_fuentes_nota": "2026-10-27: la zona se consulta con la tesela soltada (source-c5/Localizador.mc); sin eso, A Coruña no cabe en 250 recursos con la memoria del fēnix 5"
+  },
+  "pontevedra": {
+    "id": "2633a272482447b696f16c0763bc3259",
+    "nombre": "Calles Pontevedra",
+    "zonas": [
+      "pontevedra"
+    ],
+    "relojes": [
+      "fenix5",
+      "fenix5s",
+      "fenix6",
+      "fenix6s"
+    ],
+    "relojes_nota": "2026-10-27: una app por provincia para los relojes de 128 KB (fēnix 5/5S y 6/6S), con la variante c5 (plan 4 de la c5): teselas FORMATO 4 del lector común y zonas en árbol (source-c5/Zonas.mc). Galicia entera no cabe en 250 recursos; Lugo y Ourense, más adelante. El resto de relojes, en «Calles Galicia».",
+    "variante": {
+      "fenix5": "c5",
+      "fenix5s": "c5",
+      "fenix6": "c5",
+      "fenix6s": "c5"
+    }
   }
 }

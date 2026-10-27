@@ -69,6 +69,8 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
+**Novedades (3.4.2):** los nombres largos ya no se cortan en las pantallas redondas pequeñas.
+
 **Novedades (3.4.1):** la app pasa a llamarse «Calles Madrid» también en el reloj.
 
 **Novedades (3.4.0):** pantalla nueva: hora grande, calidad del GPS en un arco, número de portal en una pastilla
@@ -107,6 +109,8 @@ First release: please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
+
+**What's new (3.4.2):** long names no longer cut off on small round screens.
 
 **What's new (3.4.1):** the app is now called «Calles Madrid» on the watch too.
 

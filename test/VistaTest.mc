@@ -107,3 +107,16 @@ function abrevYPalabras(logger as Test.Logger) as Boolean {
         && Fmt.edad(25).equals("hace 25 s") && Fmt.edad(185).equals("hace 3 min") && Fmt.hhmm(7, 5).equals("07:05")
         && Fmt.MESES.size() == 12 && Fmt.horaYFecha(0)[1].length() >= 5;
 }
+
+// Pantallas pequeñas: lo que cabe sale tal cual; lo que no, a trozos de palabras con «…» que caben en el ancho.
+(:test)
+function trozoCabe(logger as Test.Logger) as Boolean {
+    var dc = Lienzo.dc();
+    var f = Graphics.FONT_XTINY;
+    var e = dc.getTextWidthInPixels("…", f);
+    var w = dc.getTextWidthInPixels("Hospital Xeral", f) + 2 * e;
+    var t = Texto.trozo(dc, "Hospital Xeral Ribera Juan Cardona", f, w);
+    logger.debug("TROZO " + t);
+    return Texto.trozo(dc, "Rúa do Franco", f, 280).equals("Rúa do Franco") && dc.getTextWidthInPixels(t, f) <= w
+        && t.find("…") != null && Texto.trozo(dc, "Supercalifragilístico", f, e).equals("Supercalifragilístico");
+}

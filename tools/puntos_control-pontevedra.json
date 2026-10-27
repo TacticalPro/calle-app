@@ -1,0 +1,52 @@
+[
+ {
+  "id": "vigo",
+  "lat": 42.2370118,
+  "lon": -8.7232157,
+  "nota": "mitad de Rúa do Príncipe",
+  "espera": "Rúa do Príncipe"
+ },
+ {
+  "id": "pontevedra",
+  "lat": 42.4310346,
+  "lon": -8.6437397,
+  "nota": "mitad de Praza de Ourense",
+  "espera": "Praza de Ourense",
+  "tambien": "Xardín de Casto Sampedro"
+ },
+ {
+  "id": "lalin",
+  "lat": 42.6609156,
+  "lon": -8.109802,
+  "nota": "mitad de Rúa da Calzada",
+  "espera": "Rúa da Calzada"
+ },
+ {
+  "id": "rural",
+  "lat": 42.5578568,
+  "lon": -8.3484298,
+  "nota": "mitad de PO-534",
+  "espera": "PO-534"
+ },
+ {
+  "id": "lejos",
+  "lat": 42.2,
+  "lon": -8.55,
+  "nota": "monte",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "otra",
+  "lat": 42.336,
+  "lon": -7.864,
+  "nota": "fuera de la región",
+  "espera": "LEJOS"
+ },
+ {
+  "id": "fuera",
+  "lat": 41.5,
+  "lon": -8.4,
+  "nota": "fuera de la región",
+  "espera": "FUERA"
+ }
+]

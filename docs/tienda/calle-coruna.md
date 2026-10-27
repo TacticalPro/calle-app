@@ -1,7 +1,7 @@
 # Calles A Coruña — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=coruna ./ciq.sh tienda` → `bin/calle-coruna.iq`.
-Subida nueva en el portal (no es versión de otra app), con el id `d80e9f16…`. **Sin subir**: la sube el autor.
+Subida nueva en el portal (no es versión de otra app), con el id `d80e9f16…`. **Subida el 2026-10-27** como 3.5.1: [ficha en la tienda](https://apps.garmin.com/apps/197766ff-5403-4037-a139-7cde9867c1b8), pendiente de aprobación. El portal la dio por verificada (fēnix 5, 5S, 6 y 6S) y avisó «Signature check failed», el fallo conocido de la primera subida; en local, «Verified OK». Categoría Navigation, sin datos de usuario, sin migración, gratis, avisos de reseñas, la portada y las cuatro pantallas. Siguiente versión: *Upload New Version* sobre esta misma app.
 
 - **Título:** «Calles A Coruña (offline)», en inglés y en español, como las demás apps Calles.
 - **Versión:** 3.5.1 (la misma base que Calles Galicia 3.5.1, con los textos que no se salen del borde en las pantallas

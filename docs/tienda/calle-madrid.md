@@ -69,6 +69,8 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
+**Novedades (3.4.3):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde), en revisión:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`ead5c7b`).
+
 **Novedades (3.4.2):** los nombres largos ya no se cortan en las pantallas redondas pequeñas.
 
 **Novedades (3.4.1):** la app pasa a llamarse «Calles Madrid» también en el reloj.
@@ -109,6 +111,8 @@ First release: please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
+
+**What's new (3.4.3):** Fixes a crash with long street names when the watch had been on for more than about 25 days without a restart.
 
 **What's new (3.4.2):** long names no longer cut off on small round screens.
 

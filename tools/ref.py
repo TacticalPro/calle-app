@@ -341,10 +341,15 @@ class Ref:
         # que caen a ZMARGEN m del punto, en el orden en que las recorre el reloj (la suya primero).
         lugs = self._lugares(nom, ox, oy)
         if len(self._z[nom]) > 11 and self._z[nom][11] == 1:
-            R = m["zmargen"]
-            for hv in self.hojas_en(x - R, y - R, x + R, y + R):
-                if hv[0] != nom:
-                    lugs += self._lugares(*hv[:3])
+            # Las hojas de los 9 puntos de muestra, cada ZMARGEN m (Zonas._consultar): las mismas que tocan el cuadrado
+            # de ZMARGEN m alrededor del punto (hojas_en), porque toda hoja mide más de ZMARGEN, y en el mismo orden.
+            R, vistas = m["zmargen"], {(ox, oy)}
+            for k in range(9):
+                hv = self.hoja(x + (k % 3 - 1) * R, y + (k // 3 - 1) * R)
+                if hv is None or hv[0] is None or (hv[1], hv[2]) in vistas:
+                    continue
+                vistas.add((hv[1], hv[2]))
+                lugs += self._lugares(*hv[:3])
         mejor = {}   # bit → (d, nombre)
         d2b = math.inf   # el segundo barrio más cercano
         for lx, ly, tipo, nl in lugs:

@@ -1657,6 +1657,8 @@ def zonas_arbol(rdir, pref, xml, zcols, zfilas, parroquias, lugares, cuenta):
     while lados[-1] // 2 >= C5_ZONA_MIN:
         lados.append(lados[-1] // 2)
     assert all(l % RCEL == 0 for l in lados) and raiz + 2 * ZMARGEN < (1 << 14) * ZU and ZU > 1
+    # Zonas.mc busca las hojas vecinas con 9 puntos de muestra cada ZMARGEN m: vale si toda hoja mide más que eso.
+    assert not C5_SIN_MARGEN or C5_ZONA_MIN > ZMARGEN, (C5_ZONA_MIN, ZMARGEN)
     G = rasterizar(parroquias, zcols, zfilas, cuenta)
     zstats = {}
 

@@ -69,7 +69,7 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
-**Novedades (3.4.4):** Sin GPS, la guía al hospital o a la comisaría ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud.
+**Novedades (3.4.4):** Sin GPS, la guía al hospital o a la comisaría ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud. **Subida el 2026-10-28** con *Upload New Version* (52,6 MB, 14 piezas, SHA-256 `14319aa9…`; API: 3.4.4, interna 7): `fa6a24f`. Entró con las novedades de la 3.4.3; corregidas el mismo día con *Edit Details* (API: ES/EN nuevas, sigue la interna 7).
 
 **Novedades (3.4.3):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde), en revisión:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`a5fe21f`).
 

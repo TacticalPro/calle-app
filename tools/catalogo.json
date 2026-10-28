@@ -237,6 +237,9 @@
       "fenix5s": "c5",
       "fenix6": "c5",
       "fenix6s": "c5"
-    }
+    },
+    "c5_fuentes": [
+      "Localizador.mc"
+    ]
   }
 }

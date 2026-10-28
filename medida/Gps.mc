@@ -13,6 +13,7 @@ import Toybox.Timer;
 module Gps {
     var _activo as Boolean = false;
     var _paseo as Paseo or Null = null;
+    var _lastre as ByteArray or Null = null;   // MedidaPuntos.LASTRE B retenidos desde el arranque (medida_c5.py --lastre)
 
     function arrancar(cb as Method(info as Position.Info) as Void) as Void {
         if (_activo) {
@@ -20,6 +21,9 @@ module Gps {
         }
         _activo = true;
         if (_paseo == null) {
+            if (MedidaPuntos.LASTRE > 0) {
+                _lastre = new [MedidaPuntos.LASTRE]b;
+            }
             var st = System.getSystemStats();
             System.println("MEDIDA inicio: usada " + st.usedMemory + " B de " + st.totalMemory);
             var p = new Paseo(cb);

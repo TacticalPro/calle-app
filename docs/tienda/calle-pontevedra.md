@@ -57,7 +57,7 @@ Fallos y sugerencias, al correo de contacto. El código y el método de generaci
 
 Datos: © colaboradores de OpenStreetMap (ODbL).
 
-**Novedades (3.5.3):** Sin GPS, la guía al hospital ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud. La app ocupa menos en el reloj.
+**Novedades (3.5.3):** Sin GPS, la guía al hospital ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud. La app ocupa menos en el reloj. **Subida el 2026-10-28** con *Upload New Version* (3,5 MB; firma «Verified»; API: 3.5.3, interna 3): `fa6a24f`, `838ed4a` y las zonas sin margen duplicado (`5317a3c`); `.prg` de 1,64 MB (antes 1,87).
 
 **Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde) y aprobada ese día:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`a5fe21f`).
 

@@ -593,9 +593,24 @@ def fuerza_bruta(ref, n, semilla=1):
     return comparados, fallos, portales_cmp, portales_ok
 
 
+def tol_zonas(ref, x, y):
+    """(parroquia, empate) en m: las tolerancias de zonas_bruta según la resolución de los datos del punto.
+    Parroquia: el raster da el valor del centro de la celda, que puede estar a media diagonal del punto
+    (rcel · √2/2): 71 m con las celdas de 100 m de la c5; con las de 50 m se quedan los 50 m de siempre.
+    Empate de lugar o barrio: cada lugar se guarda en unidades de zu m (hasta zu · √2/2 de error), así que la
+    diferencia entre dos distancias se mueve hasta zu · √2: 1,5 m con zu = 1 y 3 m con zu = 2 (c5). Con las fijas,
+    5 falsos fallos en Pontevedra junto a los bordes de hoja (a 51-54 m del límite y empates de 1,5 y 1,9 m)."""
+    zu = 1
+    hj = ref.hoja(x, y)
+    if hj is not None and hj[0] is not None:
+        z = ref._cargar_zona(hj[0])
+        zu = z[9] if len(z) > 9 else 1
+    return max(50.0, ref.m["rcel"] * math.sqrt(2) / 2 + 1), TOL_PORTAL * zu
+
+
 def zonas_bruta(ref, n, semilla=2):
     """El reloj (raster + lugares de la zona) frente a la verdad (límites reales, todos los lugares).
-    La parroquia solo puede fallar a menos de 50 m de un límite; lugar y barrio, solo en empates."""
+    La parroquia solo puede fallar cerca de un límite; lugar y barrio, solo en empates (tol_zonas)."""
     m = ref.m
     rnd = random.Random(semilla)
     ancho, alto = m["cols"] * m["tesela"], m["filas"] * m["tesela"]
@@ -604,16 +619,17 @@ def zonas_bruta(ref, n, semilla=2):
         x, y = rnd.uniform(0, min(ancho, m["zcols"] * m["zona"])), rnd.uniform(0, min(alto, m["zfilas"] * m["zona"]))
         z = ref.zona(x, y)
         v = ref.zona_global(x, y)
+        tol_par, tol_emp = tol_zonas(ref, x, y)
         cuenta["parroquia"] += v["parroquia"] is not None
         if z[0] != v["parroquia"]:
-            if v["dlim"] < 50:
+            if v["dlim"] < tol_par:
                 cuenta["cerca_limite"] += 1
             else:
                 fallos.append((x, y, f"parroquia {z[0]} ≠ {v['parroquia']} a {v['dlim']:.0f} m del límite"))
-        if z[1] != v["lugar"] and v["margen_lugar"] > 1.5:
+        if z[1] != v["lugar"] and v["margen_lugar"] > tol_emp:
             fallos.append((x, y, f"lugar {z[1]} ≠ {v['lugar']}"))
         cuenta["lugar"] += v["lugar"] is not None
-        if z[2] != v["barrio"] and v["margen_barrio"] > 1.5:
+        if z[2] != v["barrio"] and v["margen_barrio"] > tol_emp:
             fallos.append((x, y, f"barrio {z[2]} ≠ {v['barrio']}"))
         cuenta["barrio"] += v["barrio"] is not None
     return cuenta, fallos
@@ -1046,7 +1062,7 @@ def main():
     print(f"Zonas ({nz} puntos al azar, datos OSM {ref.m['zonas']}):")
     cz, fz = zonas_bruta(ref, nz)
     print(f"  con parroquia {cz['parroquia']}, con lugar {cz['lugar']}, con barrio {cz['barrio']}; "
-          f"{cz['cerca_limite']} parroquias distintas a < 50 m de un límite (admitido); {len(fz)} discrepancias")
+          f"{cz['cerca_limite']} parroquias distintas cerca de un límite (admitido, tol_zonas); {len(fz)} discrepancias")
     for x, y, msg in fz[:15]:
         lat, lon = ref.latlon(x, y)
         print(f"   {lat:.6f},{lon:.6f}: {msg}")

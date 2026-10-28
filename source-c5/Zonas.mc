@@ -95,7 +95,8 @@ module Zonas {
         rastrear(z, fx, fy, acc);
         var R = Callejero.ZMARGEN.toFloat();
         if (fx < R || fy < R || lado.toFloat() - fx <= R || lado.toFloat() - fy <= R) {
-            _z = null;   // la propia, fuera antes de cargar las vecinas: nunca dos zonas en memoria
+            _z = null;   // la propia, fuera antes de cargar las vecinas: nunca dos zonas en memoria (también la
+            z = null;    // referencia local: con ella viva, en A Coruña, zona de 20 KB + vecina = Out Of Memory)
             _clave = -1;
             var vs = [] as Array<Array>;
             vecinas(x - R, y - R, x + R, y + R, vs);

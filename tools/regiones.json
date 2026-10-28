@@ -576,7 +576,7 @@
       "zona_min": 2500,
       "zona_sin_margen": true,
       "tope_kb": 22.8,
-      "tope_zona_kb": 20,
+      "tope_zona_kb": 13,
       "rcel": 100,
       "zu": 2,
       "rural_u": 4,

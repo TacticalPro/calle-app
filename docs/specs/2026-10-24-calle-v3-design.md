@@ -79,8 +79,8 @@ memoria. `Tesela` y `Zonas` comparan `Callejero.ID` con el de lo que tienen carg
   solo por `distritos`. El generador corta si se pasa de 250 recursos.
 - **FORMATO 3** de tesela (para todas): 1.023 calles por tesela (antes 255) y coordenadas de 12 bits
   (teselas de hasta 3,9 km). La calle del portal pasa a `H`.
-- La beta solo la puede instalar el desarrollador: para otro fēnix 6X, `./ciq.sh prg6x` →
-  `bin/calle-fenix6x.prg`, que se copia por cable a `GARMIN/APPS`.
+- La beta solo la puede instalar el desarrollador: para instalarla por cable en un fēnix 6X, `./ciq.sh prg6x` →
+  `bin/calle-fenix6x.prg`, que se copia a `GARMIN/APPS`.
 
 ## 5. Beta
 
@@ -117,8 +117,8 @@ memoria. `Tesela` y `Zonas` comparan `Callejero.ID` con el de lo que tienen carg
 - **fēnix 6X solo con Madrid** (2026-10-24): una parte de la ciudad.
   - Santiago sale de la variante 6x: ocupaba ~209 de los 250 recursos. Su `compacta` queda como
     `compacta_retirada` en `tools/regiones.json`.
-  - Madrid compacta lleva esos cuatro distritos, con la etiqueta «Madrid (centro)». La caja llega por el
-    norte hasta Sol y Gran Vía.
+  - Madrid compacta lleva cuatro distritos. Desde la 3.2.0 el 6X va con la variante c (Madrid entero) y la
+    `compacta` de Madrid se retira de `tools/regiones.json`.
   - 128 de 250 recursos; fuerza bruta con 0 discrepancias; 37/37 tests en el 6X (los 14 de Santiago ya no
     van).
   - En el simulador, en la tesela más pesada (t85): 148 de 1.275 KB,

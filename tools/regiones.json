@@ -54,21 +54,6 @@
     },
     "partes": 3,
     "ruta": "Calle Mayor",
-    "compacta": {
-      "tesela": 1000,
-      "zona": 4000,
-      "distritos": [
-        356761,
-        356998,
-        356962,
-        356879
-      ],
-      "margen_m": 500,
-      "etiqueta": "Madrid (centro)",
-      "nota": "fēnix 6X: Madrid entero no cabe en 254 recursos; distritos a elección (tools/regiones.json)",
-      "distritos_nota": "ids de relación OSM (admin_level 9): 356761 Centro, 356998 Chamberí, 356775 Arganzuela, 356879 Retiro, 356962 Salamanca, 356983 Chamartín, 356984 Tetuán, 356760 Moncloa-Aravaca, 355676 Latina, 355666 Carabanchel, 349469 Usera, 354080 Puente de Vallecas, 354223 Moratalaz, 1675818 Ciudad Lineal, 354522 Hortaleza, 349470 Villaverde, 349485 Villa de Vallecas, 354389 Vicálvaro, 354377 San Blas - Canillejas, 354410 Barajas, 356771 Fuencarral-El Pardo",
-      "distritos_elegidos": "Centro, Chamberí, Salamanca y Retiro (2026-10-24)"
-    },
     "control": [
       {
         "id": "sol",
@@ -430,7 +415,12 @@
     ],
     "pbf": "geofabrik/cataluna-261026.osm.pbf",
     "pbf_recorte": true,
-    "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona"
+    "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona",
+    "c": {
+      "zona": 10000,
+      "tope_kb": 26,
+      "nota": "relojes de 128 KB (fēnix 5/5S, 6/6S) y 6X Pro: los mismos topes que Madrid; Barcelona sola cabe en 213 de 250 recursos (datos OSM del 2026-10-26). Con Madrid no cabe: la variante va por app (\"variante\" en tools/catalogo.json)"
+    }
   },
   "murcia": {
     "id": 6,

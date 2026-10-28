@@ -91,11 +91,16 @@ simulador() {
 # con el reloj perdido y por USB, se leen) y la zona elegida del callejero (source/Ajustes.mc).
 privacidad() {
     local malo=0
-    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-c5 source-gen*; then
+    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-c5 source-gen* test test-gen*; then
         echo "privacidad: el código usa una API que puede sacar o guardar datos (arriba)." >&2; malo=1
     fi
-    if grep -rnE 'Storage|Properties' source source-c5 source-gen* | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
+    if grep -rnE 'Storage|Properties' source source-c5 source-gen* test test-gen* | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
         echo "privacidad: solo source/Notas.mc y source/Ajustes.mc pueden guardar en el reloj (arriba)." >&2; malo=1
+    fi
+    # test/ y test-gen*/ están en el sourcePath de los builds publicados: solo quedan fuera si todo va con (:test).
+    if awk 'FNR == 1 { prev = "" } /^(class|module|function) / && prev !~ /\(:test\)/ { print FILENAME ":" FNR ": " $0; bad = 1 }
+            NF { prev = $0 } END { exit !bad }' test/*.mc test-gen*/*.mc 2>/dev/null; then
+        echo "privacidad: en test/ todo va con (:test), o entraría en el paquete publicado (arriba)." >&2; malo=1
     fi
     local perms; perms="$(grep -o 'uses-permission id="[^"]*"' manifest.xml | sed 's/.*id="//;s/"//' | sort -u | tr '\n' ' ')"
     if [ "$perms" != "Positioning " ]; then
@@ -131,8 +136,9 @@ case "${1:-build}" in
              privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
-             # Ni los de 128 KB (fēnix 5/5S y 6/6S): la beta es la del 7X Pro y el 6X.
-             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /fenix7xpronowifi/d; /id="fenix(5|5s|6|6s)"/d' \
+             # La beta es solo la del 7X Pro y el 6X Pro: lista blanca, para que no se cuele ningún reloj más
+             # (antes se quitaban unos pocos a mano y entraban el 6 Pro, el 6S Pro, el 5X y los 5 Plus).
+             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /<iq:product id="/{/id="fenix(7xpro|6xpro)"/!d;}' \
                  manifest.xml > bin/beta/manifest.xml
              grep -q "id=\"$BETA_ID\"" bin/beta/manifest.xml || { echo "No pude poner el id de beta" >&2; exit 1; }
              awk -F' = ' '/^#/ || NF < 2 || $1 == "project.manifest" { print; next }

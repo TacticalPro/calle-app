@@ -4,8 +4,9 @@ import Toybox.Position;
 import Toybox.Test;
 
 // La UTM calculada frente al MGRS del propio reloj (Position.Location.toGeoString): mismo huso
-// y banda, y este y norte módulo 100 km iguales (los dos redondean; 1 m de margen por si un
-// valor cae justo en el medio metro).
+// y banda, y este y norte módulo 100 km iguales al metro. Sin margen (si el reloj truncara en
+// lugar de redondear, fallaría más o menos la mitad de los puntos), salvo a menos de 1 cm del medio
+// metro: allí el reloj, con su serie, puede caer al otro lado (esquina SO: 526980,497 → 26981).
 (:test)
 function utmFrenteAMgrs(logger as Test.Logger) as Boolean {
     var puntos = [
@@ -34,7 +35,10 @@ function utmFrenteAMgrs(logger as Test.Logger) as Boolean {
         var cab = (u[0] as Number).toString() + (u[1] as String);
         var de = UtmAux._mod100k(Math.round(u[2] as Double).toNumber() - (e5 as Number));
         var dn = UtmAux._mod100k(Math.round(u[3] as Double).toNumber() - (n5 as Number));
-        var bien = s.substring(0, cab.length()).equals(cab) && de <= 1 && dn <= 1;
+        var bordeE = (((u[2] as Double) - Math.floor(u[2] as Double)) - 0.5d).abs() < 0.01d;
+        var bordeN = (((u[3] as Double) - Math.floor(u[3] as Double)) - 0.5d).abs() < 0.01d;
+        var bien = s.substring(0, cab.length()).equals(cab) && (de == 0 || bordeE && de <= 1)
+            && (dn == 0 || bordeN && dn <= 1);
         logger.debug("UTM " + Utm.texto(lat, lon) + "  MGRS " + g + (bien ? "" : "  ← NO"));
         ok = ok && bien;
     }

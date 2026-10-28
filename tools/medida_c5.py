@@ -8,6 +8,9 @@ de MedidaPuntos, uno cada 4 s, y escribe la memoria en uso tras cada uno. Los pu
 más pesadas. Imprime la carpeta.
 
     python3 -I tools/medida_c5.py coruna
+    python3 -I tools/medida_c5.py coruna --bordes      (zonas sin margen: puntos a 300 m del borde de las tres hojas más
+                                                       pesadas, por cada lado y en las esquinas, donde el reloj carga
+                                                       la propia y sus vecinas una tras otra)
     python3 -I tools/medida_c5.py coruna --escalera   (en lugar de los pares: el centro de una tesela de cada KB, de 12
                                                        a 28, de menor a mayor, con la zona de ese punto)
     monkeyc -d fenix5 -f bin/tienda/coruna/medida.jungle -o bin/medida-coruna.prg -y <clave> -r -O 2 -w
@@ -74,8 +77,10 @@ def main():
     capturas = "--capturas" in sys.argv[2:]
     ruta = "--ruta" in sys.argv[2:]
     ficha = "--ficha" in sys.argv[2:]
-    if len(sys.argv) != 2 + escalera + bool(primera) + capturas + ruta + ficha:
-        sys.exit("uso: medida_c5.py <app de tools/catalogo.json> [--escalera | --primera=t<n> | --capturas | --ruta | --ficha]")
+    bordes = "--bordes" in sys.argv[2:]
+    if len(sys.argv) != 2 + escalera + bool(primera) + capturas + ruta + ficha + bordes:
+        sys.exit("uso: medida_c5.py <app de tools/catalogo.json> [--escalera | --primera=t<n> | --capturas | --ruta | --ficha"
+                 " | --bordes]")
     clave = sys.argv[1]
     app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8"))[clave]
     if set(app.get("variante", {}).values()) != {"c5"} or len(app["zonas"]) != 1:
@@ -88,7 +93,16 @@ def main():
     rural = next(p for p in json.loads((ROOT / f"tools/puntos_control-{region}.json").read_text("utf-8"))
                  if p["id"] == "rural")
     m = ref.m
-    if ficha:
+    if bordes:
+        hojas = sorted(ref.hojas_en(0, 0, 1e9, 1e9), key=lambda h: -R.heap_zona(ref._cargar_zona(h[0])))[:3]
+        for nom, ox, oy, lado in hojas:
+            hz = R.heap_zona(ref._cargar_zona(nom))
+            for etiqueta, x, y in (("O", ox + 300, oy + lado / 2), ("E", ox + lado - 300, oy + lado / 2),
+                                   ("S", ox + lado / 2, oy + 300), ("N", ox + lado / 2, oy + lado - 300),
+                                   ("SO", ox + 300, oy + 300), ("NE", ox + lado - 300, oy + lado - 300)):
+                n_v = len([h for h in ref.hojas_en(x - m["zmargen"], y - m["zmargen"], x + m["zmargen"], y + m["zmargen"])])
+                puntos.append((f"borde {etiqueta} de {nom} ({hz} B), {n_v} hojas", *ref.latlon(x, y)))
+    elif ficha:
         # Las escenas de la ficha de la tienda (docs/tienda/calle-<app>.md): sitios públicos, lo que dicen los datos.
         # La última es desde donde se mira el hospital con urgencias más cercano (el menú se abre al final).
         puntos += FICHA[clave]

@@ -133,6 +133,11 @@ C5_URB_CELDAS = set()  # (col, fila) de las celdas que tocan la zona urbana
 C5_RURAL_U = 4
 C5_ZONA_MIN = 2500
 C5_TOPE_ZONA = 13 * 1024
+# Zonas sin margen (P33, 2026-10-28; "zona_sin_margen" en el bloque c5 de la región): cada hoja guarda solo los lugares
+# de su cuadrado, y el reloj mira además las hojas vecinas que caen a ZMARGEN m del punto (source-c5/Zonas.mc). Con el
+# margen, cada lugar salía de media en 2,5 hojas: quitarlo baja las zonas de A Coruña de 749 a 530 KB. La hoja lleva
+# un 1 detrás de su lado (z[11]).
+C5_SIN_MARGEN = False
 _C5_UNIDAD = {}
 
 
@@ -1440,8 +1445,10 @@ def nfranjas():
     return math.ceil((ZONA + 2 * ZMARGEN) / ZFRANJA)
 
 
-def empaquetar_zona(zc, zf, G, parroquias, lugares):
-    """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada."""
+def empaquetar_zona(zc, zf, G, parroquias, lugares, sin_margen=False):
+    """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada. Con
+    sin_margen (variante c5, C5_SIN_MARGEN), en L solo los lugares de la zona, sin los ZMARGEN m de alrededor; si
+    hay o no zona se sigue decidiendo con el margen, para que la rejilla de hojas no cambie de forma."""
     zx0, zy0 = zc * ZONA, zf * ZONA
     NFRANJAS = nfranjas()
     filas = [[G[zf * RN + r][zc * RN + c] for c in range(RN)] for r in range(RN)]
@@ -1456,6 +1463,8 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
                   key=lambda l: (franja(l), l["x"], l["y"]))
     if not presentes and not aqui:
         return None, None
+    if sin_margen:   # medio abierto: un lugar en el borde común de dos hojas va solo en una
+        aqui = [l for l in aqui if zx0 <= l["x"] < zx0 + ZONA and zy0 <= l["y"] < zy0 + ZONA]
     N = [parroquias[g - 1]["nombre"] for g in presentes]
     assert len(N) < 255, f"zona {zc},{zf}: {len(N)} parroquias"
     local = {g: i + 1 for i, g in enumerate(presentes)}
@@ -1640,16 +1649,18 @@ def zonas_arbol(rdir, pref, xml, zcols, zfilas, parroquias, lugares, cuenta):
     def nodo(k, zc, zf):
         global ZONA, RN
         ZONA, RN = lados[k], lados[k] // RCEL
-        lista, est = empaquetar_zona(zc, zf, G, parroquias, lugares)
+        lista, est = empaquetar_zona(zc, zf, G, parroquias, lugares, C5_SIN_MARGEN)
         if lista is None:
             return None
-        est["heap"] += 5   # el lado, que va al final
+        est["heap"] += 10 if C5_SIN_MARGEN else 5   # el lado y la marca, que van al final
         if est["heap"] > C5_TOPE_ZONA:
             if k + 1 < len(lados):
                 return [nodo(k + 1, 2 * zc + i, 2 * zf + j) for j in (0, 1) for i in (0, 1)]
             sys.exit(f"c5: la zona {k}_{zc}_{zf} ({lados[k]} m) pesa {est['heap']} B > {C5_TOPE_ZONA} y no se parte más")
         assert len(lista) == 10, "la c5 espera ZU al final"
         lista.append(lados[k])
+        if C5_SIN_MARGEN:
+            lista.append(1)
         clave = f"{k}_{zc}_{zf}"
         (rdir / "z" / f"z{clave}.json").write_text(json.dumps(lista, ensure_ascii=False, separators=(",", ":")), "utf-8")
         est.update(json=(rdir / "z" / f"z{clave}.json").stat().st_size, lado=lados[k], x0=zc * lados[k],
@@ -2600,7 +2611,7 @@ def main():
                          "(resources-gen-b/, source-gen-b/); c5: una app por provincia de Galicia para los de 128 KB "
                          "(resources-gen-c5/, source-gen-c5/; lee las zonas source-c5/Zonas.mc)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU, C5_RURAL_U, C5_ZONA_MIN, C5_TOPE_ZONA
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU, C5_RURAL_U, C5_ZONA_MIN, C5_TOPE_ZONA, C5_SIN_MARGEN
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -2649,6 +2660,7 @@ def main():
         if VARIANTE == "c5":
             C5_RURAL_U, C5_ZONA_MIN = vc["rural_u"], vc["zona_min"]
             C5_TOPE_ZONA = round(vc["tope_zona_kb"] * 1024)
+            C5_SIN_MARGEN = bool(vc.get("zona_sin_margen"))
             assert B_LADO_U * C5_RURAL_U < 1 << 15 and ZU > 1
         print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m"
               + (f" en árbol hasta {C5_ZONA_MIN} m y ≤ {vc['tope_zona_kb']} KB" if VARIANTE == "c5" else ""))

@@ -110,11 +110,11 @@ REGION=galicia ./ciq.sh ref --gen-tests
 ./ciq.sh release                    # → bin/calle-release.prg
 ```
 
-**fēnix 6X:**
+**fēnix 6X Pro** (variante c, Madrid entero):
 
 ```sh
-VARIANTE=6x REGION=madrid ./ciq.sh datos
-VARIANTE=6x REGION=madrid ./ciq.sh ref --gen-tests
+VARIANTE=c REGION=madrid ./ciq.sh datos
+VARIANTE=c REGION=madrid ./ciq.sh ref --gen-tests
 DEV=fenix6xpro ./ciq.sh test
 ./ciq.sh prg6x                      # → bin/calle-fenix6x.prg
 ```

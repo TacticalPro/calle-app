@@ -574,6 +574,7 @@
     "c5": {
       "zona": 20000,
       "zona_min": 2500,
+      "zona_sin_margen": true,
       "tope_kb": 22.8,
       "tope_zona_kb": 20,
       "rcel": 100,
@@ -685,6 +686,7 @@
     "c5": {
       "zona": 20000,
       "zona_min": 2500,
+      "zona_sin_margen": true,
       "tope_kb": 20,
       "tope_zona_kb": 10.8,
       "rcel": 100,

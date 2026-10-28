@@ -270,6 +270,43 @@ class Ref:
             nom = nom[h]
         return nom, ox, oy, lado
 
+    def hojas_en(self, x0, y0, x1, y1):
+        """[(nombre, ox, oy, lado)] de las hojas no nulas cuyo cuadrado toca el rectángulo (Zonas.vecinas)."""
+        m, out = self.m, []
+
+        def bajar(n, ox, oy, lado):
+            if n is None or ox + lado <= x0 or ox > x1 or oy + lado <= y0 or oy > y1:
+                return
+            if isinstance(n, list):
+                h = lado // 2
+                for k in range(4):
+                    bajar(n[k], ox + (k & 1) * h, oy + (k >> 1) * h, h)
+            else:
+                out.append((n, ox, oy, lado))
+
+        for zf in range(max(0, int(y0 // m["zona"])), min(m["zfilas"] - 1, int(y1 // m["zona"])) + 1):
+            for zc in range(max(0, int(x0 // m["zona"])), min(m["zcols"] - 1, int(x1 // m["zona"])) + 1):
+                bajar(m["zidx"][zf * m["zcols"] + zc], zc * m["zona"], zf * m["zona"], m["zona"])
+        return out
+
+    def _cargar_zona(self, nom):
+        if nom not in self._z:
+            self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
+        return self._z[nom]
+
+    def _lugares(self, nom, ox, oy):
+        """[(x, y, tipo, nombre)] de los lugares de una hoja, en metros de región."""
+        z, m = self._cargar_zona(nom), self.m
+        S, O, L, LN = z[1], z[2], z[5], z[6]
+        zu = z[9] if len(z) > 9 else 1
+
+        def par16(A, k):
+            return (A[k >> 1] >> (16 * (k & 1))) & 0xFFFF
+
+        lx0, ly0 = ox - m["zmargen"], oy - m["zmargen"]
+        return [(lx0 + (p & 0x3FFF) * zu, ly0 + ((p >> 14) & 0x3FFF) * zu, (p >> 28) & 7,
+                 S[par16(O, par16(LN, j)):par16(O, par16(LN, j) + 1) - 1]) for j, p in enumerate(L)]
+
     def _zona(self, x, y, margen):
         m = self.m
         hj = self.hoja(x, y)
@@ -278,8 +315,7 @@ class Ref:
         nom, ox, oy, lado = hj
         if nom is None:
             return (None, None, None)
-        if nom not in self._z:
-            self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
+        self._cargar_zona(nom)
         fmt, S, O, F, RL, L, LN = self._z[nom][:7]   # H y FZ (franjas) solo aceleran el reloj
         zu = self._z[nom][9] if len(self._z[nom]) > 9 else 1   # unidad de los lugares (variante b)
         assert len(self._z[nom]) <= 10 or self._z[nom][10] == lado, "el lado de la hoja no es el del árbol"
@@ -301,17 +337,24 @@ class Ref:
             if c < col:
                 v = t & 0xFF
                 break
-        lx0, ly0 = ox - m["zmargen"], oy - m["zmargen"]
+        # Lugares: los de la hoja (con su margen) o, en las hojas sin margen (z[11], P33), los de todas las hojas
+        # que caen a ZMARGEN m del punto, en el orden en que las recorre el reloj (la suya primero).
+        lugs = self._lugares(nom, ox, oy)
+        if len(self._z[nom]) > 11 and self._z[nom][11] == 1:
+            R = m["zmargen"]
+            for hv in self.hojas_en(x - R, y - R, x + R, y + R):
+                if hv[0] != nom:
+                    lugs += self._lugares(*hv[:3])
         mejor = {}   # bit → (d, nombre)
         d2b = math.inf   # el segundo barrio más cercano
-        for j, p in enumerate(L):
-            d = math.hypot(x - (lx0 + (p & 0x3FFF) * zu), y - (ly0 + ((p >> 14) & 0x3FFF) * zu))
+        for lx, ly, tipo, nl in lugs:
+            d = math.hypot(x - lx, y - ly)
             for bit, radio in ((1, m["lugar_r"]), (2, math.inf), (4, m["lugar_r"])):
-                if (p >> 28) & bit and d <= radio:
+                if tipo & bit and d <= radio:
                     if d < mejor.get(bit, (math.inf,))[0]:
                         if bit == 2:
                             d2b = mejor.get(2, (math.inf,))[0]
-                        mejor[bit] = (d, N[LN[j]])
+                        mejor[bit] = (d, nl)
                     elif bit == 2 and d < d2b:
                         d2b = d
         lugar = mejor.get(1) or mejor.get(4)
@@ -323,10 +366,10 @@ class Ref:
         fx, fy = (x - ox) / m["rcel"], (y - oy) / m["rcel"]
         ms = [abs(fx - round(fx)) * m["rcel"], abs(fy - round(fy)) * m["rcel"]]
         ds = {1: [], 2: [], 4: []}
-        for p in L:
-            d = math.hypot(x - (lx0 + (p & 0x3FFF) * zu), y - (ly0 + ((p >> 14) & 0x3FFF) * zu))
+        for lx, ly, tipo, _ in lugs:
+            d = math.hypot(x - lx, y - ly)
             for bit in ds:
-                if (p >> 28) & bit:
+                if tipo & bit:
                     ds[bit].append(d)
         for bit, radio in ((1, m["lugar_r"]), (2, m["barrio_r"]), (4, m["lugar_r"])):
             c = sorted(ds[bit])

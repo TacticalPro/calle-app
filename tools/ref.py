@@ -985,7 +985,11 @@ def gen_tests(ref, region, n=40, semilla=3):
     c = max((c for c in g["calles"] if c["n"] == calle_ruta and len(c["p"]) > 1
              and (cerca is None or min(math.dist(q, cerca) for q in c["p"]) <= 500.0)),
             key=lambda c: sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1)))
-    ruta = []
+    # Sin los 8 m de cada extremo: el tramo suele acabar en un cruce y, con el ruido, el primer fix (que aún no
+    # tiene histéresis) caía en la otra calle (Barcelona, 48 m entre Passatge del Crèdit y Carrer d'Avinyó:
+    # 3 de 24 fixes con otra calle, 2026-10-28). El ruido se sortea igual, para no mover el resto de vectores.
+    total = sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1))
+    ruta, hecho = [], 0.0
     for j in range(len(c["p"]) - 1):
         (ax, ay), (bx, by) = c["p"][j], c["p"][j + 1]
         L_ = math.dist((ax, ay), (bx, by))
@@ -993,7 +997,9 @@ def gen_tests(ref, region, n=40, semilla=3):
         for k in range(int(L_ // 2)):
             t = k * 2 / L_
             ruido = rnd.uniform(-3, 3)
-            ruta.append(ref.latlon(ax + t * (bx - ax) + nx * ruido, ay + t * (by - ay) + ny * ruido))
+            if 8.0 <= hecho + k * 2 <= total - 8.0:
+                ruta.append(ref.latlon(ax + t * (bx - ax) + nx * ruido, ay + t * (by - ay) + ny * ruido))
+        hecho += L_
     L += ["", f"// Paseo por {calle_ruta} con ruido: el nombre no debe bailar.", "(:test)",
           f"function ruta{mod}(logger as Test.Logger) as Boolean {{",
           f"    return Vectores.ruta(logger, {mc(calle_ruta)}, ["]

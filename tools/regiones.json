@@ -430,7 +430,12 @@
     ],
     "pbf": "geofabrik/cataluna-261026.osm.pbf",
     "pbf_recorte": true,
-    "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona"
+    "pbf_nota": "del extracto de Cataluña de Geofabrik (datos OSM del 2026-10-26), recortado a la caja: Overpass daba 502 (2026-10-26). .venv/bin/python tools/pbf_a_json.py --region barcelona",
+    "c": {
+      "zona": 10000,
+      "tope_kb": 26,
+      "nota": "relojes de 128 KB (fēnix 5/5S, 6/6S) y 6X Pro: los mismos topes que Madrid; Barcelona sola cabe en 213 de 250 recursos (datos OSM del 2026-10-26). Con Madrid no cabe: la variante va por app (\"variante\" en tools/catalogo.json)"
+    }
   },
   "murcia": {
     "id": 6,

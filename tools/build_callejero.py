@@ -2680,6 +2680,7 @@ def main():
     cuenta, sin_pareja, por_lugar = Counter(), Counter(), Counter()
     vias = extraer_vias(elems, proy, overrides, cuenta)
     variantes = unificar_variantes(vias, cuenta)
+    OUT.mkdir(parents=True, exist_ok=True)   # en un worktree nuevo aún no existe
     (OUT / f"variantes-{a.region}{sufijo()}.txt").write_text(
         "Nombres unificados (vías  viejo → nuevo  en lat,lon), build_callejero.unificar_variantes\n" +
         "".join(f"{n:>4}  {v} → {c}  en {'%.5f,%.5f' % proy.latlon(*pt)}\n"

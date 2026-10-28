@@ -18,20 +18,14 @@ import Toybox.WatchUi;
 // siendo el de una zona). El resultado es el mismo que con el margen (tools/ref.py lo compara con la verdad), y las
 // zonas de A Coruña bajan de 749 a 530 KB. Lo llama source-c5/Localizador.mc cada 100 m, con la tesela soltada.
 module Zonas {
-    var _clave as Number = -1;  // raíz × 1024 + camino en el árbol de la zona cargada; -1, ninguna
-    var _z as Array or Null = null;
-    var _reg as Number = 0;     // región de la zona cargada (Callejero.ID)
+    // Sin caché: source-c5/Localizador.mc suelta la zona tras cada consulta (cada 100 m, con la tesela soltada), así
+    // que guardarla no ahorraba ninguna carga y costaba código.
+    function soltar() as Void {
+    }
 
     // [parroquia, lugar, barrio] (String o null cada uno) del punto en metros de región;
     // null si cae fuera de la rejilla de zonas. Donde el polígono es el barrio oficial (Madrid,
     // Callejero.ZBARRIO), va en barrio y no hay parroquia.
-    // Suelta la zona cargada (el Localizador lo hace antes de cargar una tesela: cargar un recurso pide
-    // el doble de su tamaño, y en los relojes de 128 KB no sobra).
-    function soltar() as Void {
-        _z = null;
-        _clave = -1;
-    }
-
     function consultar(x as Float, y as Float) as Array<String or Null> or Null {
         var r = _consultar(x, y);
         if (r != null && Callejero.ZBARRIO) {
@@ -41,11 +35,46 @@ module Zonas {
     }
 
     function _consultar(x as Float, y as Float) as Array<String or Null> or Null {
-        if (_reg != Callejero.ID) {
-            _z = null;
-            _clave = -1;
-            _reg = Callejero.ID;
+        var h = hoja(x, y);
+        if (h == null) {
+            return null;
         }
+        if (h[0] == null) {
+            return [null, null, null] as Array<String or Null>;
+        }
+        var z = cargar(h[0]);
+        var fx = x - (h[1] as Number).toFloat();
+        var fy = y - (h[2] as Number).toFloat();
+        var acc = nuevo();
+        var par = parroquia(z, fx, fy);
+        rastrear(z, fx, fy, acc);
+        if (z.size() > 11 && z[11] == 1) {
+            // Hoja sin margen: también las hojas que tocan el cuadrado de ZMARGEN m alrededor del punto. Toda hoja mide
+            // al menos 2,5 km (C5_ZONA_MIN) y los 9 puntos de muestra van cada ZMARGEN m, así que cada una contiene
+            // alguno. De una en una y soltando la anterior: nunca dos zonas en memoria. Mismo orden que Ref._zona.
+            z = null;
+            var R = Callejero.ZMARGEN.toFloat();
+            var vistas = [(h[1] as Number) / 100 * 4096 + (h[2] as Number) / 100] as Array<Number>;
+            for (var k = 0; k < 9; k++) {
+                var v = hoja(x + (k % 3 - 1) * R, y + (k / 3 - 1) * R);
+                if (v == null || v[0] == null) {
+                    continue;
+                }
+                var c = (v[1] as Number) / 100 * 4096 + (v[2] as Number) / 100;
+                if (vistas.indexOf(c) >= 0) {
+                    continue;
+                }
+                vistas.add(c);
+                var d = cargar(v[0]);
+                rastrear(d, x - (v[1] as Number).toFloat(), y - (v[2] as Number).toFloat(), acc);
+                d = null;
+            }
+        }
+        return resolver(par, acc);
+    }
+
+    // [recurso o null, ox, oy] de la hoja del árbol que contiene el punto; null fuera de la rejilla de zonas.
+    function hoja(x as Float, y as Float) as Array or Null {
         if (x < 0.0 || y < 0.0) {
             return null;
         }
@@ -55,98 +84,25 @@ module Zonas {
         if (zc >= Callejero.ZCOLS || zf >= Callejero.ZFILAS) {
             return null;
         }
-        var i = zf * Callejero.ZCOLS + zc;
-        // Se baja por el árbol hasta la hoja que contiene el punto; el camino (1-4 por nivel) la identifica.
-        var n = Callejero.ZIDX[i];
+        var n = Callejero.ZIDX[zf * Callejero.ZCOLS + zc];
         var ox = zc * lado;
         var oy = zf * lado;
-        var camino = 0;
         while (n instanceof Array) {
             lado = lado / 2;
             var h = (x - ox >= lado ? 1 : 0) + (y - oy >= lado ? 2 : 0);
             ox += (h & 1) * lado;
             oy += (h >> 1) * lado;
-            camino = camino * 5 + h + 1;
             n = (n as Array)[h];
         }
-        var clave = i * 1024 + camino;
-        if (clave != _clave) {
-            _z = null;   // soltar la anterior antes de cargar: nunca dos en memoria
-            _clave = clave;
-            if (n != null) {
-                var d = WatchUi.loadResource(n as ResourceId) as Array;
-                if (d[0] != Callejero.FORMATO) {
-                    throw new Lang.InvalidValueException("zona con formato " + d[0]);
-                }
-                _z = d;
-            }
-        }
-        var z = _z;
-        if (z == null) {
-            return [null, null, null] as Array<String or Null>;
-        }
-        var fx = x - ox.toFloat();
-        var fy = y - oy.toFloat();
-        if (z.size() <= 11 || z[11] != 1) {
-            return buscar(z, fx, fy);
-        }
-        var acc = nuevo();
-        var par = parroquia(z, fx, fy);
-        rastrear(z, fx, fy, acc);
-        var R = Callejero.ZMARGEN.toFloat();
-        if (fx < R || fy < R || lado.toFloat() - fx <= R || lado.toFloat() - fy <= R) {
-            _z = null;   // la propia, fuera antes de cargar las vecinas: nunca dos zonas en memoria (también la
-            z = null;    // referencia local: con ella viva, en A Coruña, zona de 20 KB + vecina = Out Of Memory)
-            _clave = -1;
-            var vs = [] as Array<Array>;
-            vecinas(x - R, y - R, x + R, y + R, vs);
-            for (var k = 0; k < vs.size(); k++) {
-                var v = vs[k];
-                if (v[1] == ox && v[2] == oy) {
-                    continue;
-                }
-                var d = WatchUi.loadResource(v[0] as ResourceId) as Array;
-                if (d[0] != Callejero.FORMATO) {
-                    throw new Lang.InvalidValueException("zona con formato " + d[0]);
-                }
-                rastrear(d, x - (v[1] as Number).toFloat(), y - (v[2] as Number).toFloat(), acc);
-                d = null;
-            }
-        }
-        return resolver(par, acc);
+        return [n, ox, oy];
     }
 
-    // Las hojas no nulas cuyo cuadrado toca el rectángulo, como [recurso, ox, oy] (en el orden de Ref.hojas_en).
-    function vecinas(x0 as Float, y0 as Float, x1 as Float, y1 as Float, out as Array<Array>) as Void {
-        var lado = Callejero.ZONA;
-        var c0 = (x0 / lado).toNumber();
-        var f0 = (y0 / lado).toNumber();
-        var c1 = (x1 / lado).toNumber();
-        var f1 = (y1 / lado).toNumber();
-        c0 = c0 < 0 ? 0 : c0;
-        f0 = f0 < 0 ? 0 : f0;
-        c1 = c1 > Callejero.ZCOLS - 1 ? Callejero.ZCOLS - 1 : c1;
-        f1 = f1 > Callejero.ZFILAS - 1 ? Callejero.ZFILAS - 1 : f1;
-        for (var zf = f0; zf <= f1; zf++) {
-            for (var zc = c0; zc <= c1; zc++) {
-                bajar(Callejero.ZIDX[zf * Callejero.ZCOLS + zc], zc * lado, zf * lado, lado, x0, y0, x1, y1, out);
-            }
+    function cargar(rid) as Array {
+        var d = WatchUi.loadResource(rid as ResourceId) as Array;
+        if (d[0] != Callejero.FORMATO) {
+            throw new Lang.InvalidValueException("zona con formato " + d[0]);
         }
-    }
-
-    function bajar(n, ox as Number, oy as Number, lado as Number, x0 as Float, y0 as Float, x1 as Float,
-            y1 as Float, out as Array<Array>) as Void {
-        if (n == null || ox + lado <= x0 || ox > x1 || oy + lado <= y0 || oy > y1) {
-            return;
-        }
-        if (n instanceof Array) {
-            var h = lado / 2;
-            for (var k = 0; k < 4; k++) {
-                bajar((n as Array)[k], ox + (k & 1) * h, oy + (k >> 1) * h, h, x0, y0, x1, y1, out);
-            }
-        } else {
-            out.add([n, ox, oy]);
-        }
+        return d;
     }
 
     // x, y en metros desde la esquina SO de la zona (los tests la llaman con zonas sintéticas).
@@ -215,13 +171,14 @@ module Zonas {
         var px = x + Callejero.ZMARGEN;
         var py = y + Callejero.ZMARGEN;
         var rl2 = (Callejero.LUGAR_R * Callejero.LUGAR_R).toFloat();
+        // Se parte de lo mejor de las zonas ya vistas (acc): gana el estrictamente más cercano, a igualdad el de antes.
         var jl = -1;          // poblado
-        var dl = 0.0;
+        var dl = acc[0] as Float;
         var jp = -1;          // paraje
-        var dp = 0.0;
+        var dp = acc[2] as Float;
         var jb = -1;          // barrio, y el segundo más cercano
-        var db = 0.0;
-        var db2 = Buscador.LEJOS;
+        var db = acc[4] as Float;
+        var db2 = acc[6] as Float;
         // Solo cuentan los lugares a ZMARGEN m del punto en x y en y: es el radio del lugar y cubre el barrio
         // (BARRIO_R / BARRIO_FRAC), así que lo de fuera no cambia el resultado. L va por franjas de H m desde el
         // sur y, dentro de cada una, por x (FZ: dónde empieza cada franja); se recorren las franjas que tocan y,
@@ -265,19 +222,17 @@ module Zonas {
                 var dy = py - (((p >> 14) & 0x3FFF) * zu).toFloat();
                 var d2 = dx * dx + dy * dy;
                 var tipo = (p >> 28) & 7;
-                if ((tipo & 1) != 0 && d2 <= rl2 && (jl < 0 || d2 < dl)) {
+                if ((tipo & 1) != 0 && d2 <= rl2 && d2 < dl) {
                     jl = j;
                     dl = d2;
                 }
-                if ((tipo & 4) != 0 && d2 <= rl2 && (jp < 0 || d2 < dp)) {
+                if ((tipo & 4) != 0 && d2 <= rl2 && d2 < dp) {
                     jp = j;
                     dp = d2;
                 }
                 if ((tipo & 2) != 0) {
-                    if (jb < 0 || d2 < db) {
-                        if (jb >= 0) {
-                            db2 = db;
-                        }
+                    if (d2 < db) {
+                        db2 = db;
                         jb = j;
                         db = d2;
                     } else if (d2 < db2) {
@@ -286,23 +241,19 @@ module Zonas {
                 }
             }
         }
-        if (jl >= 0 && dl < (acc[0] as Float)) {
+        if (jl >= 0) {
             acc[0] = dl;
             acc[1] = nombre(S, O, par16(LN, jl));
         }
-        if (jp >= 0 && dp < (acc[2] as Float)) {
+        if (jp >= 0) {
             acc[2] = dp;
             acc[3] = nombre(S, O, par16(LN, jp));
         }
         if (jb >= 0) {
-            if (db < (acc[4] as Float)) {
-                acc[6] = (acc[4] as Float) < db2 ? acc[4] : db2;
-                acc[4] = db;
-                acc[5] = nombre(S, O, par16(LN, jb));
-            } else if (db < (acc[6] as Float)) {
-                acc[6] = db;
-            }
+            acc[4] = db;
+            acc[5] = nombre(S, O, par16(LN, jb));
         }
+        acc[6] = db2;
     }
 
     // El entero de 16 bits k de un array con 2 por número.

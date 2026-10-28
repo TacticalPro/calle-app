@@ -57,7 +57,7 @@ Fallos y sugerencias, al correo de contacto. El código y el método de generaci
 
 Datos: © colaboradores de OpenStreetMap (ODbL).
 
-**Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde) y aprobada ese día:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`ead5c7b`).
+**Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde) y aprobada ese día:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`a5fe21f`).
 
 **Novedades (3.5.1):** primera versión, para los fēnix 5, 5S, 6 y 6S.
 

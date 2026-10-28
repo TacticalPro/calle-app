@@ -2,8 +2,7 @@ project.manifest = manifest.xml
 base.sourcePath = source;source-gen;test;test-gen
 base.resourcePath = resources;resources-gen
 # fēnix 6X (API 3.4): su máquina virtual no admite más de 254 recursos de datos. Desde la 3.2.0 lleva la
-# variante c (Madrid entero en teselas adaptativas, decisión del autor 2026-10-25); la 6x (una parte de Madrid, solo
-# 4 distritos: VARIANTE=6x ./ciq.sh datos) queda generada por si hiciera falta volver.
+# variante c (Madrid entero en teselas adaptativas, decisión del autor 2026-10-25).
 fenix6xpro.sourcePath = source;source-gen-c;test;test-gen-c
 fenix6xpro.resourcePath = resources;resources-gen-c
 

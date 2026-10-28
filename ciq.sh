@@ -1,8 +1,8 @@
 #!/bin/bash
 # CALLE — compilar, probar, generar el callejero y empaquetar.
 #
-#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid; VARIANTE=6x para el fēnix 6X,
-#                         VARIANTE=c para los de 128 KB: fēnix 5/5S y 6/6S;
+#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid;
+#                         VARIANTE=c para los de 128 KB, fēnix 5/5S y 6/6S, y para el 6X Pro;
 #                         VARIANTE=b para los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro y 5X/5 Plus (Galicia);
 #                         --refresh vuelve a Overpass; --comun solo rehace Callejero/Regiones/ajuste)
 #   ./ciq.sh ref          autotest de la referencia Python y vectores para los tests de Monkey C
@@ -17,7 +17,7 @@
 #   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
 #                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
 #                         → bin/calle-<zona>-beta.iq
-#   ./ciq.sh prg6x        .prg para un fēnix 6X → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
+#   ./ciq.sh prg6x        .prg para un fēnix 6X Pro → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
 #   ./ciq.sh privacidad   falla si el código puede sacar datos del reloj o guardar fuera de Notas y Ajustes
@@ -33,8 +33,8 @@ cd "$(dirname "$0")"
 
 DEV="${DEV:-fenix7xpro}"
 REGION="${REGION:-santiago}"
-VARIANTE="${VARIANTE:-normal}"     # 6x: datos compactos del fēnix 6X (resources-gen-6x/, source-gen-6x/); c: Madrid
-                                   # entero en teselas adaptativas para los de 128 KB (resources-gen-c/, source-gen-c/)
+VARIANTE="${VARIANTE:-normal}"     # c: Madrid entero en teselas adaptativas para los de 128 KB y el 6X Pro
+                                   # (resources-gen-c/, source-gen-c/); b y c5: ver tools/build_callejero.py
 KEY="${KEY:-$HOME/.garmin/developer_key.der}"
 # Beta privada de la Connect IQ Store: id propio, distinto del de manifest.xml (el de las instalaciones
 # por USB, que guarda las anotaciones). Generado el 2026-10-24; no cambiarlo o la tienda la tratará como
@@ -152,8 +152,8 @@ case "${1:-build}" in
              "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP.iq" -r -O 2 -w 2>&1 \
                  | { grep -v "is large (> 8kb)" || true; }
              ls -la "bin/calle-$APP.iq" ;;
-    prg6x)  # .prg firmado para un fēnix 6X, para copiarlo por cable a GARMIN/APPS (la beta solo la instala
-             # el desarrollador). Con los datos compactos de resources-gen-6x/.
+    prg6x)   # .prg firmado para un fēnix 6X Pro, para copiarlo por cable a GARMIN/APPS sin pasar por la tienda.
+             # Con los datos de la variante c (resources-gen-c/, ver monkey.jungle).
              privacidad; DEV=fenix6xpro; sdk; mkdir -p bin
              monkeyc -o bin/calle-fenix6x.prg -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
              ls -la bin/calle-fenix6x.prg ;;

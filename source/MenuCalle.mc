@@ -2,6 +2,7 @@ import Toybox.Application;
 import Toybox.Lang;
 import Toybox.Position;
 import Toybox.System;
+import Toybox.Time;
 import Toybox.WatchUi;
 
 // Menú (mantener ARRIBA): ir al hospital o la comisaría más cercanos, las anotaciones (y volver a
@@ -57,8 +58,9 @@ module MenuCalle {
         var d = Ir.cargar();
         var pos = posicion();
         var hay = pos != null;
-        var lat = pos != null ? pos[0] : 0.0d;
-        var lon = pos != null ? pos[1] : 0.0d;
+        var lat = pos != null ? pos[0] as Double : 0.0d;
+        var lon = pos != null ? pos[1] as Double : 0.0d;
+        var tFix = pos != null ? pos[2] as Number : 0;
         var menu = new WatchUi.Menu2({:title => titulo});
         var lista = [] as Array<Array>;
         if (d != null) {
@@ -86,21 +88,24 @@ module MenuCalle {
         if (otras) {
             menu.addItem(new WatchUi.MenuItem("Otras policías", "CNP no comisaría, municipal, G. Civil", :otras, null));
         }
-        WatchUi.pushView(menu, new DelegadoIrLista(lista, hay ? lat : null, hay ? lon : null), WatchUi.SLIDE_LEFT);
+        WatchUi.pushView(menu, new DelegadoIrLista(lista, hay ? lat : null, hay ? lon : null, tFix), WatchUi.SLIDE_LEFT);
     }
 
-    // La posición de la app si tiene fix; si no, la última que conozca el reloj. [lat, lon] o null.
-    function posicion() as Array<Double> or Null {
+    // La posición de la app si tiene fix; si no, la última que conozca el reloj, solo si es de hace menos
+    // de L.SEMILLA_MAX_S: una de hace horas, quizá de otra ciudad, ordenaría la lista y apuntaría la flecha
+    // desde donde ya no se está. [lat, lon, segundos del fix] o null.
+    function posicion() as Array or Null {
         var m = (Application.getApp() as CalleApp).modelo;
-        var lat = m.lat;
-        var lon = m.lon;
-        if (m.estado != EST_BUSCANDO && lat != null && lon != null) {
-            return [lat, lon] as Array<Double>;
+        if (m.estado != EST_BUSCANDO) {
+            return [m.lat, m.lon, m.tFix];
         }
-        var p = Position.getInfo().position;
-        if (p != null) {
+        var info = Position.getInfo();
+        var p = info.position;
+        var w = info.when;
+        if (p != null && w != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE
+                && Time.now().value() - w.value() <= L.SEMILLA_MAX_S) {
             var g = p.toDegrees();
-            return [g[0].toDouble(), g[1].toDouble()] as Array<Double>;
+            return [g[0].toDouble(), g[1].toDouble(), w.value()];
         }
         return null;
     }
@@ -195,12 +200,14 @@ class DelegadoIrLista extends WatchUi.Menu2InputDelegate {
     private var _lista as Array<Array>;
     private var _lat as Double or Null;
     private var _lon as Double or Null;
+    private var _tFix as Number;
 
-    function initialize(lista as Array<Array>, lat as Double or Null, lon as Double or Null) {
+    function initialize(lista as Array<Array>, lat as Double or Null, lon as Double or Null, tFix as Number) {
         Menu2InputDelegate.initialize();
         _lista = lista;
         _lat = lat;
         _lon = lon;
+        _tFix = tFix;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
@@ -208,7 +215,7 @@ class DelegadoIrLista extends WatchUi.Menu2InputDelegate {
         if (id == :otras) {
             MenuCalle.abrirIr(Ir.OTRAS_POLICIAS, "Otras policías", false);
         } else if (id instanceof Number) {
-            var v = new VistaIr(_lista, id, _lat, _lon);
+            var v = new VistaIr(_lista, id, _lat, _lon, _tFix);
             WatchUi.pushView(v, new DelegadoIr(v), WatchUi.SLIDE_LEFT);
         }
     }
@@ -269,7 +276,8 @@ class DelegadoNota extends WatchUi.Menu2InputDelegate {
         var id = item.getId();
         if (id == :ir) {
             var pos = MenuCalle.posicion();
-            var v = new VistaIr(_lista, _i, pos != null ? pos[0] : null, pos != null ? pos[1] : null);
+            var v = pos != null ? new VistaIr(_lista, _i, pos[0] as Double, pos[1] as Double, pos[2] as Number)
+                : new VistaIr(_lista, _i, null, null, 0);
             WatchUi.pushView(v, new DelegadoIr(v), WatchUi.SLIDE_LEFT);
         } else if (id == :borrar) {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);

@@ -2,6 +2,7 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
 import Toybox.Position;
+import Toybox.Time;
 import Toybox.Timer;
 import Toybox.WatchUi;
 
@@ -15,6 +16,7 @@ class VistaIr extends WatchUi.View {
     private var _i as Number;
     private var _lat as Double or Null = null;
     private var _lon as Double or Null = null;
+    private var _tFix as Number = 0;          // segundos (Time.now().value()) de la posición
     private var _info as Position.Info or Null = null;
     private var _timer as Timer.Timer or Null = null;
     private var _fDist as Graphics.FontType = Graphics.FONT_LARGE;
@@ -26,12 +28,14 @@ class VistaIr extends WatchUi.View {
     private var _k as Float = 1.0;
     private var _lineas as Number = 2;      // del nombre
 
-    function initialize(lista as Array<Array>, i as Number, lat as Double or Null, lon as Double or Null) {
+    function initialize(lista as Array<Array>, i as Number, lat as Double or Null, lon as Double or Null,
+            tFix as Number) {
         View.initialize();
         _lista = lista;
         _i = i;
         _lat = lat;
         _lon = lon;
+        _tFix = tFix;
     }
 
     function onLayout(dc as Graphics.Dc) as Void {
@@ -82,10 +86,14 @@ class VistaIr extends WatchUi.View {
 
     function onPosition(info as Position.Info) as Void {
         var p = info.position;
-        if (p != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE) {
+        var w = info.when;
+        // Una LAST_KNOWN sin hora no se sabe de cuándo es: no sirve para guiar.
+        if (p != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE
+                && (w != null || info.accuracy != Position.QUALITY_LAST_KNOWN)) {
             var d = p.toDegrees();
             _lat = d[0].toDouble();
             _lon = d[1].toDouble();
+            _tFix = w != null ? w.value() : Time.now().value();
         }
         _info = info;
         WatchUi.requestUpdate();
@@ -116,6 +124,9 @@ class VistaIr extends WatchUi.View {
         var m = 0.0;
         var r = 0.0;
         var hay = lat != null && lon != null;
+        // Dato viejo (sin fix nuevo desde hace más de L.VIEJA_S): distancia en gris y su edad en el pie.
+        var edad = _tFix == 0 ? 0 : Time.now().value() - _tFix;
+        var viejo = hay && edad > L.VIEJA_S;
         if (lat != null && lon != null) {
             m = Ir.distancia(lat, lon, e[2] as Double, e[3] as Double);
             r = Ir.rumbo(lat, lon, e[2] as Double, e[3] as Double);
@@ -162,19 +173,20 @@ class VistaIr extends WatchUi.View {
             dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, _y[3], Graphics.FONT_MEDIUM, "HA LLEGADO", Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         }
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(viejo ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, _y[4], _fDist, Ir.texto(m), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         linea(dc, Abrev.corta(e[1] as String), _y[5], Graphics.COLOR_LT_GRAY);
         // Abajo el anillo deja poco ancho: si no cabe entero, se acorta antes de perder el cardinal.
         var card = Ir.cardinal(r);
-        var pies = o == null ? ["norte arriba · " + card, card] : ["línea recta · " + card, "recta · " + card, card];
+        var pies = viejo ? [Fmt.mayus(Fmt.edad(edad)) + " · " + card, Fmt.mayus(Fmt.edad(edad))]
+            : o == null ? ["norte arriba · " + card, card] : ["línea recta · " + card, "recta · " + card, card];
         var hx = dc.getFontHeight(Graphics.FONT_XTINY);
         var pw = Texto.anchoR(dc, _y[6] - hx / 2, _y[6] + hx / 2, L.y(L.ANILLO_RI), 4);
         var k = 0;
         while (k < pies.size() - 1 && dc.getTextWidthInPixels(pies[k] as String, Graphics.FONT_XTINY) > pw) {
             k++;
         }
-        dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(viejo ? Graphics.COLOR_YELLOW : Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, _y[6], Graphics.FONT_XTINY, pies[k] as String, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 

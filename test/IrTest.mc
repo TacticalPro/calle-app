@@ -2,6 +2,7 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
 import Toybox.Test;
+import Toybox.Time;
 
 // Ir a hospital o comisaría: distancias, rumbos, textos, y los más cercanos en orden y por tipo.
 (:test)
@@ -13,7 +14,9 @@ function irCuentas(logger as Test.Logger) as Boolean {
     var este = Ir.rumbo(40.0d, -3.0d, 40.0d, -2.99d);
     var oeste = Ir.rumbo(40.0d, -3.0d, 40.0d, -3.01d);
     var pi = Math.PI.toFloat();
-    var ok = d > 900.0 && d < 940.0 && r > 1.2 && r < 1.4
+    // 0,01° de latitud en Santiago: 1.110,9 m (con el grado del ecuador salían 1.105,7).
+    var ns = Ir.distancia(42.875d, -8.545d, 42.885d, -8.545d);
+    var ok = ns > 1110.5 && ns < 1111.3 && d > 900.0 && d < 940.0 && r > 1.2 && r < 1.4
         && norte.abs() < 0.001 && (este - pi / 2.0).abs() < 0.001 && (oeste - 3.0 * pi / 2.0).abs() < 0.001
         && Ir.texto(850.0).equals("850 m") && Ir.texto(994.0).equals("990 m") && Ir.texto(996.0).equals("1,0 km")
         && Ir.texto(1234.0).equals("1,2 km") && Ir.texto(12345.0).equals("12 km")
@@ -92,19 +95,23 @@ function vistaIrPinta(logger as Test.Logger) as Boolean {
         ["Complexo Hospitalario Universitario de Santiago de Compostela", "Rúa da Choupana", 42.87d, -8.56d, Ir.URGENCIAS, 1200.0],
         ["Comisaría", "Rúa do Vilar 44", 42.8785d, -8.5446d, Ir.CNP, 20.0]
     ] as Array<Array>;
-    var v = new VistaIr(lista, 0, 42.88d, -8.545d);
+    var ahora = Time.now().value();
+    var v = new VistaIr(lista, 0, 42.88d, -8.545d, ahora);
     v.onLayout(dc);
     v.onUpdate(dc);
     v.mover(1);
     v.onUpdate(dc);                 // a 20 m: «HA LLEGADO»
     v.mover(1);
-    var sin = new VistaIr(lista, 1, null, null);
+    var sin = new VistaIr(lista, 1, null, null, 0);
     sin.onLayout(dc);
     sin.onUpdate(dc);               // sin posición
+    var vieja = new VistaIr(lista, 0, 42.88d, -8.545d, ahora - 300);
+    vieja.onLayout(dc);
+    vieja.onUpdate(dc);             // posición de hace 5 min: distancia en gris y «HACE 5 MIN» en el pie
     // Hacia una anotación (rótulo con la hora, la UTM en lugar de la dirección), y a la siguiente.
     var notas = Ir.deNotas([[7, [1000, "Rúa do Vilar 44 / Rúa Nova ≈11", 42.8785539d, -8.5446323d]],
         [5, [900, "Rúa do Franco 33", 42.8781762d, -8.5453149d]]] as Array<Array>);
-    var vn = new VistaIr(notas, 0, 42.88d, -8.545d);
+    var vn = new VistaIr(notas, 0, 42.88d, -8.545d, ahora);
     vn.onLayout(dc);
     vn.onUpdate(dc);
     vn.mover(1);
@@ -153,4 +160,16 @@ function irDeNotas(logger as Test.Logger) as Boolean {
         logger.error("deNotas " + l);
     }
     return ok;
+}
+
+// La edad de la posición no sale negativa si el reloj va por detrás de la hora del fix.
+(:test)
+function edadNoNegativa(logger as Test.Logger) as Boolean {
+    var m = new Modelo();
+    m.tFix = Time.now().value() + 30;
+    var a = m.edad() == 0;
+    m.tFix = Time.now().value() - 40;
+    var b = m.edad() >= 40 && m.edad() < 45;
+    m.tFix = 0;
+    return a && b && m.edad() == 0;
 }

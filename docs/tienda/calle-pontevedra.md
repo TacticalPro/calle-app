@@ -57,6 +57,8 @@ Fallos y sugerencias, al correo de contacto. El código y el método de generaci
 
 Datos: © colaboradores de OpenStreetMap (ODbL).
 
+**Novedades (3.5.3):** Sin GPS, la guía al hospital ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud. La app ocupa menos en el reloj.
+
 **Novedades (3.5.2):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde) y aprobada ese día:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`a5fe21f`).
 
 **Novedades (3.5.1):** primera versión, para los fēnix 5, 5S, 6 y 6S.
@@ -89,6 +91,8 @@ For fēnix 5, 5S, 6 and 6S. Watches with more memory have «Calles Galicia», co
 Please send bugs and suggestions to the contact email. Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL).
+
+**What's new (3.5.3):** Without GPS, guidance to the hospital no longer starts from a position hours old: if the fix is more than 15 s old, the distance turns grey and shows its age. Less battery use in open country, and exact north-south distances. The app takes less space on the watch.
 
 **What's new (3.5.2):** Fixes a crash with long street names when the watch had been on for more than about 25 days without a restart.
 

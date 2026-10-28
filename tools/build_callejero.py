@@ -83,13 +83,17 @@ import math
 import re
 import subprocess
 import sys
-import tempfile
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
+
+# Los anchos de bit de los formatos se comprueban con assert: con python -O desaparecerían y los datos se
+# desbordarían sin aviso.
+if not __debug__:
+    sys.exit("build_callejero.py no se ejecuta con python -O: sus comprobaciones son assert.")
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
@@ -447,8 +451,7 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
     if f.exists() and not refresh:
         print(f"Overpass: caché {f.name}")
         return json.loads(f.read_text("utf-8"))
-    with tempfile.NamedTemporaryFile("w", suffix=".ql", delete=False) as tq:
-        tq.write(q)
+    vacia = None
     # Overpass da 502/504 a ratos cuando está cargado: tres vueltas por los servidores, con espera.
     servidores = servidores or SERVIDORES
     for vuelta, url in [(v, u) for v in range(vueltas) for u in servidores]:
@@ -457,7 +460,7 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
             time.sleep(60)
         print(f"Overpass: descargando de {url} …")
         r = subprocess.run(["curl", "-sS", "--fail", "--max-time", "900", "-A", UA, url,
-                            "--data-urlencode", f"data@{tq.name}", "-o", str(f) + ".part"])
+                            "--data-urlencode", "data@-", "-o", str(f) + ".part"], input=q.encode("utf-8"))
         if r.returncode == 0:
             try:
                 d = json.loads(Path(str(f) + ".part").read_text("utf-8"))
@@ -467,9 +470,18 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
             if d.get("remark", "").lower().startswith(("runtime error", "error")):
                 print(f"  {d['remark']}; siguiente servidor")
                 continue
+            if not d.get("elements"):
+                # Una réplica atrasada o a medias puede dar 200 sin nada: se prueba otra antes de creerla.
+                print("  respuesta sin elementos; siguiente servidor")
+                vacia = d
+                continue
             Path(str(f) + ".part").replace(f)
             return d
         print(f"  curl salió con {r.returncode}; siguiente servidor")
+    if vacia is not None:
+        print("  todos los servidores dan la respuesta vacía: se toma por buena")
+        f.write_text(json.dumps(vacia), "utf-8")
+        return vacia
     if not salir:
         return None
     sys.exit("Overpass no respondió en ningún servidor; reintente más tarde.")
@@ -925,7 +937,7 @@ def extraer_portales(elems, proy, vias, overrides, cuenta, sin_pareja, por_lugar
 # «PZ FUENTERRABIA»). Sirven solo para casar cada portal con la vía de OSM, que es la que da el nombre.
 # Contraste en la Zona Vella (2026-10-24): ningún nombre de OSM estaba mal; faltaba en OSM el 14 %
 # de los números.
-CATASTRO_WFS = ("http://ovc.catastro.meh.es/INSPIRE/wfsAD.aspx?service=WFS&version=2.0.0&request=GetFeature"
+CATASTRO_WFS = ("https://ovc.catastro.meh.es/INSPIRE/wfsAD.aspx?service=WFS&version=2.0.0&request=GetFeature"
                 "&typeNames=ad:Address&srsName=EPSG::4326&bbox={s},{w},{n},{e},urn:ogc:def:crs:EPSG::4326")
 CATASTRO_PASO = (0.0025, 0.0035)   # grados (lat, lon) por petición: unas 250 direcciones en el casco
 CATASTRO_ASOC = 30    # m: el portal solo entra si pasa a esta distancia una vía de OSM de su nombre
@@ -988,7 +1000,9 @@ def descargar_catastro(region, caja, refresh):
         for j in range(math.ceil((e - w) / dlon - 1e-9)):
             url = CATASTRO_WFS.format(s=round(s + i * dlat, 6), w=round(w + j * dlon, 6),
                                       n=round(min(n, s + (i + 1) * dlat), 6), e=round(min(e, w + (j + 1) * dlon), 6))
-            f = CACHE / f"catastro-{region}-{hashlib.sha1(url.encode()).hexdigest()[:12]}.xml"
+            # La clave de la caché, de la URL en http (la de antes de pasar a https): no hay que descargarlo todo otra vez.
+            clave = url.replace("https://", "http://", 1)
+            f = CACHE / f"catastro-{region}-{hashlib.sha1(clave.encode()).hexdigest()[:12]}.xml"
             if refresh or not f.exists():
                 if nuevas:
                     time.sleep(1)

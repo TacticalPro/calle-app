@@ -20,8 +20,8 @@ La calle, el número de portal y las calles a cada lado, sin teléfono ni cobert
 Privacidad: solo pide el permiso de posición. No tiene red: la posición no sale nunca del reloj. No graba
 actividades.
 
-Zonas: Santiago de Compostela y alrededores, y el término municipal de Madrid. En el fēnix 6X, una parte
-de Madrid: una parte de la ciudad.
+Zonas: Santiago de Compostela y alrededores, y el término municipal de Madrid. En el fēnix 6X, una parte de
+Madrid.
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Dirección General del Catastro. Fuente:
 Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
@@ -44,8 +44,8 @@ Street name, door number and the streets on each side, with no phone and no sign
 Privacy: the only permission is position. No network access: your position never leaves the watch. No
 activity recording.
 
-Areas: Santiago de Compostela and surroundings, and the municipality of Madrid. On the fēnix 6X, part
-Madrid: part of the city.
+Areas: Santiago de Compostela and surroundings, and the municipality of Madrid. On the fēnix 6X, part of
+Madrid.
 
 Data: © OpenStreetMap contributors (ODbL). Source: Dirección General del Catastro. Source: Ayuntamiento de
 Madrid (datos.madrid.es), CC BY 4.0.

@@ -62,7 +62,7 @@ jungle() { if [ -n "${APP:-}" ]; then echo "$($PY tools/tienda.py "$APP")/monkey
 # Lo que sale del Mac (los .iq de la tienda y de la beta, los .prg para el reloj) se compila desde una copia en
 # una ruta neutra, /private/tmp/ciq-build/calle-<app>/: el debug.xml de cada .prg lleva la ruta absoluta de cada
 # fuente (filename="…/source/X.mc", miles de veces por paquete) y, compilado aquí, llevaría la carpeta del usuario
-# (2026-10-29; Morse, Timberline, Arboretum y Aforo ya compilaban desde /private/tmp). test, build y sim siguen
+# (2026-10-29). test, build y sim siguen
 # compilando aquí. neutro: si no estamos ya en la copia (CIQ_NEUTRO), copia el árbol con rsync (sin .git, bin/,
 # cachés ni salidas), vuelve a lanzar esta misma orden dentro y trae bin/; lo que haya en la copia se puede borrar.
 NEUTRO=/private/tmp/ciq-build

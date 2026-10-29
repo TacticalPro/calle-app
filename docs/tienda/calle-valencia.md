@@ -19,7 +19,7 @@ Subida nueva en el portal (no es una versión de ninguna beta), con el id `f435b
   `ficha_1.png` a `ficha_4.png`. Cada escena es lo que dicen los datos reales en un sitio público (`tools/ref.py`):
   1. València, Carrer de Sant Vicent Màrtir 21, el Mercat, entre el Carrer dels Manyans y el Carrer de Sant Ferran;
   2. Alacant, Carrer de Canalejas 5, Raval de Sant Francesc, entre el Carrer de Rafael Terol y el Carrer de Sant Ferran;
-  3. en la huerta de Alboraia, sin calle a 50 m: Camí de Vera, término de Alboraia / Alboraya, con su UTM;
+  3. en la huerta de Alboraia, sin calle a 50 m: Camí de Vera, término de Alboraia, con su UTM;
   4. desde el centro de Manises, el hospital con urgencias más cercano: el Hospital de Manises, a 1,2 km hacia el SE.
 - El portal puede avisar «Signature check failed» en la primera subida de una app nueva: es un fallo conocido suyo.
   La firma se comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -signature manifest.sig2

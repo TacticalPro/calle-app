@@ -192,14 +192,65 @@ las que valgan alcancen el objetivo de T0. Ninguna se aplica sin el visto bueno 
 - [ ] **D. Vértices (V = 297 KB; 114 rurales).** `rural_dp` 8 → 12 y 15 m, y DP urbano a 2 m. Límite: la fuerza
       bruta de `ref.py` tolera la unidad de la tesela; con 15 m la distancia a la calle puede variar más que el
       error del GPS en pistas sinuosas.
-- [ ] **G. K solo en las teselas urbanas (−41 KB).** K salta los vértices de las calles lejanas (watchdog); en las
-      rurales, con 3,7 vértices por tirada, vale menos. Toca `source/Tesela.mc` (si K falta, recorrer): batería
-      completa de los ocho relojes y medir el tiempo en el fēnix 5.
+- [ ] **G. Teselas sin K (−84 KB).** K salta los vértices de las calles lejanas (watchdog) y lo añadió la variante
+      b para sus teselas de 120 KB. **El lector común ya admite teselas sin K** (`source/Tesela.mc`: `K =
+      datos.size() > 11 ? datos[11] : null`, como las de la variante normal): es solo generador (`"k": false`).
+      Coste: tiempo de búsqueda en el fēnix 5; medir con los tests (watchdog) y en la muñeca.
 - [x] **E. Coste fijo por recurso:** medido en T1, 33 KB en 237 recursos (≈ 140 B cada uno). Nada que rascar.
 
 Para cada palanca que se mida: `ref.py` con 0 discrepancias, tests del fēnix 5 en verde y la fila en la tabla de
 este documento. **Suma de lo medible sin tocar el lector (F + B + C.a + D): del orden de −400 a −450 KB; con
 C.b y C.c, −550 a −600. El objetivo son −637.** Si al medir no se llega, T3.
+
+**Decisión del autor (2026-10-29):** portales a la mitad, sí; abreviar los tipos de vía, sí; el rural se queda
+(ni versión urbana ni menos lugares), solo menos detalle en pistas.
+
+**Tanda 1 (2026-10-29, sobre `main` `84f402e`, con `C5_OPTS`; total estimado de `peso_c5.py`, base 2.395 KB):**
+
+| Palanca (bandera del bloque c5) | Ahorro | Recursos | Qué cambia |
+|---|---|---|---|
+| Ráster de parroquias a 250 m (`rcel`) | −108 | 226 (−9 hojas) | frontera de parroquia a 250 m |
+| Sin `track` ni `service` rurales (`rural_sin`) | −82 | 234 | 5.093 vías fuera |
+| DP rural 12 m / 15 m (`rural_dp`) | −27 / −42 | 235 | pistas menos fieles |
+| Unidad rural 8 m (`rural_u`) | falló | | `assert B_LADO_U * C5_RURAL_U < 1 << 15`: no se insiste |
+| Portales uno de cada dos (`portales_mitad`) | −178 | 231 | 21.161 portales fuera |
+| Tipo de vía abreviado (`abreviar`) | −51 | 235 | 26.686 nombres |
+| **Las cinco aprobadas, DP rural 12** | **−441 → 1.954 KB** | 216 | `.prg` ≈ 2.036 KB: **faltan ≈ 180 KB para la cuota estricta y ≈ 240 para el objetivo** |
+
+Reparto tras la combinación: teselas 1.504 KB (R 475 · S 287, de ellos 101 repetidos entre teselas · V 256, 173
+urbanos · P + E 186 · C + CB + K 252) · zonas 442 (S 192 · L + LN 134 · RL 52).
+
+**Tanda 2 (2026-10-29), sobre la combinación B (las cinco aprobadas, DP rural 12; 1.954 KB, 216 recursos):**
+
+| Añadido a B | Ahorro | Recursos | Qué cambia |
+|---|---|---|---|
+| Teselas sin K (`"k": false`) | **−108** | 206 | sin K cabe más en cada tesela (125 → 115); la búsqueda lee las cabeceras R de las calles lejanas en vez de saltarlas: tiempo, por medir |
+| DP urbano 2 m / 3 m (`urb_dp`; venía a 0,75) | −41 / −65 | 213 / 212 | geometría urbana a ≤ 2-3 m, por debajo del error del GPS |
+| DP rural 15 en vez de 12 | −11 | 215 | |
+| Ráster de parroquias a 500 m | −37 | 207 | frontera de parroquia a 500 m |
+| Portales uno de cada tres (`portales_cada`) | −74 | 208 | el portal puede errar dos números |
+| **C = B + DP rural 15 + sin K + DP urbano 2** | **−161 → 1.793 KB** | 204 | `.prg` ≈ 1.870 KB ≈ 1.915.000 B: **cabe en la cuota con las dos esferas (47 KB de sobra); 15 KB por encima del objetivo con margen** |
+| C + ráster 500 | −199 → 1.755 | 195 | `.prg` ≈ 1.875.000 B: bajo el objetivo |
+| C + portales uno de cada tres | −213 → 1.741 | 204 | `.prg` ≈ 1.862.000 B: bajo el objetivo |
+
+Reparto de C: teselas 1.343 KB (R 462 · S 278 · V 213 · P + E 181 · C + CB 163) · zonas 442. Lo que queda grande es
+estructural (R, una cabecera por tramo) o nombres.
+
+**C compilada de verdad (2026-10-29): `.prg` del fēnix 5 = 1.915.788 B** (la estimación daba 1.915.000), 204
+recursos. **Cabe en la cuota con las dos esferas: 1.915.788 + 135.104 = 2.050.892 < 2.097.152 (46 KB de sobra).**
+`ref.py`: fuerza bruta de 10.000 puntos, 0 discrepancias (portales 1.338/1.338, tramos 4.783); zonas 0. Los puntos
+de control se rederivan (`ref --derivar`): el fichero guardaba los nombres sin abreviar.
+
+**Verificación de C en el simulador (2026-10-29, 19:00):** fēnix 5, `APP=coruna DEV=fenix5 ./ciq.sh test`: **55/55**.
+Puntos de control **10/10** tras rederivarlos (cambian los nombres y ≤ 1 m de posición por el DP urbano; «franco»
+admite «Pr. de Fonseca» como antes admitía «Praza de Fonseca»: la mitad del tramo cae dentro del polígono de la
+plaza). `ref --gen-tests`: 62 vectores y una ruta de 37 fixes. **Pendiente, sobre los datos definitivos (T4):** 5S, 6
+y 6S; `medida_c5.py --bordes` y `--punto … --lastre` (no cambia ningún byte de código: el margen debería seguir en
+≈ 7,45 KB); la muñeca.
+
+Trampas nuevas: `ref.py` corre con `python3 -I`, que no pone `tools/` en `sys.path`, así que un `import
+build_callejero` suelto falla (se añade la carpeta antes de importar). Y un simulador abierto a mano desde el
+binario dejó `monkeydo` sin conectar y el log vacío hasta el corte de 600 s: cerrarlo y que lo abra `ciq.sh`.
 
 ### T3 — Cobertura (solo si T2 no llega al objetivo; decide el autor)
 

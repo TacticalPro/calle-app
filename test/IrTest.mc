@@ -29,6 +29,30 @@ function irCuentas(logger as Test.Logger) as Boolean {
     return ok;
 }
 
+// Ir.distancia contra la geodésica del elipsoide WGS84 en los extremos de latitud de la Comunitat Valenciana
+// (37,85 y 40,79): 0,01° este-oeste y 0,01° norte-sur en cada una. Lo esperado se calculó fuera del reloj con
+// Vincenty (inversa, a = 6378137, f = 1/298,257223563) y se comprobó con el arco de paralelo (N·cos φ·Δλ) y la
+// integral del de meridiano; coinciden al 0,1 mm. _dxdy se aparta menos de 0,3 mm: 1 cm de tolerancia.
+(:test)
+function irDistanciaWgs84(logger as Test.Logger) as Boolean {
+    var casos = [
+        [37.85d, -0.5d, 37.85d, -0.49d, 880.1106],    // E-O a 37,85
+        [37.85d, -0.5d, 37.86d, -0.5d, 1109.9373],    // N-S de 37,85 a 37,86
+        [40.79d, -0.5d, 40.79d, -0.49d, 844.0165],    // E-O a 40,79
+        [40.79d, -0.5d, 40.80d, -0.5d, 1110.4995]     // N-S de 40,79 a 40,80
+    ] as Array<Array>;
+    var ok = true;
+    for (var i = 0; i < casos.size(); i++) {
+        var k = casos[i];
+        var d = Ir.distancia(k[0] as Double, k[1] as Double, k[2] as Double, k[3] as Double);
+        if ((d - (k[4] as Float)).abs() >= 0.01) {
+            logger.error("caso " + i + ": " + d + " m, esperado " + k[4]);
+            ok = false;
+        }
+    }
+    return ok;
+}
+
 (:test)
 function irCercanos(logger as Test.Logger) as Boolean {
     Activa.poner(Regiones.IDS[0]);

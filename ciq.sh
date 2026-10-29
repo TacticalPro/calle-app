@@ -22,6 +22,8 @@
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
 #   ./ciq.sh privacidad   falla si el código puede sacar datos del reloj o guardar fuera de Notas y Ajustes
 #                         (va antes de release/instalar/package)
+#   release, package, beta, tienda, prg6x e instalar compilan desde una copia en /private/tmp/ciq-build/ (ruta
+#   neutra: el debug.xml de cada .prg lleva la ruta de las fuentes) y fallan si el producto lleva /Users/ dentro.
 #   ./ciq.sh icon         regenera el icono (Python + Pillow)
 #   ./ciq.sh fuentes      mide las fuentes de sistema de cada reloj en el simulador → tools/fonts/metricas.json
 #                         (las usa tools/mockup.py; rehacer al añadir un reloj al catálogo)
@@ -56,6 +58,46 @@ sdk() {
 monkeyc() { "$BIN/monkeyc" -d "$DEV" -f "$(jungle)" -y "$KEY" "$@"; }
 # El jungle: el del repositorio o, con APP, el de esa app del catálogo (tools/tienda.py lo escribe en bin/tienda/).
 jungle() { if [ -n "${APP:-}" ]; then echo "$($PY tools/tienda.py "$APP")/monkey.jungle"; else echo monkey.jungle; fi; }
+
+# Lo que sale del Mac (los .iq de la tienda y de la beta, los .prg para el reloj) se compila desde una copia en
+# una ruta neutra, /private/tmp/ciq-build/calle-<app>/: el debug.xml de cada .prg lleva la ruta absoluta de cada
+# fuente (filename="…/source/X.mc", miles de veces por paquete) y, compilado aquí, llevaría la carpeta del usuario
+# (2026-10-29; Morse, Timberline, Arboretum y Aforo ya compilaban desde /private/tmp). test, build y sim siguen
+# compilando aquí. neutro: si no estamos ya en la copia (CIQ_NEUTRO), copia el árbol con rsync (sin .git, bin/,
+# cachés ni salidas), vuelve a lanzar esta misma orden dentro y trae bin/; lo que haya en la copia se puede borrar.
+NEUTRO=/private/tmp/ciq-build
+neutro() {
+    [ -n "${CIQ_NEUTRO:-}" ] && return 0
+    local dest="$NEUTRO/calle-${APP:-base}"
+    mkdir -p "$dest"
+    rsync -a --delete --exclude .git --exclude /bin --exclude /tools/cache --exclude /tools/out --exclude /docs \
+        --exclude __pycache__ --exclude .venv --exclude .DS_Store ./ "$dest/"
+    rm -rf "$dest/bin"
+    echo "compilo en $dest" >&2
+    CIQ_NEUTRO=1 "$dest/ciq.sh" "$@"
+    mkdir -p bin; rsync -a "$dest/bin/" bin/
+    exit 0
+}
+
+# Guarda: ningún producto que salga del Mac lleva la carpeta del usuario. Mira dentro del .iq (manifest, debug.xml y
+# .prg de cada reloj) y en cada .prg suelto con su .debug.xml. Si la lleva, el fichero se retira a /tmp y se falla.
+rutas() {
+    local f n malo=0
+    for f in "$@"; do
+        [ -f "$f" ] || continue
+        case "$f" in
+            *.iq) bsdtar -tf "$f" > /dev/null; n=$(bsdtar -xOf "$f" | grep -ac "/Users/" || true) ;;
+            *)    n=$(cat "$f" "$f.debug.xml" 2>/dev/null | grep -ac "/Users/" || true) ;;
+        esac
+        if [ "${n:-0}" -gt 0 ]; then
+            mkdir -p /tmp/ciq-rechazado; mv "$f" /tmp/ciq-rechazado/; [ -f "$f.debug.xml" ] && mv "$f.debug.xml" /tmp/ciq-rechazado/
+            echo "rutas: $f lleva la carpeta del usuario ($n líneas); retirado a /tmp/ciq-rechazado/" >&2; malo=1
+        else
+            echo "rutas: $f sin carpeta del usuario" >&2
+        fi
+    done
+    return $malo
+}
 
 # El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
 # /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
@@ -114,24 +156,29 @@ case "${1:-build}" in
     datos)   shift; $PY tools/build_callejero.py --region "$REGION" --variante "$VARIANTE" "$@" ;;
     ref)     shift; $PY tools/ref.py --region "$REGION" --variante "$VARIANTE" "$@" ;;
     build)   sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w ;;
-    release) privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w --build-stats 0
-             ls -la bin/calle-release.prg ;;
+    release) neutro "$@"; privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w --build-stats 0
+             rutas bin/calle-release.prg; ls -la bin/calle-release.prg ;;
     test)    sdk; mkdir -p bin; monkeyc -o bin/test.prg -t -w; simulador
              # Con tope de tiempo (TEST_MAX s, 600 por defecto): un test colgado retenía el simulador y el candado
              # (fēnix 6S, 22 min, 2026-10-26). macOS no trae «timeout»: se vigila en segundo plano.
-             "$BIN/monkeydo" bin/test.prg "$DEV" -t & md=$!
+             # monkeydo -t sale con 1 aunque todo pase: manda la línea final del informe (bin/test.log). El
+             # vigilante se mata pase lo que pase (antes, con set -e, un wait fallido lo dejaba huérfano 600 s).
+             { "$BIN/monkeydo" bin/test.prg "$DEV" -t | tee bin/test.log; } & md=$!
              ( sleep "${TEST_MAX:-600}"; kill -0 $md 2>/dev/null && { echo "test: más de ${TEST_MAX:-600} s; lo corto" >&2; pkill -P $md; kill $md; } ) & vig=$!
-             wait $md; rc=$?; kill $vig 2>/dev/null; exit $rc ;;
+             wait $md || true; pkill -P $vig 2>/dev/null || true; kill $vig 2>/dev/null || true
+             grep -q '^PASSED' bin/test.log ;;
     sim)     sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w; simulador
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
-    package) privacidad; sdk; mkdir -p bin
-             "$BIN/monkeyc" -e -f monkey.jungle -y "$KEY" -o bin/calle.iq -r -O 2 -w ;;
-    beta)    if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
+    package) neutro "$@"; privacidad; sdk; mkdir -p bin
+             "$BIN/monkeyc" -e -f monkey.jungle -y "$KEY" -o bin/calle.iq -r -O 2 -w
+             rutas bin/calle.iq ;;
+    beta)    neutro "$@"
+             if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
                  privacidad; sdk
                  dir="$($PY tools/tienda.py "$APP" --beta)"
                  "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP-beta.iq" -r -O 2 -w 2>&1 \
                      | { grep -v "is large (> 8kb)" || true; }
-                 ls -la "bin/calle-$APP-beta.iq"; exit 0
+                 rutas "bin/calle-$APP-beta.iq"; ls -la "bin/calle-$APP-beta.iq"; exit 0
              fi
              privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
@@ -145,19 +192,20 @@ case "${1:-build}" in
                  { n = split($2, a, ";"); s = ""; for (i = 1; i <= n; i++) s = s (i > 1 ? ";" : "") "../../" a[i]
                    print $1 " = " s }' monkey.jungle > bin/beta/monkey.jungle
              "$BIN/monkeyc" -e -f bin/beta/monkey.jungle -y "$KEY" -o bin/calle-beta.iq -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
-             ls -la bin/calle-beta.iq ;;
+             rutas bin/calle-beta.iq; ls -la bin/calle-beta.iq ;;
     tienda)  # App de la tienda pública: una por zona, con el id, el nombre y los relojes de tools/catalogo.json.
-             privacidad; sdk
+             neutro "$@"; privacidad; sdk
              dir="$($PY tools/tienda.py "${APP:?APP=<zona de tools/catalogo.json>}")"
              "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP.iq" -r -O 2 -w 2>&1 \
                  | { grep -v "is large (> 8kb)" || true; }
-             ls -la "bin/calle-$APP.iq" ;;
+             rutas "bin/calle-$APP.iq"; ls -la "bin/calle-$APP.iq" ;;
     prg6x)   # .prg firmado para un fēnix 6X Pro, para copiarlo por cable a GARMIN/APPS sin pasar por la tienda.
              # Con los datos de la variante c (resources-gen-c/, ver monkey.jungle).
-             privacidad; DEV=fenix6xpro; sdk; mkdir -p bin
+             neutro "$@"; privacidad; DEV=fenix6xpro; sdk; mkdir -p bin
              monkeyc -o bin/calle-fenix6x.prg -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
-             ls -la bin/calle-fenix6x.prg ;;
-    instalar) privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w
+             rutas bin/calle-fenix6x.prg; ls -la bin/calle-fenix6x.prg ;;
+    instalar) neutro "$@"; privacidad; sdk; mkdir -p bin; monkeyc -o bin/calle-release.prg -r -O 2 -w
+             rutas bin/calle-release.prg
              [ tools/mtp_enviar -nt tools/mtp_enviar.c ] || clang -O2 -o tools/mtp_enviar tools/mtp_enviar.c \
                  -I/opt/homebrew/include -L/opt/homebrew/lib -lmtp
              tools/mtp_enviar bin/calle-release.prg CALLE.PRG 2>&1 | grep -v "association\|UNKNOWN\|report this" ;;

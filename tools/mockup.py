@@ -637,7 +637,7 @@ ESCENAS_VALENCIA = [
     ("Alacant: Canalejas", dict(calle1="Carrer de Canalejas", num1="nº 5", barrio="Raval de Sant Francesc",
                                 tramo=("Carrer de Rafael Terol", "Carrer de Sant Ferran"))),
     # L'Horta Nord, 39.4930 -0.3530: sin calle a 50 m; el poblado más cercano y el término.
-    ("Huerta: lugar y término", dict(lugar="Camí de Vera", sub="término de Alboraia / Alboraya",
+    ("Huerta: lugar y término", dict(lugar="Camí de Vera", sub="término de Alboraia",
                                      pie="30S 727625 4374833")),
     # Desde el centro de Manises (39.4925 -0.4630): el de urgencias más cercano, a 1,2 km, rumbo 130°. (El General
     # d'Elx no cabe entero en la línea: el escaparate pide un nombre que se lea.)

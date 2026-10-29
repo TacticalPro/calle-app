@@ -122,48 +122,84 @@ salidas ya medidas (≈ −13 %) **no llegan**: hacen falta las palancas de T2, 
       reloj lo lista y lo abre (si por cable la ignora, el autor puede llevar su propia compilación mientras la de
       la tienda adelgaza). Solo con su permiso.
 
-### T1 — Reparto reproducible del peso (`tools/peso_c5.py`)
+### T1 — Reparto reproducible del peso (`tools/peso_c5.py`) ✅ (2026-10-29)
 
-- [ ] Datos: `VARIANTE=c5 REGION=coruna ./ciq.sh datos` (comprobar la orden exacta en la cabecera de `ciq.sh` y en
-      `build_callejero.py`; en un worktree nuevo, antes `mkdir -p tools/out`). Las regiones se generan **en
-      serie**: dos en paralelo en la misma copia hacen fallar la comprobación común de `Callejero.ZONA`.
-- [ ] Script que lee `resources-gen-c5/coruna/jsonData/` y da, por tesela y en total: bytes estimados de
-      `S O C CB R V P E` y de las zonas `S O F RL L LN H FZ`; número de tiradas, vértices, portales y nombres;
-      teselas rurales (unidad 4 m) frente a urbanas (1 m); nombres repetidos entre teselas y entre hojas de zona.
-      Misma convención que la medición del 2026-10-28 (5 B por número, cadena = bytes + 3) para poder comparar.
-- [ ] Contraste con la realidad: `APP=coruna DEV=fenix5 ./ciq.sh release` y comparar la suma estimada con el
-      `.prg`. La diferencia es el coste fijo por recurso más el código: anotarlo (237 recursos).
-- [ ] Tabla en este documento. Las cifras de la medición del 2026-10-28 deben salir dentro de un ±5 % (la salida 1 ya está aplicada:
-      las zonas pesan menos que en la tabla de §0).
+- [x] Datos: `VARIANTE=c5 REGION=coruna ./ciq.sh datos` (≈ 1 min). En un worktree nuevo hacen falta `tools/cache`
+      (enlace al del repositorio principal, 1,4 GB), `mkdir -p tools/out` y un `source-gen/` (enlace también):
+      `ciq.sh` exige `source-gen/Callejero.mc` para compilar cualquier app, aunque la c5 no lo use.
+- [x] `python3 -I tools/peso_c5.py coruna --prg bin/calle-release.prg` (la release: `APP=coruna DEV=fenix5
+      ./ciq.sh release`, **2.537.148 B** desde `main` `84f402e`). Misma convención que la medición del 2026-10-28 y sus mismas cifras
+      (R 27,6 % frente a 28; S 19,5 frente a 19; P 16,5 frente a 16; V 16,2 frente a 16).
+
+| Bloque | KB | % |
+|---|---|---|
+| Teselas (135: 47 rurales de 4 m, 88 urbanas de 1 m) | 1.837 | 76,7 % |
+| Zonas (100 hojas; 18.258 lugares, 17.948 nombres) | 550 | 23,0 % |
+| `poi.json` + `cajas.json` | 8 | 0,3 % |
+| **Total estimado** | **2.395** | |
+| `.prg` real | 2.478 | +82 KB (3,3 %): el código (49 KB) y el empaquetado de 237 recursos (≈ 140 B cada uno). **La estimación de 5 B por número vale también para el fichero.** |
+
+| Teselas, por sección | KB | % | rural | urbana |
+|---|---|---|---|---|
+| R, cabeceras de tirada | 506 | 27,6 | 152 | 355 |
+| S, nombres | 358 | 19,5 | 150 | 208 |
+| P, portales (+ E, escapes: 41) | 303 | 16,5 | 0 | 303 |
+| V, vértices | 297 | 16,2 | 114 | 183 |
+| C + CB + K (15 B por entrada de calle; 18.947 entradas) | 279 | 15,2 | 123 | 155 |
+| O | 51 | 2,8 | 21 | 31 |
+| **Total** | **1.837** | | **561** | **1.276** |
+
+| Zonas, por sección | KB | % |
+|---|---|---|
+| S, nombres | 194 | 35 |
+| RL, ráster de parroquias a 100 m | 140 | 25 |
+| L + LN, lugares | 134 | 24 |
+| O + F + FZ | 80 | 15 |
+
+**Lo que dicen las cifras:**
+- **Las tiradas son muchas y cortas, no largas y partidas:** 51.848 tiradas con 3,7 vértices de media; solo
+  **1.634** llegan al tope de 240 m (749 rurales, 885 urbanas) y **ninguna** al de 63 vértices. **La palanca A
+  (tiradas rurales más largas) queda descartada: cota de −16 KB.** El coste de R es una cabecera de 10 B por tramo
+  entre cruces, y eso es el modelo de datos del lector común.
+- **Nombres:** 130 KB de S se repiten entre teselas (salida 3); 874 entradas son calles que solo cruzan (30 KB entre
+  S, C, CB y K); los sufijos de portal, 7 KB.
+- **Portales:** 344 KB con los escapes, todos urbanos. La mitad, −170 KB.
+- **Zonas:** dentro de una hoja los nombres ya no se repiten (0 KB); entre hojas, 70 KB (lugares homónimos en hojas
+  distintas: no es duplicación). El ráster de 100 m pesa 140 KB.
+- **Rural:** 561 KB de teselas (23 %) más la parte rural de las zonas (la mayoría de los 18.258 lugares).
+- **Hace falta −637 KB y ninguna palanca sola llega.** Sin tocar el lector, en el mejor caso: ráster de 250 m (−115
+  con sus recursos) + portales a la mitad (−170) + `track`/`service` (−80) + DP rural (por medir) ≈ −365 + DP. Con
+  un `Tesela.mc` propio de la c5 (`c5_fuentes`): + salida 3 (−130) + calles que solo cruzan (−30) ≈ −525. **Lo que
+  falte sale de la cobertura o de más precisión perdida.**
 
 ### T2 — Palancas que nadie ha medido (cada una: KB ahorrados · qué se pierde · qué toca · tiempo en el reloj)
 
 Se miden **regenerando sobre una copia**, sin tocar la app, de mayor a menor ahorro esperado, y se para en cuanto
 las que valgan alcancen el objetivo de T0. Ninguna se aplica sin el visto bueno del autor sobre lo que se pierde.
 
-- [ ] **A. Tiradas rurales más largas (R = 28 %).** Una tirada lineal se parte a 63 vértices o **240 m**
-      (`RUN_EXT_MAX` 30 × `RUN_EXT_U` 8 m, 5 bits en la cabecera), también en las teselas rurales de 4 m donde
-      las vías van encadenadas. Si la estimación de 5 B vale, 515 KB de R son **≈ 50.000 cabeceras** de 10 B.
-      Medir: cuántas tiradas hay en teselas rurales y cuántas vendrían de partir por los 240 m; qué ahorro da
-      (a) `ext` en unidades de 8 × U m en las teselas de 4 m (960 m por tirada) y (b) subir el tope de vértices.
-      Toca: el generador y **el lector** (`EXT_U` es constante en `Callejero.mc`; haría falta leer U de la tesela,
-      como ya hace la variante b con su unidad). Coste: la búsqueda recorre más vértices por tirada cerca del
-      usuario → tiempo y watchdog en el fēnix 5; `ext` más grueso descarta menos tiradas lejanas.
-- [ ] **B. Portales (P = 16 %, ≈ 295 KB; ya son solo urbanos).** Medir: (a) uno de cada dos por calle (el «portal
+- [x] **A. Tiradas rurales más largas.** ~~Descartada en T1~~: solo 1.634 de 51.848 tiradas se parten por los
+      240 m; cota de −16 KB. No merece tocar el lector.
+- [ ] **F. Las ya medidas, combinadas (primero: solo generador, un commit):** salida 2 (`rcel` 250, −115 KB con
+      sus recursos) + salida 4' (`track` y `service` rurales, −80 KB). Volver a medir juntas sobre la 3.5.3.
+- [ ] **B. Portales (P + E = 344 KB, todos urbanos).** Medir: (a) uno de cada dos por calle (−170 KB; el «portal
       más cercano» puede errar un número); (b) solo las calles con ≥ N portales; (c) por rangos de tramo (pierde
-      el punto exacto; exige lector). Es una decisión de producto del autor: precisión frente a tamaño.
-- [ ] **C. Nombres (S = 19 % en teselas).** Medir: (a) la salida 3 (sin repetir entre teselas, lector propio
-      vía `c5_fuentes`); (b) cuánto pesan en `S` las calles que **solo cruzan** (NC las incluye aunque no tengan
-      tirada en la tesela); (c) abreviar el tipo de vía al generar (pierde fidelidad en pantalla: hoy `Abrev`
-      solo abrevia si el nombre no cabe). En las zonas, qué queda de los 293 KB de nombres tras la salida 1.
-- [ ] **D. Vértices (V = 16 %).** `rural_dp` 8 → 12 y 15 m. Límite: la fuerza bruta de `ref.py` tolera la unidad de
-      la tesela; con 15 m la distancia a la calle puede variar más que el error del GPS en pistas sinuosas.
-- [ ] **E. Coste fijo por recurso** (de T1): si pesa, menos teselas más grandes no es opción (tope de 22,8 KB);
-      sí lo es juntar zonas pequeñas que estén lejos del tope de 13 KB.
-- [ ] **F. Las ya medidas, combinadas:** salida 2 (`rcel` 250) + salida 4' (−8 %, solo generador, un commit).
+      el punto exacto; exige lector). Decisión de producto del autor: precisión frente a tamaño.
+- [ ] **C. Nombres (S = 358 KB en teselas).** Medir: (a) abreviar el tipo de vía al generar («Rúa», «Avenida»,
+      «Camiño», «Estrada», «Lugar»: solo generador; pierde fidelidad en pantalla, aunque `Abrev` ya abrevia cuando
+      no cabe); (b) la salida 3, nombres sin repetir entre teselas (−130 KB; `Tesela.mc` propio de la c5 vía
+      `c5_fuentes`, y su coste en el pico de memoria); (c) las 874 calles que solo cruzan (−30 KB; comprobar qué
+      hace el lector cuando el cruce A/B apunta a un nombre que ya no está).
+- [ ] **D. Vértices (V = 297 KB; 114 rurales).** `rural_dp` 8 → 12 y 15 m, y DP urbano a 2 m. Límite: la fuerza
+      bruta de `ref.py` tolera la unidad de la tesela; con 15 m la distancia a la calle puede variar más que el
+      error del GPS en pistas sinuosas.
+- [ ] **G. K solo en las teselas urbanas (−41 KB).** K salta los vértices de las calles lejanas (watchdog); en las
+      rurales, con 3,7 vértices por tirada, vale menos. Toca `source/Tesela.mc` (si K falta, recorrer): batería
+      completa de los ocho relojes y medir el tiempo en el fēnix 5.
+- [x] **E. Coste fijo por recurso:** medido en T1, 33 KB en 237 recursos (≈ 140 B cada uno). Nada que rascar.
 
 Para cada palanca que se mida: `ref.py` con 0 discrepancias, tests del fēnix 5 en verde y la fila en la tabla de
-este documento.
+este documento. **Suma de lo medible sin tocar el lector (F + B + C.a + D): del orden de −400 a −450 KB; con
+C.b y C.c, −550 a −600. El objetivo son −637.** Si al medir no se llega, T3.
 
 ### T3 — Cobertura (solo si T2 no llega al objetivo; decide el autor)
 

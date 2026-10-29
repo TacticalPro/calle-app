@@ -1,7 +1,12 @@
 # Calles Comunitat Valenciana — textos de la Connect IQ Store
 
 App del catálogo por zonas (`tools/catalogo.json`): `APP=valencia ./ciq.sh tienda` → `bin/calle-valencia.iq`.
-Subida nueva en el portal (no es una versión de ninguna beta), con el id `f435ba19…`. **Sin subir**: la sube el autor.
+Subida nueva en el portal (no es una versión de ninguna beta), con el id `f435ba19…`. **Enviada a revisión el
+2026-10-29** como 3.4.0: [ficha en la tienda](https://apps.garmin.com/apps/5219d400-0c0d-4a5f-99ae-321c13e16f36).
+
+**Beta privada** (app propia, solo el fēnix 7X Pro): `APP=valencia ./ciq.sh beta` → `bin/calle-valencia-beta.iq`, con
+el id de beta `a37285fa…` (`beta_id` en `tools/catalogo.json`; no se cambia nunca):
+[página en la tienda](https://apps.garmin.com/apps/b0f291c0-ce1c-4a96-bd58-2878fed1e7c3).
 
 - **Título (confirmado por el autor, 2026-10-26):** «Calles Comunitat Valenciana (offline)», en inglés y en español. En el
   reloj, «Calles C. Valenciana» (`nombre` de la entrada `valencia` en `tools/catalogo.json`, el único sitio donde se

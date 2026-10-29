@@ -264,6 +264,6 @@
     "beta_relojes": [
       "fenix7xpro"
     ],
-    "beta_nota": "Beta privada propia de Calles Comunitat Valenciana (2026-10-26), solo el fēnix 7X Pro: APP=valencia ./ciq.sh beta. El beta_id no se cambia nunca (la tienda trataría otro id como otra app); no es el de Galicia (19ddcb3e…) ni el de Murcia (fe5c0e8f…). Aún sin subir."
+    "beta_nota": "Beta privada propia de Calles Comunitat Valenciana (2026-10-26), solo el fēnix 7X Pro: APP=valencia ./ciq.sh beta. El beta_id no se cambia nunca (la tienda trataría otro id como otra app); no es el de Galicia (19ddcb3e…) ni el de Murcia (fe5c0e8f…). Subida el 2026-10-29."
   }
 }

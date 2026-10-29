@@ -42,12 +42,15 @@ function irCercanos(logger as Test.Logger) as Boolean {
     var lon = Callejero.LON_MIN + 1000.0d / Callejero.KX;
     var h = Ir.cercanos(d, lat, lon, Ir.HOSPITALES, 2);
     var c = Ir.cercanos(d, lat, lon, Ir.COMISARIAS, 8);
+    // 50 m de la proyección son 50 m reales solo en su latitud central; en LAT_MIN de una región alta (la Comunitat
+    // Valenciana, 3° de norte a sur) son un 2 % más: se compara con la distancia real de esos 50 m.
+    var esperado = Ir.distancia(lat, lon, lat, lon + 50.0d / Callejero.KX);
     var ok = h.size() == 2 && "H cerca".equals(h[0][0]) && "H medio".equals(h[1][0])
-        && ((h[0][5] as Float) - 50.0).abs() < 1.0 && (h[0][4] as Number) == Ir.URGENCIAS
+        && ((h[0][5] as Float) - esperado).abs() < 0.5 && (h[0][4] as Number) == Ir.URGENCIAS
         && c.size() == 2 && "C cerca".equals(c[0][0]) && "Calle A 1".equals(c[0][1]) && "C lejos".equals(c[1][0])
         && Ir.cercanos(d, lat, lon, Ir.OTRAS_POLICIAS, 8).size() == 0;
     if (!ok) {
-        logger.error("h " + h + " c " + c);
+        logger.error("h " + h + " c " + c + " esperado " + esperado);
     }
     // El recurso real de la región carga y tiene el formato.
     var real = Ir.cargar();

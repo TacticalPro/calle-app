@@ -156,7 +156,8 @@ def texto(d, xy, txt, f, fill, anchor="mm"):
 TIPOS = dict(zip(*[iter("Rúa R. Avenida Av. Praza Pr. Praciña Prc. Travesa Tr. Travesía Tr. Camiño Cm. Calle C/ "
                         "Plaza Pl. Paseo P.º Rolda Rd. Ronda Rd. Estrada Estr. Carretera Ctra. Corredoira Corr. "
                         "Costa Cta. Glorieta Gl. Lugar Lg. Urbanización Urb. Polígono Pol. Pasaxe Psx. "
-                        "Ruela Rla. Carrer C. Avinguda Av. Plaça Pl. Passeig Pg. Camí Cm.".split())] * 2))
+                        "Ruela Rla. Carrer C. Avinguda Av. Plaça Pl. Passeig Pg. Camí Cm. Passatge Ptge. "
+                        "Rambla Rbla. Travessera Trav. Baixada Bda.".split())] * 2))
 
 
 def corta(n):

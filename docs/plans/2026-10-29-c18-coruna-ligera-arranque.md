@@ -263,12 +263,31 @@ binario dejó `monkeydo` sin conectar y el log vacío hasta el corte de 600 s: c
 
 ### T4 — Aplicar lo elegido, verificar e instalar
 
-- [ ] Lo elegido entra por banderas en el bloque `c5` de `tools/regiones.json` (como `zona_sin_margen`); nada
-      en `source/` sin aprobación expresa del autor (límite 1).
-- [ ] `ref.py` 0 discrepancias y puntos de control OK; `ref --gen-tests`; tests en fēnix 5, 5S, 6 y 6S
-      (`APP=coruna DEV=<modelo> ./ciq.sh test`, salida a fichero, no por tubería).
-- [ ] Memoria: `medida_c5.py coruna --bordes` y `--punto … --lastre` → margen ≥ 7 KB en el pico; si una palanca
-      toca el lector, repetir también la escalera (`--escalera`).
+**Decisión del autor (2026-10-29): «C tal cual, sin más margen».**
+
+- [x] C fijada en el bloque `c5` de `coruna` en `tools/regiones.json` (`rcel` 250, `rural_sin`, `rural_dp` 15,
+      `portales_mitad`, `abreviar`, `urb_dp` 2, `k` false; la nota dice por qué). `source/` intacto. Regenerada sin
+      `C5_OPTS`: el mismo `.prg`, **1.915.788 B**, 204 recursos (113 teselas + 91 hojas).
+- [x] `ref.py` 0 discrepancias (10.000 puntos; portales 1.338/1.338; zonas 0); puntos de control 10/10 rederivados;
+      `ref --gen-tests` 62 vectores. **Tests: fēnix 5, 5S, 6 y 6S, 55/55 cada uno.**
+- [x] Memoria (`medida_c5.py`, fēnix 5, 2026-10-29 19:15-19:35, lastre retenido desde el arranque):
+      - `--punto` en las dos teselas más pesadas (t71 y t25) **con 7 KB de lastre**: cargan, 20,5 KB libres
+        después, ≤ 17 ms. El margen en el peor arranque en frío sigue ≥ 7 KB, como en la 3.5.3 (7,45 KB).
+      - `--bordes` (18 puntos a 300 m de los bordes y esquinas de las tres hojas más pesadas, z1_6_11 de 12,5 KB
+        con 532 lugares, z0_5_8 y z0_1_7; hasta 4 hojas seguidas): **sin lastre, todo carga**, ≥ 21,9 KB libres en
+        reposo, ≤ 22 ms; **con 3 KB de lastre, todo carga** (≥ 18,9 KB); **con 5 KB, Out Of Memory** en el
+        primer punto. El margen en el pico de la esquina está entre 3 y 5 KB. En la 3.5.3 los bordes se midieron sin lastre:
+        para saber si C lo empeora, la misma prueba sobre los datos de la 3.5.3 en el mismo simulador:
+
+        | `--bordes` (fēnix 5, mismo simulador, 19:15-19:45) | 3.5.3 publicada | **C** |
+        |---|---|---|
+        | sin lastre | carga todo; mínimo libre en reposo 19.992 B | carga todo; **21.904 B** |
+        | lastre de 3 KB | **Out Of Memory** en el 2.º punto | carga todo; 18.872 B |
+        | lastre de 5 KB | Out Of Memory | Out Of Memory |
+
+        **C no empeora el margen de la esquina: lo mejora** (las teselas sin K dejan más sitio). Se acepta sin tocar
+        `tope_zona_kb`. Hojas más pesadas: 3.5.3 z0_1_6 (12.075 B, 296 lugares); C z1_6_11 (12.519 B, 532 lugares).
+- [x] Datos de C restaurados tras la comparación y release recompilada: **1.915.788 B**, SHA-256 `c77390ff…`.
 - [ ] `APP=coruna DEV=fenix5 ./ciq.sh release`, copiar el `.prg` a `/Volumes/GARMIN/GARMIN/APPS/` **con las dos
       esferas puestas**: la prueba real es que instala y abre. Después, recorrido en la muñeca (Santiago, una
       aldea, coche) para el tiempo de consulta.

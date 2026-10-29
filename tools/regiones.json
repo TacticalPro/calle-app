@@ -567,10 +567,15 @@
       "zona_sin_margen": true,
       "tope_kb": 22.8,
       "tope_zona_kb": 13,
-      "rcel": 100,
+      "rcel": 250,
       "zu": 2,
       "rural_u": 4,
-      "rural_dp": 8,
+      "rural_dp": 15,
+      "rural_sin": ["track", "service"],
+      "portales_mitad": true,
+      "abreviar": true,
+      "urb_dp": 2,
+      "k": false,
       "urbana": [
         "15030",
         "15036",
@@ -588,7 +593,7 @@
         "36057",
         "36060"
       ],
-      "nota": "Variante c5 (fēnix 5/5S y 6/6S, 128 KB; plan 4 de la c5, 2026-10-27): una app por provincia. Zona urbana (urbana: ref:ine de los municipios con callejero completo): todo; fuera, las vías de cada calle encadenadas y sin sendas, portales ni parajes. Teselas ≤ 22,8 KB de heap estimado (1 m si tocan la zona urbana, 4 m si no) y zonas en árbol de 20 a 2,5 km, ≤ 20 KB, que se consultan con la tesela soltada (source-c5/Localizador.mc): medido con la app real en el fēnix 5 (2026-10-27), primera tesela ≤ 26,4 KB, menos ~1 KB de código del arreglo de textos y un 10 % de margen (source-c5/Zonas.mc)"
+      "nota": "Variante c5 (fēnix 5/5S y 6/6S, 128 KB; plan 4 de la c5, 2026-10-27): una app por provincia. Zona urbana (urbana: ref:ine de los municipios con callejero completo): todo; fuera, las vías de cada calle encadenadas y sin sendas, portales ni parajes. Teselas ≤ 22,8 KB de heap estimado (1 m si tocan la zona urbana, 4 m si no) y zonas en árbol de 20 a 2,5 km, ≤ 20 KB, que se consultan con la tesela soltada (source-c5/Localizador.mc): medido con la app real en el fēnix 5 (2026-10-27), primera tesela ≤ 26,4 KB, menos ~1 KB de código del arreglo de textos y un 10 % de margen (source-c5/Zonas.mc). C18 (2026-10-29, decisión del autor): el fēnix 5 tiene una cuota de 2 MB para todas las apps de Connect IQ (AppSpace en GarminDevice.xml) y la 3.5.3 (2.537.644 B) no cabía ni sola; para bajar a 1.915.788 B: ráster de parroquias a 250 m, sin track ni service fuera de la zona urbana (rural_sin), Douglas-Peucker rural a 15 m y urbano a 2 m (urb_dp), un portal de cada dos por calle (portales_mitad), el tipo de vía abreviado en los datos (abreviar, misma tabla que source/Abrev.mc) y teselas sin K (k: false; el lector lo admite). Medidas y alternativas en docs/plans/2026-10-29-c18-coruna-ligera-arranque.md"
     },
     "control": [
       {

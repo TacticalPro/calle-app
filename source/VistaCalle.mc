@@ -268,7 +268,8 @@ class VistaCalle extends WatchUi.View {
         var cx = dc.getWidth() / 2;
         if (caja == null) {
             var w = Texto.ancho(dc, y0, y1, 12);
-            var s = Graphics.fitTextToArea(Abrev.corta(nombre), Graphics.FONT_TINY, w, y1 - y0, true);
+            var s = Graphics.fitTextToArea(Texto.trozo(dc, Abrev.corta(nombre), Graphics.FONT_TINY, w),
+                Graphics.FONT_TINY, w, y1 - y0, true);
             dc.drawText(cx, (y0 + y1) / 2, Graphics.FONT_TINY, s, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
             return;
         }
@@ -289,7 +290,8 @@ class VistaCalle extends WatchUi.View {
         var w = Texto.ancho(dc, y - med, y + med, 10);
         var alto = L.y(24) > h + 4 ? L.y(24) : h + 4;
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_XTINY, Graphics.fitTextToArea(txt, Graphics.FONT_XTINY, w, alto, true),
+        dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_XTINY,
+            Graphics.fitTextToArea(Texto.trozo(dc, txt, Graphics.FONT_XTINY, w), Graphics.FONT_XTINY, w, alto, true),
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
@@ -450,11 +452,21 @@ class VistaCalle extends WatchUi.View {
             "memoria " + (st.usedMemory / 1024) + "/" + (st.totalMemory / 1024) + " KB",
             Callejero.ETIQUETA + (Ajustes.zona() == Ajustes.AUTO ? " (auto)" : " (fija)") + " · " + Callejero.DATOS
         ] as Array<String>;
-        var paso = L.y(26) > dc.getFontHeight(Graphics.FONT_XTINY) ? L.y(26) : dc.getFontHeight(Graphics.FONT_XTINY);
+        // La XTINY de los fēnix 5 (23 y 26 px) apila las 7 líneas hasta el borde: se juntan al 92 % de su alto,
+        // y la que aún no cabe en su cuerda va a trozos (Texto.trozo). Bajo el aviso no se pinta ninguna: no quedan
+        // medio tapadas.
+        var h = dc.getFontHeight(Graphics.FONT_XTINY);
+        var paso = L.y(26) > h * 92 / 100 ? L.y(26) : h * 92 / 100;
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         for (var i = 0; i < lineas.size(); i++) {
-            dc.drawText(cx, L.y(L.SUB_Y + 2) + i * paso,
- Graphics.FONT_XTINY, lineas[i], Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+            var y = L.y(L.SUB_Y + 2) + i * paso;
+            if (_aviso != null && y + h / 2 > L.y(108) && y - h / 2 < L.y(172)) {
+                continue;
+            }
+            var w = Texto.ancho(dc, y - h / 4, y + h / 4, 0);   // la celda de la XTINY es más alta que sus letras
+            dc.drawText(cx, y, Graphics.FONT_XTINY,
+                Graphics.fitTextToArea(Texto.trozo(dc, lineas[i], Graphics.FONT_XTINY, w), Graphics.FONT_XTINY, w, h + 4, true),
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         }
     }
 }

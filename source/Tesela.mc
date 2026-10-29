@@ -10,7 +10,9 @@ class Tesela {
     var x1 as Float;    // esquina NE sin el margen
     var y1 as Float;
     var nc as Number;   // calles (los nombres siguientes en S son sufijos de portal)
-    var pb as Number;   // bits por coordenada de portal (12, o 13 en las teselas de más de 4.095 m)
+    var pb as Number;   // bits por coordenada de portal (12, o 13 en las teselas de más de 4.095 unidades)
+    var u as Number;    // metros por unidad de las coordenadas de la tesela (1; 2 o 4 en las grandes de la variante b)
+    var K as Array<Number> or Null;   // variante b: bit de V donde empiezan los vértices de cada calle (y uno final)
     var S as String;    // "\n" + cada nombre + "\n"
     var O as Array<Number>;
     var C as Array<Number>;
@@ -33,7 +35,10 @@ class Tesela {
         x1 = caja[2].toFloat();
         y1 = caja[3].toFloat();
         nc = datos[1] as Number;
-        pb = datos[2] as Number;
+        var pbu = datos[2] as Number;    // pb | U << 8 (sin U, 1 m)
+        pb = pbu & 0xFF;
+        u = pbu >> 8;
+        u = u == 0 ? 1 : u;
         S = datos[3] as String;
         O = datos[4] as Array<Number>;
         C = datos[5] as Array<Number>;
@@ -42,6 +47,7 @@ class Tesela {
         V = datos[8] as Array<Number>;
         P = datos[9] as Array<Number>;
         E = datos[10] as Array<Number>;
+        K = datos.size() > 11 ? datos[11] as Array<Number> : null;
         mejor = new Array<Float>[nc];
         mejorRun = new Array<Number>[nc];
     }

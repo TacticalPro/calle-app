@@ -26,7 +26,8 @@ class Resultado {
     }
 }
 
-// La calle más cercana dentro de una tesela. Todo en Float y metros locales de la tesela.
+// La calle más cercana dentro de una tesela. Todo en Float y unidades locales de la tesela (t.u m: 1 salvo en
+// las teselas grandes de la variante b); las distancias que salen, en metros.
 // Es el mismo algoritmo que Ref.buscar() de tools/ref.py, que lo valida por fuerza bruta.
 module Buscador {
     const LEJOS = 1.0e9;
@@ -36,9 +37,10 @@ module Buscador {
     // Las tiradas van ordenadas por calle (t.C marca dónde empieza cada una) y sus vértices, desde el
     // segundo, en el flujo de bits t.V: hay que avanzar por él aunque la tirada se descarte.
     function buscar(t as Tesela, x as Float, y as Float) as Array<Number> {
-        var px = x - t.ox;
-        var py = y - t.oy;
-        var maxd = Callejero.MAXD.toFloat();
+        var uf = t.u.toFloat();
+        var px = (x - t.ox) / uf;
+        var py = (y - t.oy) / uf;
+        var maxd = Callejero.MAXD.toFloat() / uf;
         var maxd2 = maxd * maxd;
         var mejor = t.mejor;
         var mejorRun = t.mejorRun;
@@ -53,7 +55,8 @@ module Buscador {
         var U = Callejero.CB_U;
         var pxi = px.toNumber();
         var pyi = py.toNumber();
-        var M = Callejero.MAXD + 1;
+        var M = (Callejero.MAXD + t.u - 1) / t.u + 1;
+        var K = t.K;
         var o = 0;                  // bit de V
         var r = 0;
         for (var calle = 0; calle < t.nc; calle++) {
@@ -61,7 +64,12 @@ module Buscador {
             var b = CB[calle];
             if (pxi + M < (b & 0xFF) * U || pxi - M > ((b >> 16) & 0xFF) * U
                     || pyi + M < ((b >> 8) & 0xFF) * U || pyi - M > ((b >> 24) & 0xFF) * U) {
-                // Calle lejana: solo se avanza el flujo de vértices hasta la siguiente.
+                // Calle lejana: solo se avanza el flujo de vértices hasta la siguiente; con K, de un salto.
+                if (K != null) {
+                    o = K[calle + 1];
+                    r = fin;
+                    continue;
+                }
                 while (r < fin) {
                     var g = R[r + 1];
                     var n = (g >> 26) & 0x3F;
@@ -142,7 +150,7 @@ module Buscador {
                     ax = bx;
                     ay = by;
                 }
-                var d = dentro ? 0.0 : Math.sqrt(d2).toFloat();
+                var d = dentro ? 0.0 : Math.sqrt(d2).toFloat() * uf;
                 d += Callejero.PEN[(h1 >> 4) & 3];
                 if (d < mejor[calle]) {
                     mejor[calle] = d;
@@ -171,9 +179,11 @@ module Buscador {
         var j1 = (t.C[s + 1] >> 16) & 0xFFFF;
         var pb = t.pb;
         var m = (1 << pb) - 1;
-        var px = x - t.ox;
-        var py = y - t.oy;
-        var r2 = (Callejero.PORTAL_R * Callejero.PORTAL_R).toFloat();
+        var uf = t.u.toFloat();
+        var px = (x - t.ox) / uf;
+        var py = (y - t.oy) / uf;
+        var pr = Callejero.PORTAL_R.toFloat() / uf;
+        var r2 = pr * pr;
         var mejorJ = -1;
         var mejorD2 = r2;
         for (var j = j0; j < j1; j++) {
@@ -188,7 +198,7 @@ module Buscador {
         if (mejorJ < 0) {
             return null;
         }
-        return [textoNumero(t, j0, mejorJ), Math.sqrt(mejorD2).toFloat()];
+        return [textoNumero(t, j0, mejorJ), Math.sqrt(mejorD2).toFloat() * uf];
     }
 
     // El número del portal j, cuya calle empieza en j0: suma de saltos desde el primero, o el último escape.

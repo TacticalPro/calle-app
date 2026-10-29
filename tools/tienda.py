@@ -8,6 +8,10 @@ para cada reloj tengan exactamente las zonas de la app: si no, para.
 
 Lo llama `APP=<app> ./ciq.sh tienda`, que compila con lo que este script deja. Imprime la carpeta.
 
+Variante c5 (las apps por provincia de Galicia para los de 128 KB: "variante" c5 en el catálogo): el reloj compila
+source/*.mc menos Zonas.mc, más source-c5/Zonas.mc (zonas en árbol), con sourcePath por fichero, y sus tests
+generados de test-gen-c5/<zona>/. La lista sale de source/ cada vez: un fichero nuevo del común no se queda fuera.
+
 Con --beta (`APP=<app> ./ciq.sh beta`): la beta privada de esa app, con su "beta_id" (otro id, que no se cambia
 nunca) y sus "beta_relojes" (por defecto, solo el fēnix 7X Pro), en bin/tienda/<app>-beta/.
 """
@@ -30,6 +34,20 @@ def rutas_jungle(jungle):
         if m:
             rutas[m.group(1)] = [c.strip() for c in m.group(2).split(";")]
     return rutas
+
+
+# Ficheros de source-c5/ que sustituyen a los de source/ en la variante c5 (los demás de source-c5/, el lector del
+# FORMATO 5, no se compilan). Una app puede añadir los suyos con "c5_fuentes" en el catálogo (A Coruña: Localizador.mc,
+# la zona con la tesela soltada).
+C5_PROPIOS = ["Zonas.mc"]
+
+
+def fuentes_c5(propios):
+    """sourcePath de la variante c5 en lugar de «source»: los ficheros de source/ menos los propios, y estos desde
+    source-c5/."""
+    comunes = sorted(f.name for f in (ROOT / "source").glob("*.mc"))
+    assert all(f in comunes and (ROOT / "source-c5" / f).exists() for f in propios), propios
+    return [f"source/{f}" for f in comunes if f not in propios] + [f"source-c5/{f}" for f in propios]
 
 
 def zonas_generadas(carpetas):
@@ -73,6 +91,27 @@ def main():
         app = dict(app, id=app["beta_id"], relojes=app.get("beta_relojes", ["fenix7xpro"]))
 
     jungle = (ROOT / "monkey.jungle").read_text("utf-8")
+    # "variante" de la app: {reloj: variante} cuyos datos lleva ese reloj en esta app, aunque el jungle diga otra
+    # (Galicia lleva el 6X Pro en la b; Madrid, en la c). Se rehacen sus rutas desde las de base.
+    base = {k: re.search(rf"^base\.{k}\s*=\s*(.+)$", jungle, re.M).group(1) for k in ("sourcePath", "resourcePath")}
+    for reloj, v in app.get("variante", {}).items():
+        if reloj not in app["relojes"] or v not in ("normal", "6x", "c", "b", "c5"):
+            sys.exit(f"{clave}: variante «{v}» para «{reloj}», que no está en sus relojes o no existe")
+        if v == "c5" and len(app["zonas"]) != 1:
+            sys.exit(f"{clave}: la variante c5 es de una sola zona (una provincia por app)")
+        suf = "" if v == "normal" else "-" + v
+
+        def ruta(c):
+            c = re.sub(r"^(source|test|resources)-gen(-\w+)?$", rf"\1-gen{suf}", c.strip())
+            if v == "c5" and c == "source":
+                return ";".join(fuentes_c5(C5_PROPIOS + app.get("c5_fuentes", [])))
+            if v == "c5" and c == "test-gen-c5":
+                return f"{c}/{app['zonas'][0]}"
+            return c
+
+        jungle = re.sub(rf"^{reloj}\.(sourcePath|resourcePath)\s*=.*\n?", "", jungle, flags=re.M)
+        jungle += "".join(f"\n{reloj}.{k} = " + ";".join(ruta(c) for c in base[k].split(";"))
+                          for k in ("sourcePath", "resourcePath")) + "\n"
     rutas = rutas_jungle(jungle)
     out = ROOT / "bin" / "tienda" / (clave + ("-beta" if beta else ""))
     filtro = {}   # carpeta source-gen* con más zonas que la app → carpeta de out con solo las de la app

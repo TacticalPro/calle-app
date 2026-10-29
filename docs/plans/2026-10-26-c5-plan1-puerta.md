@@ -11,7 +11,7 @@
 **Tech Stack:** Python 3 (biblioteca estándar), Monkey C (SDK 9.3, `fenix5`, API 3.1), `monkeyc`/`monkeydo`, `StringUtil.convertEncodedString`.
 
 **Plan 2 (después de la puerta, aparte):**
-- variante `c5` en `build_callejero.py`: demarcación, rural sin cortes, unidad por tesela, zonas de 20 km en dos niveles y reparto en dos módulos;
+- variante `c5` en `build_callejero.py`: zona urbana, rural sin cortes, unidad por tesela, zonas de 20 km en dos niveles y reparto en dos módulos;
 - `ref.py` con FORMATO 5;
 - `Resultado` y `Estado` sacados de `Buscador.mc` a su propio fichero, y `rellenar`/`consultar` en el lector `c5`;
 - anotaciones `(:f4)`/`(:c5)`, `tienda.py` y `catalogo.json`;

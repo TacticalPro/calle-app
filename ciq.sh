@@ -1,20 +1,23 @@
 #!/bin/bash
 # CALLE — compilar, probar, generar el callejero y empaquetar.
 #
-#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid; VARIANTE=6x para el fēnix 6X,
-#                         VARIANTE=c para los de 128 KB: fēnix 5/5S y 6/6S;
+#   ./ciq.sh datos        genera el callejero (REGION=santiago|madrid;
+#                         VARIANTE=c para los de 128 KB, fēnix 5/5S y 6/6S, y para el 6X Pro;
+#                         VARIANTE=b para los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro y 5X/5 Plus (Galicia);
 #                         --refresh vuelve a Overpass; --comun solo rehace Callejero/Regiones/ajuste)
 #   ./ciq.sh ref          autotest de la referencia Python y vectores para los tests de Monkey C
 #   ./ciq.sh build        .prg de depuración        → bin/calle.prg
 #   ./ciq.sh release      .prg optimizado (-r -O 2) → bin/calle-release.prg  (el que va al reloj)
 #   ./ciq.sh test         compila con los tests y los ejecuta en el simulador
+#                         APP=<app>: con el jungle de esa app del catálogo (tools/tienda.py; las provincias de la c5:
+#                         APP=coruna DEV=fenix5 ./ciq.sh test). También vale para build, release y sim
 #   ./ciq.sh sim          abre el simulador con la app
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
 #   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
 #                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
 #                         → bin/calle-<zona>-beta.iq
-#   ./ciq.sh prg6x        .prg para un fēnix 6X → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
+#   ./ciq.sh prg6x        .prg para un fēnix 6X Pro → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
 #   ./ciq.sh privacidad   falla si el código puede sacar datos del reloj o guardar fuera de Notas y Ajustes
@@ -30,8 +33,8 @@ cd "$(dirname "$0")"
 
 DEV="${DEV:-fenix7xpro}"
 REGION="${REGION:-santiago}"
-VARIANTE="${VARIANTE:-normal}"     # 6x: datos compactos del fēnix 6X (resources-gen-6x/, source-gen-6x/); c: Madrid
-                                   # entero en teselas adaptativas para los de 128 KB (resources-gen-c/, source-gen-c/)
+VARIANTE="${VARIANTE:-normal}"     # c: Madrid entero en teselas adaptativas para los de 128 KB y el 6X Pro
+                                   # (resources-gen-c/, source-gen-c/); b y c5: ver tools/build_callejero.py
 KEY="${KEY:-$HOME/.garmin/developer_key.der}"
 # Beta privada de la Connect IQ Store: id propio, distinto del de manifest.xml (el de las instalaciones
 # por USB, que guarda las anotaciones). Generado el 2026-10-24; no cambiarlo o la tienda la tratará como
@@ -50,15 +53,24 @@ sdk() {
     BIN="$s/bin"
 }
 
-monkeyc() { "$BIN/monkeyc" -d "$DEV" -f monkey.jungle -y "$KEY" "$@"; }
+monkeyc() { "$BIN/monkeyc" -d "$DEV" -f "$(jungle)" -y "$KEY" "$@"; }
+# El jungle: el del repositorio o, con APP, el de esa app del catálogo (tools/tienda.py lo escribe en bin/tienda/).
+jungle() { if [ -n "${APP:-}" ]; then echo "$($PY tools/tienda.py "$APP")/monkey.jungle"; else echo monkey.jungle; fi; }
 
 # El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
 # /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
 # cierran a la vez y los tests salen en blanco (2026-10-26). Se toma al usarlo y se suelta al salir; si lo
 # tiene otro, se espera (SIM_ESPERA s, 1800 por defecto) y, si no lo suelta, se para.
+# Con SIM_ESPERA=0 no se espera: si está ocupado, se para enseguida.
 CANDADO=/tmp/calles-sim.lock
 simulador() {
     local t=0
+    # Turno dado de antemano (SIM_TURNO=<nombre>): si el candado ya es de ese nombre (primer campo de «quien»),
+    # se usa sin esperar, sin reescribirlo y sin soltarlo al salir; lo suelta quien lo tomó.
+    if [ -n "${SIM_TURNO:-}" ] && [ "$(cut -d' ' -f1 "$CANDADO/quien" 2>/dev/null)" = "$SIM_TURNO" ]; then
+        pgrep -x simulator >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
+        return
+    fi
     until mkdir "$CANDADO" 2>/dev/null; do
         [ -f "$CANDADO/quien" ] && grep -q "^calle-fenix $$ " "$CANDADO/quien" && break
         [ $t -eq 0 ] && echo "simulador ocupado por: $(cat "$CANDADO/quien" 2>/dev/null) — espero" >&2
@@ -79,11 +91,16 @@ simulador() {
 # con el reloj perdido y por USB, se leen) y la zona elegida del callejero (source/Ajustes.mc).
 privacidad() {
     local malo=0
-    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-gen; then
+    if grep -rnE 'Communications|makeWebRequest|ActivityRecording|FitContributor|setProperty|Toybox\.Background|registerForTemporalEvent' source source-c5 source-gen* test test-gen*; then
         echo "privacidad: el código usa una API que puede sacar o guardar datos (arriba)." >&2; malo=1
     fi
-    if grep -rnE 'Storage|Properties' source source-gen | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
+    if grep -rnE 'Storage|Properties' source source-c5 source-gen* test test-gen* | grep -vE '^source/(Notas|Ajustes)\.mc:'; then
         echo "privacidad: solo source/Notas.mc y source/Ajustes.mc pueden guardar en el reloj (arriba)." >&2; malo=1
+    fi
+    # test/ y test-gen*/ están en el sourcePath de los builds publicados: solo quedan fuera si todo va con (:test).
+    if awk 'FNR == 1 { prev = "" } /^(class|module|function) / && prev !~ /\(:test\)/ { print FILENAME ":" FNR ": " $0; bad = 1 }
+            NF { prev = $0 } END { exit !bad }' test/*.mc test-gen*/*.mc 2>/dev/null; then
+        echo "privacidad: en test/ todo va con (:test), o entraría en el paquete publicado (arriba)." >&2; malo=1
     fi
     local perms; perms="$(grep -o 'uses-permission id="[^"]*"' manifest.xml | sed 's/.*id="//;s/"//' | sort -u | tr '\n' ' ')"
     if [ "$perms" != "Positioning " ]; then
@@ -119,8 +136,9 @@ case "${1:-build}" in
              privacidad; sdk; mkdir -p bin/beta
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
-             # Ni los de 128 KB (fēnix 5/5S y 6/6S): la beta es la del 7X Pro y el 6X.
-             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /fenix7xpronowifi/d; /id="fenix(5|5s|6|6s)"/d' \
+             # La beta es solo la del 7X Pro y el 6X Pro: lista blanca, para que no se cuele ningún reloj más
+             # (antes se quitaban unos pocos a mano y entraban el 6 Pro, el 6S Pro, el 5X y los 5 Plus).
+             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /<iq:product id="/{/id="fenix(7xpro|6xpro)"/!d;}' \
                  manifest.xml > bin/beta/manifest.xml
              grep -q "id=\"$BETA_ID\"" bin/beta/manifest.xml || { echo "No pude poner el id de beta" >&2; exit 1; }
              awk -F' = ' '/^#/ || NF < 2 || $1 == "project.manifest" { print; next }
@@ -134,8 +152,8 @@ case "${1:-build}" in
              "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP.iq" -r -O 2 -w 2>&1 \
                  | { grep -v "is large (> 8kb)" || true; }
              ls -la "bin/calle-$APP.iq" ;;
-    prg6x)  # .prg firmado para un fēnix 6X, para copiarlo por cable a GARMIN/APPS (la beta solo la instala
-             # el desarrollador). Con los datos compactos de resources-gen-6x/.
+    prg6x)   # .prg firmado para un fēnix 6X Pro, para copiarlo por cable a GARMIN/APPS sin pasar por la tienda.
+             # Con los datos de la variante c (resources-gen-c/, ver monkey.jungle).
              privacidad; DEV=fenix6xpro; sdk; mkdir -p bin
              monkeyc -o bin/calle-fenix6x.prg -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
              ls -la bin/calle-fenix6x.prg ;;

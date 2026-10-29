@@ -20,6 +20,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+
+def abreviar_tipo(nombre):
+    """La de build_callejero (ref.py corre con python -I, que no pone tools/ en sys.path): se importa al usarla."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_callejero import abreviar_tipo as f
+    return f(nombre)
+
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
 OUT = TOOLS / "out"
@@ -758,6 +765,9 @@ def derivar_control_cfg(ref, region, specs):
         puntos.append(dict(id=id_, lat=round(lat, 7), lon=round(lon, 7), nota=nota))
 
     for sp in specs:
+        if m.get("abreviar") and sp.get("calle"):
+            # Los datos llevan el tipo de vía abreviado (bloque c5, "abreviar"): el punto de control, igual.
+            sp = dict(sp, calle=abreviar_tipo(sp["calle"]))
         t, id_ = sp["tipo"], sp["id"]
         if t == "portal":
             p = next((p for p in g["portales"] if p[2] == sp["calle"] and p[3] == sp["num"] and p[4] == ""), None)
@@ -979,6 +989,8 @@ def gen_tests(ref, region, n=40, semilla=3):
     # Paseo por una calle (la "ruta" de la región; en Santiago, la Rúa do Franco), un fix cada 2 m con
     # ruido lateral de ±3 m: la histéresis no debe hacer bailar el nombre (sustituye a reproducir un GPX).
     calle_ruta = cfg.get("ruta", "Rúa do Franco")
+    if ref.m.get("abreviar"):
+        calle_ruta = abreviar_tipo(calle_ruta)   # los datos de la c5 llevan el tipo de vía abreviado
     # "ruta_cerca" [lat, lon]: la de ese sitio, no la homónima más larga (en la c5, una rural encadenada de Pontevedra
     # era más larga que la Rúa do Príncipe de Vigo, que va en trozos de tramo).
     cerca = ref.xy(*cfg["ruta_cerca"]) if cfg.get("ruta_cerca") else None

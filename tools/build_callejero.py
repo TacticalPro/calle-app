@@ -80,6 +80,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -137,6 +138,7 @@ C5_URB_CELDAS = set()  # (col, fila) de las celdas que tocan la zona urbana
 C5_RURAL_U = 4
 C5_ZONA_MIN = 2500
 C5_TOPE_ZONA = 13 * 1024
+C5_SIN_K = False       # "k": false en el bloque c5 (C18): teselas sin K, como las de la variante normal (el lector lo admite)
 # Zonas sin margen (P33, 2026-10-28; "zona_sin_margen" en el bloque c5 de la región): cada hoja guarda solo los lugares
 # de su cuadrado, y el reloj mira además las hojas vecinas que caen a ZMARGEN m del punto (source-c5/Zonas.mc). Con el
 # margen, cada lugar salía de media en 2,5 hojas: quitarlo baja las zonas de A Coruña de 749 a 530 KB. La hoja lleva
@@ -594,6 +596,23 @@ def descargar_por_partes(region, bbox, partes, refresh, nivel_max=2, q=None):
 
 # ---------------------------------------------------------------- vías
 
+# Misma tabla que source/Abrev.mc (la forma corta que el reloj usa cuando el nombre no cabe). Con "abreviar" en el
+# bloque c5 de la región (C18, 2026-10-29), los datos ya llevan el tipo de vía abreviado y la cadena S de cada tesela
+# pesa menos; en pantalla sale lo mismo que Abrev.corta() habría puesto al no caber.
+ABREV = dict(zip(*[iter((
+    "Rúa", "R.", "Avenida", "Av.", "Praza", "Pr.", "Praciña", "Prc.", "Travesa", "Tr.", "Travesía", "Tr.",
+    "Camiño", "Cm.", "Calle", "C/", "Plaza", "Pl.", "Paseo", "P.º", "Rolda", "Rd.", "Ronda", "Rd.",
+    "Estrada", "Estr.", "Carretera", "Ctra.", "Corredoira", "Corr.", "Costa", "Cta.", "Glorieta", "Gl.",
+    "Lugar", "Lg.", "Urbanización", "Urb.", "Polígono", "Pol.", "Pasaxe", "Psx.", "Ruela", "Rla.",
+    "Carrer", "C.", "Avinguda", "Av.", "Plaça", "Pl.", "Passeig", "Pg.", "Camí", "Cm.",
+    "Passatge", "Ptge.", "Rambla", "Rbla.", "Travessera", "Trav.", "Baixada", "Bda."))] * 2))
+
+
+def abreviar_tipo(nombre):
+    """«Rúa do Franco» → «R. do Franco»: la primera palabra, si es un tipo de vía de ABREV; lo demás, igual."""
+    tipo, sep, resto = nombre.partition(" ")
+    return ABREV[tipo] + sep + resto if sep and tipo in ABREV else nombre
+
 
 def nombre_via(tags, overrides):
     hw = tags.get("highway", "")
@@ -645,7 +664,7 @@ def extraer_vias(elems, proy, overrides, cuenta):
             area = tags.get("area") == "yes" and pts[0] == pts[-1] and len(pts) >= 4
             clase = 1 if hw in PEATONAL else 2 if hw in SENDA else 0
             # nodos y raw (sin simplificar) los usa trocear() para cortar en las intersecciones.
-            vias.append(dict(id=e["id"], nombre=nom, clase=clase, area=area, pts=pts, raw=pts,
+            vias.append(dict(id=e["id"], nombre=nom, clase=clase, area=area, pts=pts, raw=pts, hw=hw,
                              nodos=[n for n, _ in pares] if None not in ids else None,
                              claves=claves_via(tags, nom)))
             cuenta[f"vía {'área ' if area else ''}{['calzada', 'peatonal', 'senda'][clase]}"] += 1
@@ -1680,14 +1699,48 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
 
     assert C5_URBANA, "c5: ninguna parroquia de la zona urbana (¿ref:ine de cfg[\"c5\"][\"urbana\"]?)"
     urb = [t for t in trozos if en_urbana(*cx(t))]
+    urb_dp = c5.get("urb_dp")
+    if urb_dp and urb_dp > DP_TOL:
+        # Más simplificación en la zona urbana (C18): los trozos venían a DP_TOL; extremos y cruces se conservan.
+        for t in urb:
+            if not t["area"] and len(t["pts"]) > 2:
+                t["pts"] = douglas_peucker(t["pts"], urb_dp)
+                t["bb"] = caja_de(t["pts"])
     rur = []
-    for v in encadenar_rural([v for v in vias if not v["area"] and v["clase"] != 2 and not en_urbana(*cx(v))]):
+    # "rural_sin" (C18, 2026-10-29): tipos de vía OSM (highway) que no entran fuera de la zona urbana, p. ej.
+    # ["track", "service"]: las pistas y los viales de servicio con nombre, que son calzada y pesaban como tal.
+    rural_sin = set(c5.get("rural_sin", ()))
+    fuera = [v for v in vias if not v["area"] and v["clase"] != 2 and not en_urbana(*cx(v))]
+    cuenta["c5: vías rurales fuera por su tipo (rural_sin)"] = sum(1 for v in fuera if v.get("hw") in rural_sin)
+    for v in encadenar_rural([v for v in fuera if v.get("hw") not in rural_sin]):
         pts = douglas_peucker(v["raw"], c5.get("rural_dp", 8.0))
         rur.append(dict(nombre=v["nombre"], clase=v["clase"], area=False, pts=pts, bb=caja_de(pts),
                         tramo=(None, None)))
     rur_a = [t for t in trozos if t["area"] and not en_urbana(*cx(t))]
     trozos = [t for t in urb + rur + rur_a if en_prov(*cx(t))]
     portales = [p for p in portales if en_prov(p["x"], p["y"]) and en_urbana(p["x"], p["y"])]
+    cada = int(c5.get("portales_cada") or (2 if c5.get("portales_mitad") else 1))
+    if cada > 1:
+        # Uno de cada `cada` por calle, el primero y el último siempre (C18; "portales_mitad" = 2): el «portal más
+        # cercano» puede errar hasta cada − 1 números. El salto entre números crece y algunos pasan a los escapes E.
+        por_calle = defaultdict(list)
+        for p in portales:
+            por_calle[p["calle"]].append(p)
+        antes, portales = len(portales), []
+        for ps in por_calle.values():
+            ps.sort(key=lambda p: (p["num"], p["suf"], p["x"], p["y"]))
+            portales += [p for i, p in enumerate(ps) if i % cada == 0 or i == len(ps) - 1]
+        cuenta[f"c5: portales fuera (uno de cada {cada})"] = antes - len(portales)
+    if c5.get("abreviar"):
+        # El tipo de vía abreviado ya en los datos (abreviar_tipo): trozos, sus cruces y los portales, a la vez, para
+        # que la tesela, la referencia (geom) y los puntos de control hablen el mismo nombre.
+        for t in trozos:
+            t["nombre"] = abreviar_tipo(t["nombre"])
+            t["tramo"] = tuple(abreviar_tipo(n) if n else n for n in t["tramo"])
+        for p in portales:
+            p["calle"] = abreviar_tipo(p["calle"])
+        cuenta["c5: nombres con el tipo de vía abreviado"] = sum(1 for t in trozos if t["nombre"].split(" ")[0] in
+                                                               set(ABREV.values()))
     parroquias = [p for p in parroquias if en_prov(*cx(p))]
     lugares = [l for l in lugares if (l["tipo"] != 4 or en_urbana(l["x"], l["y"]))
                and any(en_prov(l["x"] + dx, l["y"] + dy) for dx, dy in
@@ -2150,7 +2203,7 @@ def empaquetar(caja, t, sufijos):
     Vl = V.lista()
     # PB lleva la unidad en sus bits altos (pb | U << 8) cuando no es 1: los datos de siempre no cambian.
     lista = [FORMATO, len(calles_runs), pb | (U << 8 if U > 1 else 0), S, O, C, CB, R, Vl, P, E]
-    if VARIANTE in ("b", "c5"):
+    if VARIANTE == "b" or (VARIANTE == "c5" and not C5_SIN_K):
         # K: por calle, más una final, el bit de V donde empiezan sus vértices (una sin tiradas, el de la siguiente).
         K, fin_v = [], V.n
         for k in range(len(calles_runs) - 1, -1, -1):
@@ -2277,7 +2330,8 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
         # El árbol de zonas (zidx anidado) y el centro de la hoja más pesada (ref.py --gen-tests).
         zm = zstats[zmayor]
         meta.update(zona_min=C5_ZONA_MIN, tope_zona=C5_TOPE_ZONA, tope_tesela=KD_TOPE,
-                    z_mayor_xy=[zm["x0"] + zm["lado"] / 2, zm["y0"] + zm["lado"] / 2])
+                    z_mayor_xy=[zm["x0"] + zm["lado"] / 2, zm["y0"] + zm["lado"] / 2],
+                    abreviar=bool(cfg["c5"].get("abreviar")))   # ref.py abrevia igual los nombres de control y ruta
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"meta-{region}{sufijo()}.json").write_text(json.dumps(meta, ensure_ascii=False), "utf-8")
     geom = dict(calles=[dict(n=v["nombre"], c=v["clase"], a=int(v["area"]), t=list(v["tramo"]),
@@ -2683,7 +2737,8 @@ def main():
                          "(resources-gen-b/, source-gen-b/); c5: una app por provincia de Galicia para los de 128 KB "
                          "(resources-gen-c5/, source-gen-c5/; lee las zonas source-c5/Zonas.mc)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU, C5_RURAL_U, C5_ZONA_MIN, C5_TOPE_ZONA, C5_SIN_MARGEN
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU, C5_RURAL_U, C5_ZONA_MIN, C5_TOPE_ZONA, C5_SIN_MARGEN, \
+        C5_SIN_K
     global TEXTO_LATIN1
     VARIANTE = a.variante
     if a.comun:
@@ -2723,6 +2778,10 @@ def main():
     if VARIANTE == "6x" and cfg.get("adaptativa"):
         sys.exit(f"La región {a.region} es de teselas adaptativas: en el fēnix 6X va con la variante c.")
     vc = cfg.get(VARIANTE) if VARIANTE in ("c", "b", "c5") else cfg.get("adaptativa") if VARIANTE == "normal" else None
+    if vc and VARIANTE == "c5" and os.environ.get("C5_OPTS"):
+        # Para medir sin tocar regiones.json (C18): C5_OPTS='{"rcel": 250, "rural_dp": 12}' se funde en el bloque c5.
+        vc = cfg["c5"] = dict(vc, **json.loads(os.environ["C5_OPTS"]))
+        print(f"c5: opciones de C5_OPTS fundidas en el bloque c5: {os.environ['C5_OPTS']}")
     if vc:
         KD = True
         ZONA, KD_TOPE = vc["zona"], round(vc["tope_kb"] * 1024)
@@ -2735,6 +2794,7 @@ def main():
             C5_RURAL_U, C5_ZONA_MIN = vc["rural_u"], vc["zona_min"]
             C5_TOPE_ZONA = round(vc["tope_zona_kb"] * 1024)
             C5_SIN_MARGEN = bool(vc.get("zona_sin_margen"))
+            C5_SIN_K = not vc.get("k", True)
             assert B_LADO_U * C5_RURAL_U < 1 << 15 and ZU > 1
         print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m"
               + (f" en árbol hasta {C5_ZONA_MIN} m y ≤ {vc['tope_zona_kb']} KB" if VARIANTE == "c5" else ""))

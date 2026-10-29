@@ -1,6 +1,8 @@
 import Toybox.Application;
 import Toybox.Lang;
 import Toybox.Position;
+import Toybox.System;
+import Toybox.Time;
 import Toybox.WatchUi;
 
 // Menú (mantener ARRIBA): ir al hospital o la comisaría más cercanos, las anotaciones (y volver a
@@ -9,17 +11,30 @@ module MenuCalle {
     function abrir() as Void {
         var menu = new WatchUi.Menu2({:title => "CALLES"});
         menu.addItem(new WatchUi.MenuItem("Hospital más cercano", "flecha y distancia", :hospital, null));
-        menu.addItem(new WatchUi.MenuItem("Comisaría más cercana", "CNP; al final, otras policías", :comisaria, null));
+        menu.addItem(new WatchUi.MenuItem(peq() ? "Comisaría cercana" : "Comisaría más cercana", "CNP; al final, otras policías",
+            :comisaria, null));
         menu.addItem(new WatchUi.MenuItem(etiquetaNotas(), "START anota en la pantalla de calle", :notas, null));
-        menu.addItem(new WatchUi.MenuItem("Zona: " + etiquetaZona(), "dónde se usa el callejero", :zona, null));
-        menu.addItem(new WatchUi.MenuItem("Callejero: " + Callejero.ETIQUETA,
+        menu.addItem(new WatchUi.MenuItem("Zona: " + etiquetaZona(), peq() ? "del callejero" : "dónde se usa el callejero",
+            :zona, null));
+        menu.addItem(new WatchUi.MenuItem(etiquetaDatos(),
             Callejero.FUENTES + " " + Callejero.DATOS + " · " + Callejero.NTESELAS + " teselas", :datos, null));
         WatchUi.pushView(menu, new DelegadoMenu(menu), WatchUi.SLIDE_UP);
     }
 
+    // Pantallas de menos de 280 px (fēnix 5 y 6; también 7S y 7): el Menu2 del sistema corta por el borde redondo
+    // los textos que en la de 280 caben. Allí van más cortos; en la de 280, los de siempre.
+    function peq() as Boolean {
+        return System.getDeviceSettings().screenWidth < 280;
+    }
+
+    // En las pequeñas, sin la región entre paréntesis: ya la dice la línea siguiente («Datos: …»).
     function etiquetaZona() as String {
         var z = Ajustes.zona();
-        return z == Ajustes.AUTO ? "Automática (" + Callejero.ETIQUETA + ")" : Ajustes.etiqueta(z);
+        return z == Ajustes.AUTO ? (peq() ? "Automática" : "Automática (" + Callejero.ETIQUETA + ")") : Ajustes.etiqueta(z);
+    }
+
+    function etiquetaDatos() as String {
+        return (peq() ? "Datos: " : "Callejero: ") + Callejero.ETIQUETA;
     }
 
     // Automática: la región que contiene la posición (si no hay ninguna, la última usada). Fija: siempre
@@ -43,8 +58,9 @@ module MenuCalle {
         var d = Ir.cargar();
         var pos = posicion();
         var hay = pos != null;
-        var lat = pos != null ? pos[0] : 0.0d;
-        var lon = pos != null ? pos[1] : 0.0d;
+        var lat = pos != null ? pos[0] as Double : 0.0d;
+        var lon = pos != null ? pos[1] as Double : 0.0d;
+        var tFix = pos != null ? pos[2] as Number : 0;
         var menu = new WatchUi.Menu2({:title => titulo});
         var lista = [] as Array<Array>;
         if (d != null) {
@@ -72,21 +88,24 @@ module MenuCalle {
         if (otras) {
             menu.addItem(new WatchUi.MenuItem("Otras policías", "CNP no comisaría, municipal, G. Civil", :otras, null));
         }
-        WatchUi.pushView(menu, new DelegadoIrLista(lista, hay ? lat : null, hay ? lon : null), WatchUi.SLIDE_LEFT);
+        WatchUi.pushView(menu, new DelegadoIrLista(lista, hay ? lat : null, hay ? lon : null, tFix), WatchUi.SLIDE_LEFT);
     }
 
-    // La posición de la app si tiene fix; si no, la última que conozca el reloj. [lat, lon] o null.
-    function posicion() as Array<Double> or Null {
+    // La posición de la app si tiene fix; si no, la última que conozca el reloj, solo si es de hace menos
+    // de L.SEMILLA_MAX_S: una de hace horas, quizá de otra ciudad, ordenaría la lista y apuntaría la flecha
+    // desde donde ya no se está. [lat, lon, segundos del fix] o null.
+    function posicion() as Array or Null {
         var m = (Application.getApp() as CalleApp).modelo;
-        var lat = m.lat;
-        var lon = m.lon;
-        if (m.estado != EST_BUSCANDO && lat != null && lon != null) {
-            return [lat, lon] as Array<Double>;
+        if (m.estado != EST_BUSCANDO) {
+            return [m.lat, m.lon, m.tFix];
         }
-        var p = Position.getInfo().position;
-        if (p != null) {
+        var info = Position.getInfo();
+        var p = info.position;
+        var w = info.when;
+        if (p != null && w != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE
+                && Time.now().value() - w.value() <= L.SEMILLA_MAX_S) {
             var g = p.toDegrees();
-            return [g[0].toDouble(), g[1].toDouble()] as Array<Double>;
+            return [g[0].toDouble(), g[1].toDouble(), w.value()];
         }
         return null;
     }
@@ -169,7 +188,7 @@ class DelegadoZona extends WatchUi.Menu2InputDelegate {
         i = _principal.findItemById(:datos);
         it = i >= 0 ? _principal.getItem(i) : null;
         if (it != null) {
-            it.setLabel("Callejero: " + Callejero.ETIQUETA);
+            it.setLabel(MenuCalle.etiquetaDatos());
             it.setSubLabel(Callejero.FUENTES + " " + Callejero.DATOS + " · " + Callejero.NTESELAS + " teselas");
             _principal.updateItem(it, i);
         }
@@ -181,12 +200,14 @@ class DelegadoIrLista extends WatchUi.Menu2InputDelegate {
     private var _lista as Array<Array>;
     private var _lat as Double or Null;
     private var _lon as Double or Null;
+    private var _tFix as Number;
 
-    function initialize(lista as Array<Array>, lat as Double or Null, lon as Double or Null) {
+    function initialize(lista as Array<Array>, lat as Double or Null, lon as Double or Null, tFix as Number) {
         Menu2InputDelegate.initialize();
         _lista = lista;
         _lat = lat;
         _lon = lon;
+        _tFix = tFix;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
@@ -194,7 +215,7 @@ class DelegadoIrLista extends WatchUi.Menu2InputDelegate {
         if (id == :otras) {
             MenuCalle.abrirIr(Ir.OTRAS_POLICIAS, "Otras policías", false);
         } else if (id instanceof Number) {
-            var v = new VistaIr(_lista, id, _lat, _lon);
+            var v = new VistaIr(_lista, id, _lat, _lon, _tFix);
             WatchUi.pushView(v, new DelegadoIr(v), WatchUi.SLIDE_LEFT);
         }
     }
@@ -255,7 +276,8 @@ class DelegadoNota extends WatchUi.Menu2InputDelegate {
         var id = item.getId();
         if (id == :ir) {
             var pos = MenuCalle.posicion();
-            var v = new VistaIr(_lista, _i, pos != null ? pos[0] : null, pos != null ? pos[1] : null);
+            var v = pos != null ? new VistaIr(_lista, _i, pos[0] as Double, pos[1] as Double, pos[2] as Number)
+                : new VistaIr(_lista, _i, null, null, 0);
             WatchUi.pushView(v, new DelegadoIr(v), WatchUi.SLIDE_LEFT);
         } else if (id == :borrar) {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);

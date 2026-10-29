@@ -66,8 +66,12 @@ class Tes:
     """Una tesela del FORMATO 4 (tools/build_callejero.py), desempaquetada a la manera del reloj."""
 
     def __init__(self, t):
-        fmt, self.nc, self.pb, self.S, O, self.C, self.CB, self.R, self.V, self.P, E = t
+        fmt, self.nc, self.pb, self.S, O, self.C, self.CB, self.R, self.V, self.P, E = t[:11]
         self.fmt = fmt
+        # Variante b: la unidad de la tesela va en los bits altos de PB (sin ellos, 1 m) y K, al final, solo
+        # acelera el reloj (salta las calles lejanas); aquí se recorren todas.
+        self.u = (self.pb >> 8) or 1
+        self.pb &= 0xFF
         n = self.S.count("\n") - 1
         offs = [(O[j // 2] >> (16 * (j % 2))) & 0xFFFF for j in range(n + 1)]
         self.nombres = [self.S[offs[k]:offs[k + 1] - 1] for k in range(n)]
@@ -181,12 +185,14 @@ class Ref:
         N = t.nombres[:t.nc]
         B, MAXD = m["buf"], m["maxd"]
         caja = self.caja(i)
-        px, py = x - (caja[0] - B), y - (caja[1] - B)
+        u = t.u                       # todo en unidades de la tesela; las distancias, de vuelta en metros
+        px, py = (x - (caja[0] - B)) / u, (y - (caja[1] - B)) / u
         best = [math.inf] * len(N)
         brun = [-1] * len(N)          # la tirada más cercana de cada calle (la primera, si empatan)
         tramos = {}                   # offset en R → (A, B)
         vistas = []                   # (calle, d, tramo) de cada tirada medida
-        pxi, pyi, M, U = int(px), int(py), MAXD + 1, m["cb_u"]
+        pxi, pyi, M, U = int(px), int(py), -(-MAXD // u) + 1, m["cb_u"]
+        maxd_u = MAXD / u
         for r, calle, clase, area, ext, vs, a, b in t.tiradas():
             tramos[r] = (a, b)
             # Como el reloj: la caja gruesa de la calle descarta todas sus tiradas de un golpe.
@@ -199,20 +205,20 @@ class Ref:
                 e = ext * m["ext_u"]
                 dx = max(0.0, abs(px - vs[0][0]) - e)
                 dy = max(0.0, abs(py - vs[0][1]) - e)
-                if dx * dx + dy * dy > MAXD * MAXD:
+                if dx * dx + dy * dy > maxd_u * maxd_u:
                     continue
             n = len(vs)
             if n == 1:
                 d2 = (px - vs[0][0]) ** 2 + (py - vs[0][1]) ** 2
             else:
                 d2 = min(dseg2(px, py, *vs[j], *vs[j + 1]) for j in range(n - 1))
-            d = (0.0 if area and dentro(px, py, vs) else math.sqrt(d2)) + m["pen"][clase]
+            d = (0.0 if area and dentro(px, py, vs) else math.sqrt(d2) * u) + m["pen"][clase]
             if d < best[calle]:
                 best[calle], brun[calle] = d, r
             vistas.append((calle, d, (a, b)))
         orden = sorted(range(len(N)), key=lambda s: best[s])
         if not orden or best[orden[0]] > MAXD:
-            return dict(estado="LEJOS", tesela=i, s1=N[orden[0]] if orden else None,
+            return dict(estado="LEJOS", tesela=i, u=u, s1=N[orden[0]] if orden else None,
                         d1=best[orden[0]] if orden else math.inf)
         s1 = orden[0]
         s2 = orden[1] if len(orden) > 1 and best[orden[1]] <= MAXD else None
@@ -220,7 +226,7 @@ class Ref:
         def portal(s):
             mejor = None
             for qx, qy, texto in t.portales(s):
-                d = math.hypot(px - qx, py - qy)
+                d = math.hypot(px - qx, py - qy) * u
                 if d <= m["portal_r"] and (mejor is None or d < mejor[1]):
                     mejor = (texto, d)
             return mejor
@@ -231,7 +237,7 @@ class Ref:
 
         t_s1 = tramos[brun[s1]]
         t1_margen = min([d - best[s1] for c, d, tr in vistas if c == s1 and tr != t_s1] + [math.inf])
-        return dict(estado="OK", tesela=i, s1=N[s1], d1=best[s1], p1=portal(s1), t1=tramo(s1), t1_margen=t1_margen,
+        return dict(estado="OK", tesela=i, u=u, s1=N[s1], d1=best[s1], p1=portal(s1), t1=tramo(s1), t1_margen=t1_margen,
                     s2=N[s2] if s2 is not None else None, d2=best[s2] if s2 is not None else None,
                     p2=portal(s2) if s2 is not None else None)
 
@@ -246,7 +252,8 @@ class Ref:
             return (None, r[1], r[0]) + r[3:]
         return r
 
-    def _zona(self, x, y, margen):
+    def hoja(self, x, y):
+        """(nombre de la zona o None, ox, oy, lado) del punto; None si cae fuera de la rejilla de zonas."""
         m = self.m
         if x < 0 or y < 0:
             return None
@@ -254,11 +261,65 @@ class Ref:
         if zc >= m["zcols"] or zf >= m["zfilas"]:
             return None
         nom = m["zidx"][zf * m["zcols"] + zc]
-        if nom is None:
-            return (None, None, None)
+        ox, oy, lado = zc * m["zona"], zf * m["zona"], m["zona"]
+        while isinstance(nom, list):
+            # Árbol de zonas (variante c5): los cuatro hijos SO, SE, NO, NE, de la mitad de lado (Zonas.consultar).
+            lado //= 2
+            h = (x - ox >= lado) + 2 * (y - oy >= lado)
+            ox, oy = ox + (h & 1) * lado, oy + (h >> 1) * lado
+            nom = nom[h]
+        return nom, ox, oy, lado
+
+    def hojas_en(self, x0, y0, x1, y1):
+        """[(nombre, ox, oy, lado)] de las hojas no nulas cuyo cuadrado toca el rectángulo (Zonas.vecinas)."""
+        m, out = self.m, []
+
+        def bajar(n, ox, oy, lado):
+            if n is None or ox + lado <= x0 or ox > x1 or oy + lado <= y0 or oy > y1:
+                return
+            if isinstance(n, list):
+                h = lado // 2
+                for k in range(4):
+                    bajar(n[k], ox + (k & 1) * h, oy + (k >> 1) * h, h)
+            else:
+                out.append((n, ox, oy, lado))
+
+        for zf in range(max(0, int(y0 // m["zona"])), min(m["zfilas"] - 1, int(y1 // m["zona"])) + 1):
+            for zc in range(max(0, int(x0 // m["zona"])), min(m["zcols"] - 1, int(x1 // m["zona"])) + 1):
+                bajar(m["zidx"][zf * m["zcols"] + zc], zc * m["zona"], zf * m["zona"], m["zona"])
+        return out
+
+    def _cargar_zona(self, nom):
         if nom not in self._z:
             self._z[nom] = json.loads((self.zdir / f"{nom}.json").read_text("utf-8"))
+        return self._z[nom]
+
+    def _lugares(self, nom, ox, oy):
+        """[(x, y, tipo, nombre)] de los lugares de una hoja, en metros de región."""
+        z, m = self._cargar_zona(nom), self.m
+        S, O, L, LN = z[1], z[2], z[5], z[6]
+        zu = z[9] if len(z) > 9 else 1
+
+        def par16(A, k):
+            return (A[k >> 1] >> (16 * (k & 1))) & 0xFFFF
+
+        lx0, ly0 = ox - m["zmargen"], oy - m["zmargen"]
+        return [(lx0 + (p & 0x3FFF) * zu, ly0 + ((p >> 14) & 0x3FFF) * zu, (p >> 28) & 7,
+                 S[par16(O, par16(LN, j)):par16(O, par16(LN, j) + 1) - 1]) for j, p in enumerate(L)]
+
+    def _zona(self, x, y, margen):
+        m = self.m
+        hj = self.hoja(x, y)
+        if hj is None:
+            return None
+        nom, ox, oy, lado = hj
+        if nom is None:
+            return (None, None, None)
+        self._cargar_zona(nom)
         fmt, S, O, F, RL, L, LN = self._z[nom][:7]   # H y FZ (franjas) solo aceleran el reloj
+        zu = self._z[nom][9] if len(self._z[nom]) > 9 else 1   # unidad de los lugares (variante b)
+        assert len(self._z[nom]) <= 10 or self._z[nom][10] == lado, "el lado de la hoja no es el del árbol"
+        rn = lado // m["rcel"]
         assert fmt == m["formato"]
 
         def par16(A, k):
@@ -267,9 +328,8 @@ class Ref:
         n = S.count("\n") - 1
         N = [S[par16(O, k):par16(O, k + 1) - 1] for k in range(n)]
         LN = [par16(LN, j) for j in range(len(L))]
-        ox, oy = zc * m["zona"], zf * m["zona"]
-        c = min(m["rn"] - 1, int((x - ox) // m["rcel"]))
-        r = min(m["rn"] - 1, int((y - oy) // m["rcel"]))
+        c = min(rn - 1, int((x - ox) // m["rcel"]))
+        r = min(rn - 1, int((y - oy) // m["rcel"]))
         v, col = 0, 0
         for k in range(par16(F, r), par16(F, r + 1)):
             t = par16(RL, k)
@@ -277,17 +337,29 @@ class Ref:
             if c < col:
                 v = t & 0xFF
                 break
-        lx0, ly0 = ox - m["zmargen"], oy - m["zmargen"]
+        # Lugares: los de la hoja (con su margen) o, en las hojas sin margen (z[11], P33), los de todas las hojas
+        # que caen a ZMARGEN m del punto, en el orden en que las recorre el reloj (la suya primero).
+        lugs = self._lugares(nom, ox, oy)
+        if len(self._z[nom]) > 11 and self._z[nom][11] == 1:
+            # Las hojas de los 9 puntos de muestra, cada ZMARGEN m (Zonas._consultar): las mismas que tocan el cuadrado
+            # de ZMARGEN m alrededor del punto (hojas_en), porque toda hoja mide más de ZMARGEN, y en el mismo orden.
+            R, vistas = m["zmargen"], {(ox, oy)}
+            for k in range(9):
+                hv = self.hoja(x + (k % 3 - 1) * R, y + (k // 3 - 1) * R)
+                if hv is None or hv[0] is None or (hv[1], hv[2]) in vistas:
+                    continue
+                vistas.add((hv[1], hv[2]))
+                lugs += self._lugares(*hv[:3])
         mejor = {}   # bit → (d, nombre)
         d2b = math.inf   # el segundo barrio más cercano
-        for j, p in enumerate(L):
-            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
+        for lx, ly, tipo, nl in lugs:
+            d = math.hypot(x - lx, y - ly)
             for bit, radio in ((1, m["lugar_r"]), (2, math.inf), (4, m["lugar_r"])):
-                if (p >> 28) & bit and d <= radio:
+                if tipo & bit and d <= radio:
                     if d < mejor.get(bit, (math.inf,))[0]:
                         if bit == 2:
                             d2b = mejor.get(2, (math.inf,))[0]
-                        mejor[bit] = (d, N[LN[j]])
+                        mejor[bit] = (d, nl)
                     elif bit == 2 and d < d2b:
                         d2b = d
         lugar = mejor.get(1) or mejor.get(4)
@@ -299,10 +371,10 @@ class Ref:
         fx, fy = (x - ox) / m["rcel"], (y - oy) / m["rcel"]
         ms = [abs(fx - round(fx)) * m["rcel"], abs(fy - round(fy)) * m["rcel"]]
         ds = {1: [], 2: [], 4: []}
-        for p in L:
-            d = math.hypot(x - (lx0 + (p & 0x3FFF)), y - (ly0 + ((p >> 14) & 0x3FFF)))
+        for lx, ly, tipo, _ in lugs:
+            d = math.hypot(x - lx, y - ly)
             for bit in ds:
-                if (p >> 28) & bit:
+                if tipo & bit:
                     ds[bit].append(d)
         for bit, radio in ((1, m["lugar_r"]), (2, m["barrio_r"]), (4, m["lugar_r"])):
             c = sorted(ds[bit])
@@ -415,13 +487,13 @@ class Ref:
             mejor.sort(key=lambda t: t[0])
             return mejor[:2]
 
-        def tramo(nombre):
-            """El tramo del trozo más cercano, o None si otro trozo con otro tramo está a menos de TOL."""
+        def tramo(nombre, tol=TOL):
+            """El tramo del trozo más cercano, o None si otro trozo con otro tramo está a menos de tol."""
             ts = sorted(tramos.get(nombre, ()), key=lambda t: t[0])
             if not ts:
                 return None
             otros = [e for e, t in ts if t != ts[0][1]]
-            return ts[0][1] if not otros or otros[0] - ts[0][0] > TOL else None
+            return ts[0][1] if not otros or otros[0] - ts[0][0] > tol else None
 
         return best, orden, portal, tramo
 
@@ -488,39 +560,57 @@ def fuerza_bruta(ref, n, semilla=1):
                         cands.append(f1 * m["cols"] + c1)
         for ti in cands:
             r = ref.buscar(x, y, ti)
+            # Con unidad de U m (variante b), la cuantización mueve las distancias hasta ~0,71·U m.
+            u = r.get("u", 1)
+            tol, tol_portal = TOL * u, TOL_PORTAL * u
             g1 = best[orden[0]] if orden else math.inf
-            if g1 <= m["maxd"] - TOL:
+            if g1 <= m["maxd"] - tol:
                 comparados += 1
                 if r["estado"] != "OK":
                     fallos.append((x, y, ti, f"tesela dice {r['estado']} y la calle {orden[0]} está a {g1:.1f} m"))
                     continue
-                if r["s1"] != orden[0] and abs(best.get(r["s1"], math.inf) - g1) > TOL:
+                if r["s1"] != orden[0] and abs(best.get(r["s1"], math.inf) - g1) > tol:
                     fallos.append((x, y, ti, f"tesela {r['s1']} ({r['d1']:.1f}) ≠ global {orden[0]} ({g1:.1f})"))
-                elif abs(r["d1"] - g1) > TOL:
+                elif abs(r["d1"] - g1) > tol:
                     fallos.append((x, y, ti, f"distancia {r['d1']:.2f} ≠ {g1:.2f}"))
                 elif r["s1"] == orden[0]:
-                    tg = tramo_g(orden[0])
+                    tg = tramo_g(orden[0], tol)
                     if tg is not None:
                         tramos_cmp += 1
                         if tuple(r["t1"]) != tg:
                             fallos.append((x, y, ti, f"tramo {r['t1']} ≠ global {tg}"))
                     ps = portal(orden[0])
-                    if ps and ps[0][0] <= m["portal_r"] - TOL and (len(ps) == 1 or ps[1][0] - ps[0][0] > TOL_PORTAL):
+                    if ps and ps[0][0] <= m["portal_r"] - tol and (len(ps) == 1 or ps[1][0] - ps[0][0] > tol_portal):
                         portales_cmp += 1
                         esperado = ps[0][1][4] if ps[0][1][3] == 0 else f"{ps[0][1][3]}{ps[0][1][4]}"
                         if r["p1"] and r["p1"][0] == esperado:
                             portales_ok += 1
                         else:
                             fallos.append((x, y, ti, f"portal {r['p1']} ≠ {esperado}"))
-            elif g1 > m["maxd"] + TOL and r["estado"] == "OK":
+            elif g1 > m["maxd"] + tol and r["estado"] == "OK":
                 fallos.append((x, y, ti, f"tesela da {r['s1']} a {r['d1']:.1f} m y lo más cercano está a {g1:.1f}"))
     fuerza_bruta.tramos = tramos_cmp
     return comparados, fallos, portales_cmp, portales_ok
 
 
+def tol_zonas(ref, x, y):
+    """(parroquia, empate) en m: las tolerancias de zonas_bruta según la resolución de los datos del punto.
+    Parroquia: el raster da el valor del centro de la celda, que puede estar a media diagonal del punto
+    (rcel · √2/2): 71 m con las celdas de 100 m de la c5; con las de 50 m se quedan los 50 m de siempre.
+    Empate de lugar o barrio: cada lugar se guarda en unidades de zu m (hasta zu · √2/2 de error), así que la
+    diferencia entre dos distancias se mueve hasta zu · √2: 1,5 m con zu = 1 y 3 m con zu = 2 (c5). Con las fijas,
+    5 falsos fallos en Pontevedra junto a los bordes de hoja (a 51-54 m del límite y empates de 1,5 y 1,9 m)."""
+    zu = 1
+    hj = ref.hoja(x, y)
+    if hj is not None and hj[0] is not None:
+        z = ref._cargar_zona(hj[0])
+        zu = z[9] if len(z) > 9 else 1
+    return max(50.0, ref.m["rcel"] * math.sqrt(2) / 2 + 1), TOL_PORTAL * zu
+
+
 def zonas_bruta(ref, n, semilla=2):
     """El reloj (raster + lugares de la zona) frente a la verdad (límites reales, todos los lugares).
-    La parroquia solo puede fallar a menos de 50 m de un límite; lugar y barrio, solo en empates."""
+    La parroquia solo puede fallar cerca de un límite; lugar y barrio, solo en empates (tol_zonas)."""
     m = ref.m
     rnd = random.Random(semilla)
     ancho, alto = m["cols"] * m["tesela"], m["filas"] * m["tesela"]
@@ -529,16 +619,17 @@ def zonas_bruta(ref, n, semilla=2):
         x, y = rnd.uniform(0, min(ancho, m["zcols"] * m["zona"])), rnd.uniform(0, min(alto, m["zfilas"] * m["zona"]))
         z = ref.zona(x, y)
         v = ref.zona_global(x, y)
+        tol_par, tol_emp = tol_zonas(ref, x, y)
         cuenta["parroquia"] += v["parroquia"] is not None
         if z[0] != v["parroquia"]:
-            if v["dlim"] < 50:
+            if v["dlim"] < tol_par:
                 cuenta["cerca_limite"] += 1
             else:
                 fallos.append((x, y, f"parroquia {z[0]} ≠ {v['parroquia']} a {v['dlim']:.0f} m del límite"))
-        if z[1] != v["lugar"] and v["margen_lugar"] > 1.5:
+        if z[1] != v["lugar"] and v["margen_lugar"] > tol_emp:
             fallos.append((x, y, f"lugar {z[1]} ≠ {v['lugar']}"))
         cuenta["lugar"] += v["lugar"] is not None
-        if z[2] != v["barrio"] and v["margen_barrio"] > 1.5:
+        if z[2] != v["barrio"] and v["margen_barrio"] > tol_emp:
             fallos.append((x, y, f"barrio {z[2]} ≠ {v['barrio']}"))
         cuenta["barrio"] += v["barrio"] is not None
     return cuenta, fallos
@@ -706,6 +797,9 @@ def derivar_control_cfg(ref, region, specs):
             otro = next((tuple(q), c["n"]) for c in g["calles"] if c["n"] != sp["calle"] and not c["a"]
                         for q in c["p"] if tuple(q) in propia)
             anadir(id_, otro[0][0], otro[0][1], f"cruce de {sp['calle']} con {otro[1]}")
+        elif t == "lejos" and "lat" in sp:
+            # Con lat/lon (las provincias de la c5: la rejilla de 10 m de las teselas adaptativas no se recorre).
+            anadir(id_, *ref.xy(sp["lat"], sp["lon"]), sp.get("nota", "sin calles cerca"))
         elif t == "lejos":
             for f in range(m["filas"]):
                 for col in range(m["cols"]):
@@ -764,6 +858,46 @@ def control(ref, region):
 
 
 # ---------------------------------------------------------------- vectores para Monkey C
+
+
+def heap_tesela(t):
+    """Heap estimado de una tesela FORMATO 4, como build_callejero.empaquetar."""
+    return int(5 * (sum(len(x) for x in t[4:]) + 10) + len(t[3].encode()) + 20 + 10 * t[1])
+
+
+def heap_zona(z):
+    """Heap estimado de una zona, como build_callejero.empaquetar_zona (más 5 B por el lado de la c5)."""
+    return int(5 * (sum(len(x) if isinstance(x, list) else 1 for x in z[2:]) + 7) + len(z[1].encode()) + 20)
+
+
+def pares_mayores(ref, n=5):
+    """Los n pares (tesela, zona) más pesados en heap estimado que conviven en algún punto: el reloj carga la tesela
+    y, con ella en memoria, la zona del punto (Localizador). Por cada tesela, las zonas (hojas) que tocan su caja,
+    muestreadas cada 250 m. [(tesela, zona, heap de la tesela, heap de la zona, lat, lon)] (tools/medida_c5.py)."""
+    m = ref.m
+    pares, hz = {}, {}
+    for ti, (x0, y0, x1, y1) in enumerate(m["cajas"]):
+        if not m["idx"][ti]:
+            continue
+        ht = heap_tesela(json.loads((ref.tdir / f"{m['idx'][ti]}.json").read_text("utf-8")))
+        nx, ny = max(1, int((x1 - x0) // 250)), max(1, int((y1 - y0) // 250))
+        for i in range(nx + 1):
+            for j in range(ny + 1):
+                x, y = x0 + (x1 - x0) * i / nx, y0 + (y1 - y0) * j / ny
+                x, y = min(x, x1 - 0.5), min(y, y1 - 0.5)
+                hoja = ref.hoja(x, y)[0]
+                if hoja and (ti, hoja) not in pares:
+                    if hoja not in hz:
+                        hz[hoja] = heap_zona(json.loads((ref.zdir / f"{hoja}.json").read_text("utf-8")))
+                    pares[(ti, hoja)] = (ht + hz[hoja], ht, hz[hoja], x, y)
+    return [(f"t{ti}", hoja, ht, hz_, *ref.latlon(x, y))
+            for (ti, hoja), (_, ht, hz_, x, y) in sorted(pares.items(), key=lambda kv: -kv[1][0])[:n]]
+
+
+def par_mayor(ref, n=5):
+    """Imprime los pares de pares_mayores, para llevar allí el reloj."""
+    for t, z, ht, hz, lat, lon in pares_mayores(ref, n):
+        print(f"{t} {ht} B + {z} {hz} B = {ht + hz} B ({(ht + hz) / 1024:.1f} KB)  en {lat:.6f},{lon:.6f}")
 
 
 def mc(s):
@@ -845,9 +979,17 @@ def gen_tests(ref, region, n=40, semilla=3):
     # Paseo por una calle (la "ruta" de la región; en Santiago, la Rúa do Franco), un fix cada 2 m con
     # ruido lateral de ±3 m: la histéresis no debe hacer bailar el nombre (sustituye a reproducir un GPX).
     calle_ruta = cfg.get("ruta", "Rúa do Franco")
-    c = max((c for c in g["calles"] if c["n"] == calle_ruta and len(c["p"]) > 1),
+    # "ruta_cerca" [lat, lon]: la de ese sitio, no la homónima más larga (en la c5, una rural encadenada de Pontevedra
+    # era más larga que la Rúa do Príncipe de Vigo, que va en trozos de tramo).
+    cerca = ref.xy(*cfg["ruta_cerca"]) if cfg.get("ruta_cerca") else None
+    c = max((c for c in g["calles"] if c["n"] == calle_ruta and len(c["p"]) > 1
+             and (cerca is None or min(math.dist(q, cerca) for q in c["p"]) <= 500.0)),
             key=lambda c: sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1)))
-    ruta = []
+    # Sin los 8 m de cada extremo: el tramo suele acabar en un cruce y, con el ruido, el primer fix (que aún no
+    # tiene histéresis) caía en la otra calle (Barcelona, 48 m entre Passatge del Crèdit y Carrer d'Avinyó:
+    # 3 de 24 fixes con otra calle, 2026-10-28). El ruido se sortea igual, para no mover el resto de vectores.
+    total = sum(math.dist(c["p"][j], c["p"][j + 1]) for j in range(len(c["p"]) - 1))
+    ruta, hecho = [], 0.0
     for j in range(len(c["p"]) - 1):
         (ax, ay), (bx, by) = c["p"][j], c["p"][j + 1]
         L_ = math.dist((ax, ay), (bx, by))
@@ -855,7 +997,9 @@ def gen_tests(ref, region, n=40, semilla=3):
         for k in range(int(L_ // 2)):
             t = k * 2 / L_
             ruido = rnd.uniform(-3, 3)
-            ruta.append(ref.latlon(ax + t * (bx - ax) + nx * ruido, ay + t * (by - ay) + ny * ruido))
+            if 8.0 <= hecho + k * 2 <= total - 8.0:
+                ruta.append(ref.latlon(ax + t * (bx - ax) + nx * ruido, ay + t * (by - ay) + ny * ruido))
+        hecho += L_
     L += ["", f"// Paseo por {calle_ruta} con ruido: el nombre no debe bailar.", "(:test)",
           f"function ruta{mod}(logger as Test.Logger) as Boolean {{",
           f"    return Vectores.ruta(logger, {mc(calle_ruta)}, ["]
@@ -873,16 +1017,20 @@ def gen_tests(ref, region, n=40, semilla=3):
     else:
         x0, y0 = (ti % m["cols"]) * m["tesela"], (ti // m["cols"]) * m["tesela"]
         x1, y1 = x0 + m["tesela"], y0 + m["tesela"]
-    zi = int(m["z_mayor"][1:])
-    zx, zy = (zi % m["zcols"] + 0.5) * m["zona"], (zi // m["zcols"] + 0.5) * m["zona"]
+    if m.get("z_mayor_xy"):   # árbol de zonas (c5): el centro de la hoja más pesada
+        zx, zy = m["z_mayor_xy"]
+    else:
+        zi = int(m["z_mayor"][1:])
+        zx, zy = (zi % m["zcols"] + 0.5) * m["zona"], (zi // m["zcols"] + 0.5) * m["zona"]
     for id_, (x, y) in (("tmayor", ((x0 + x1) / 2, (y0 + y1) / 2)), ("zmayor", (zx, zy))):
         if ref.celda(x, y) >= 0:
             cad.append((id_, *[round(v, 7) for v in ref.latlon(x, y)]))
     for id_, lat, lon in cad:
         L += ["", "(:test)", f"function cadena{mod}_{re.sub(r'[^A-Za-z0-9]', '_', id_)}(logger as Test.Logger) as Boolean {{",
               f"    return Vectores.cadena(logger, {cfg['id']}, {lat!r}d, {lon!r}d);", "}"]
-    out = ROOT / f"test-gen{ref.suf}" / f"Vectores{mod}Test.mc"
-    out.parent.mkdir(exist_ok=True)
+    # c5: una carpeta por provincia, porque cada app lleva solo su región (tools/tienda.py).
+    out = ROOT / f"test-gen{ref.suf}" / (region if ref.suf == "-c5" else "") / f"Vectores{mod}Test.mc"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(L) + "\n", "utf-8")
     print(f"escrito {out.relative_to(ROOT)} ({len(filas)} vectores, ruta de {len(ruta)} fixes)")
 
@@ -894,7 +1042,9 @@ def main():
     ap.add_argument("--derivar", action="store_true")
     ap.add_argument("--gen-tests", action="store_true")
     ap.add_argument("--n", type=int, default=10000, help="puntos de la fuerza bruta")
-    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal")
+    ap.add_argument("--variante", choices=("normal", "6x", "c", "b", "c5"), default="normal")
+    ap.add_argument("--par-mayor", action="store_true",
+                    help="el par (tesela, zona) más pesado que conviven en un punto: el peor caso de memoria del reloj")
     a = ap.parse_args()
     ref = Ref(a.region, a.variante)
     if a.punto:
@@ -903,6 +1053,9 @@ def main():
         return
     if a.derivar:
         derivar_control(ref, a.region)
+        return
+    if a.par_mayor:
+        par_mayor(ref)
         return
     print(f"Fuerza bruta ({a.n} puntos, datos OSM {ref.m['datos']}):")
     comparados, fallos, pc, pok = fuerza_bruta(ref, a.n)
@@ -915,7 +1068,7 @@ def main():
     print(f"Zonas ({nz} puntos al azar, datos OSM {ref.m['zonas']}):")
     cz, fz = zonas_bruta(ref, nz)
     print(f"  con parroquia {cz['parroquia']}, con lugar {cz['lugar']}, con barrio {cz['barrio']}; "
-          f"{cz['cerca_limite']} parroquias distintas a < 50 m de un límite (admitido); {len(fz)} discrepancias")
+          f"{cz['cerca_limite']} parroquias distintas cerca de un límite (admitido, tol_zonas); {len(fz)} discrepancias")
     for x, y, msg in fz[:15]:
         lat, lon = ref.latlon(x, y)
         print(f"   {lat:.6f},{lon:.6f}: {msg}")

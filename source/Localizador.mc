@@ -9,6 +9,7 @@ class Localizador {
     var modelo as Modelo;
     private var _t as Tesela or Null = null;
     private var _reg as Number = 0;      // región de la tesela cargada (Callejero.ID)
+    private var _vacia as Number = -1;   // celda de esa región que ya se sabe sin calles
     private var _x as Float = -1.0e6;
     private var _y as Float = -1.0e6;
     private var _ms as Number = 0;
@@ -37,11 +38,13 @@ class Localizador {
 
     function procesar(info as Position.Info, forzado as Boolean, semilla as Boolean) as Void {
         var pos = info.position;
-        if (pos == null || info.accuracy == Position.QUALITY_NOT_AVAILABLE) {
+        var w = info.when;
+        // Una LAST_KNOWN sin hora no se sabe de cuándo es: pintarla como fresca engañaría.
+        if (pos == null || info.accuracy == Position.QUALITY_NOT_AVAILABLE
+                || (w == null && info.accuracy == Position.QUALITY_LAST_KNOWN)) {
             return;
         }
         var deg = pos.toDegrees();
-        var w = info.when;
         actualizar(deg[0].toDouble(), deg[1].toDouble(), info.accuracy as Number,
             w != null ? w.value() : Time.now().value(), forzado, semilla);
     }
@@ -85,13 +88,17 @@ class Localizador {
                 m.tesela = -1;
                 return;
             }
-            if (t == null || t.idx != i) {
+            // En una celda sin calles (monte, mar) no se recarga nada en cada posición: ni la tesela, que no
+            // existe, ni la zona, que habría que volver a leer entera.
+            var yaVacia = t == null && i == _vacia && _reg == Callejero.ID;
+            if (!yaVacia && (t == null || t.idx != i)) {
                 _t = null;   // soltar la anterior antes de cargar: nunca dos en memoria
                 t = null;
                 Zonas.soltar();   // ni la zona: se vuelve a cargar después, y es pequeña
                 t = Teselas.cargar(i);
                 _t = t;
                 _reg = Callejero.ID;
+                _vacia = t == null ? i : -1;
             }
             if (t == null) {
                 m.limpiar();

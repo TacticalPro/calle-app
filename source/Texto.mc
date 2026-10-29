@@ -1,6 +1,7 @@
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
+import Toybox.System;
 
 // Nombres largos en pantalla redonda: reparte palabras en líneas cuyo ancho depende
 // de la altura (la cuerda del círculo), probando fuentes de mayor a menor.
@@ -65,6 +66,31 @@ module Texto {
             lineas.add(actual);
         }
         return lineas;
+    }
+
+    // Pantallas pequeñas (fēnix 5 y 6): si txt no cabe en una línea de ancho w, lo parte por palabras en trozos que
+    // caben y devuelve el que toca ahora (cambia cada 2 s), con «…» donde sigue. Si cabe, txt tal cual: lo que ya cabía
+    // se pinta igual que antes. Con una palabra que no cabe sola, también tal cual (quien llama lo recorta).
+    function trozo(dc as Graphics.Dc, txt as String, f as Graphics.FontType, w as Number) as String {
+        if (dc.getTextWidthInPixels(txt, f) <= w) {
+            return txt;
+        }
+        w -= 2 * dc.getTextWidthInPixels("…", f);
+        var ls = partir(dc, txt, f, [w, w, w, w, w, w, w, w] as Array<Number>);
+        if (ls == null) {
+            return txt;
+        }
+        var n = ls.size();
+        var p = turno(System.getTimer(), n);
+        return (p > 0 ? "…" : "") + ls[p] + (p < n - 1 ? "…" : "");
+    }
+
+    // Qué trozo de n toca en el instante t (ms de System.getTimer()), cambiando cada 2 s. El contador da la vuelta a
+    // negativo a los ~24,8 días de reloj encendido y el % de Monkey C conserva el signo: sin corregirlo, el índice sale
+    // negativo (Array Out Of Bounds en el 7X Pro, 3.5.1, 2026-10-27; el simulador empieza en 0 y no lo ve).
+    function turno(t as Number, n as Number) as Number {
+        var p = (t / 2000) % n;
+        return p < 0 ? p + n : p;
     }
 
     // Busca la primera combinación (fuente, forma del nombre, nº de líneas) que cabe en la

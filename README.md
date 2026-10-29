@@ -6,8 +6,9 @@ de la app y la posición no sale nunca del reloj.
 
 > **English.** Calles is an offline street finder for Garmin fēnix watches. It shows the street you are on,
 > the nearest door number and the cross streets on each side. The street data ships inside the app, it
-> needs no phone or network, and your position never leaves the watch. Areas: Santiago de Compostela and
-> Madrid (Spain). The interface is in Spanish.
+> needs no phone or network, and your position never leaves the watch. One app per area (Spain): Galicia,
+> Madrid, and the provinces of A Coruña and Pontevedra for the 128 KB watches; Barcelona and Murcia in beta.
+> The interface is in Spanish.
 
 ![Pantallas de Calles](docs/tienda/ficha_1.png)
 
@@ -15,8 +16,8 @@ de la app y la posición no sale nunca del reloj.
 
 - **La calle, el portal más cercano y el tramo** («entre C/ de la Montera y C/ de Hortaleza»). En un cruce
   da la esquina, y si duda entre dos paralelas muestra las dos («DOS CALLES»).
-- **Barrio y distrito** en Madrid; **barrio, lugar y parroquia** en Santiago y su entorno. Si no hay calle
-  a 50 m, el lugar más cercano.
+- **Barrio y distrito** en Madrid; **barrio, lugar y parroquia** en Galicia. Si no hay calle a 50 m, el
+  lugar más cercano.
 - **Hospital con urgencias y comisaría más cercanos.** Flecha y anillo de brújula, con el destino marcado
   en el anillo, y distancia en línea recta. No hay ruta por calles.
 - **Anotaciones con START:** hora, lugar y coordenadas, guardadas en el reloj. Desde el menú, «Ir aquí»
@@ -30,21 +31,29 @@ de la app y la posición no sale nunca del reloj.
 - El manifiesto pide **solo `Positioning`**. Sin el permiso `Communications`, la plataforma no deja hacer
   peticiones de red: la app no puede enviar la posición a ningún sitio.
 - **No graba actividades** ni ficheros FIT.
-- Solo guarda en el reloj las anotaciones (hasta que el usuario las borra) y la zona elegida.
+- Solo guarda en el reloj las anotaciones (hasta que el usuario las borra), la zona elegida y, con la zona
+  automática, la última región usada (para arrancar en ella antes de tener posición; no guarda la posición).
 - `./ciq.sh privacidad` falla si el código usa red, grabación o segundo plano, o si algo fuera de
   `source/Notas.mc` y `source/Ajustes.mc` guarda en el reloj. Se ejecuta solo antes de `release`,
   `package`, `beta`, `prg6x` e `instalar`.
 
 ## Relojes y zonas
 
-| Reloj | Zonas |
-|---|---|
-| fēnix 7X Pro (y su variante sin Wi-Fi) | Santiago de Compostela y alrededores; término municipal de Madrid |
-| fēnix 6X Pro | una parte de Madrid |
-| fēnix 7X Pro, app aparte (Calles Galicia, en beta) | Galicia entera, en teselas adaptativas y zonas de 10 km |
+Una app por zona en la Connect IQ Store. La lista completa (ids, relojes y variante de datos por reloj)
+está en `tools/catalogo.json`; `APP=<clave> ./ciq.sh tienda` compila la de cada una.
 
-El fēnix 6X no admite más de 254 recursos de datos por app, así que lleva datos compactos y solo los
-distritos de `compacta.distritos` en `tools/regiones.json`.
+| App | Zona | Relojes |
+|---|---|---|
+| Calles Galicia | Galicia entera | familia fēnix 7; fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus (variante b) |
+| Calles Madrid | término municipal de Madrid | familia fēnix 7; fēnix 6X Pro (variante c) |
+| Calles A Coruña | provincia de A Coruña | fēnix 5/5S y 6/6S, los de 128 KB (variante c5) |
+| Calles Pontevedra | provincia de Pontevedra | fēnix 5/5S y 6/6S (variante c5) |
+| Calles Barcelona (beta) | Barcelona | familia fēnix 7 y modelos de 768 KB con pantalla redonda |
+| Calles Murcia (beta) | Murcia | familia fēnix 7 |
+
+Las variantes existen porque no todos los relojes caben igual: los de 1,25 MB no admiten más de 254
+recursos de datos por app (variantes b y c, con teselas adaptativas), y los de 128 KB, ni una provincia
+entera en el formato normal (variante c5).
 
 Para **añadir una ciudad**, se describe la región en `tools/regiones.json` y se ejecuta
 `REGION=<nombre> ./ciq.sh datos`. Los puntos de control salen con `REGION=<nombre> ./ciq.sh ref --derivar`.
@@ -101,11 +110,11 @@ REGION=galicia ./ciq.sh ref --gen-tests
 ./ciq.sh release                    # → bin/calle-release.prg
 ```
 
-**fēnix 6X:**
+**fēnix 6X Pro** (variante c, Madrid entero):
 
 ```sh
-VARIANTE=6x REGION=madrid ./ciq.sh datos
-VARIANTE=6x REGION=madrid ./ciq.sh ref --gen-tests
+VARIANTE=c REGION=madrid ./ciq.sh datos
+VARIANTE=c REGION=madrid ./ciq.sh ref --gen-tests
 DEV=fenix6xpro ./ciq.sh test
 ./ciq.sh prg6x                      # → bin/calle-fenix6x.prg
 ```

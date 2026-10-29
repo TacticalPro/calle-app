@@ -24,6 +24,12 @@ subir cada trozo a un `<input type=file>` auxiliar creado por JS, recomponer con
 SHA-256 en la página y asignarlo al campo real con `DataTransfer`. Servirlo desde localhost no vale: la CSP
 (`connect-src`) del portal lo bloquea.
 
+**Aprobada la 3.4.0 (2026-10-26).** Ese mismo día, con *Edit Details*: título «Calles Madrid (offline)», carátula
+«CALLES / MADRID» y la descripción de abajo (la de la tienda era aún la de la 3.1.0). **3.4.1 subida el 2026-10-26**
+(*Upload New Version*, mismos 9 relojes y 14 piezas, firma verificada por el portal): solo cambia el nombre en el
+reloj. Antes hubo que rehacer `source-gen-c` (`REGION=madrid VARIANTE=c ./ciq.sh datos --comun`): estaba generado
+antes de `ZPREF` y el 6X Pro no compilaba.
+
 **Título «Calles Madrid (offline)»** (el autor, 2026-10-26; antes «CALLE Madrid (offline)»: que no usa red es su
 punto fuerte). Se cambia con *Edit Details*, junto con la carátula «CALLES / MADRID», en cuanto Garmin apruebe la
 versión en revisión: no se toca mientras tanto. En el reloj, «Calles Madrid» llega con la próxima versión.
@@ -63,6 +69,14 @@ Código y método de generación de los datos: https://github.com/TacticalPro/ca
 
 Datos: © colaboradores de OpenStreetMap (ODbL). Fuente: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
 
+**Novedades (3.4.4):** Sin GPS, la guía al hospital o a la comisaría ya no parte de una posición de hace horas: si el dato tiene más de 15 s, la distancia sale en gris y con su edad. En el monte gasta menos batería, y la distancia norte-sur es exacta a la latitud. **Subida el 2026-10-28** con *Upload New Version* (52,6 MB, 14 piezas, SHA-256 `14319aa9…`; API: 3.4.4, interna 7): `fa6a24f`. Entró con las novedades de la 3.4.3; corregidas el mismo día con *Edit Details* (API: ES/EN nuevas, sigue la interna 7).
+
+**Novedades (3.4.3):** los nombres de calle largos ya no cierran la app cuando el reloj lleva más de unos 25 días encendido sin reiniciarse. **Subida el 2026-10-27 (tarde), en revisión:** corrige el cierre de `Texto.trozo` con `System.getTimer()` negativo (`a5fe21f`).
+
+**Novedades (3.4.2):** los nombres largos ya no se cortan en las pantallas redondas pequeñas.
+
+**Novedades (3.4.1):** la app pasa a llamarse «Calles Madrid» también en el reloj.
+
 **Novedades (3.4.0):** pantalla nueva: hora grande, calidad del GPS en un arco, número de portal en una pastilla
 ámbar y rótulos en mayúsculas, más legibles con un vistazo. Icono nuevo.
 
@@ -99,6 +113,14 @@ First release: please send bugs and suggestions to the contact email.
 Source code and how the data is built: https://github.com/TacticalPro/calle-app
 
 Data: © OpenStreetMap contributors (ODbL). Source: Ayuntamiento de Madrid (datos.madrid.es), CC BY 4.0.
+
+**What's new (3.4.4):** Without GPS, guidance to the hospital or police station no longer starts from a position hours old: if the fix is more than 15 s old, the distance turns grey and shows its age. Less battery use in open country, and exact north-south distances.
+
+**What's new (3.4.3):** Fixes a crash with long street names when the watch had been on for more than about 25 days without a restart.
+
+**What's new (3.4.2):** long names no longer cut off on small round screens.
+
+**What's new (3.4.1):** the app is now called «Calles Madrid» on the watch too.
 
 **What's new (3.4.0):** new screen: large clock, GPS quality as an arc, the door number on an amber badge and
 upper-case labels, easier to read at a glance. New icon.

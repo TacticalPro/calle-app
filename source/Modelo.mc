@@ -35,7 +35,11 @@ class Modelo {
     }
 
     function edad() as Number {
-        return tFix == 0 ? 0 : Time.now().value() - tFix;
+        if (tFix == 0) {
+            return 0;
+        }
+        var e = Time.now().value() - tFix;
+        return e > 0 ? e : 0;
     }
 
     function hayCalle() as Boolean {

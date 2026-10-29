@@ -83,13 +83,17 @@ import math
 import re
 import subprocess
 import sys
-import tempfile
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
+
+# Los anchos de bit de los formatos se comprueban con assert: con python -O desaparecerían y los datos se
+# desbordarían sin aviso.
+if not __debug__:
+    sys.exit("build_callejero.py no se ejecuta con python -O: sus comprobaciones son assert.")
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
@@ -106,6 +110,14 @@ TOPE_RECURSOS_6X = 250     # el compilador corta en 254; margen para cadenas o i
 # Variante c (fēnix 5/5S y 6/6S: 128 KB por app, API 3.1 o 3.4, el mismo tope de recursos): teselas
 # adaptativas (teselar_kd) que caben en KD_TOPE bytes de heap estimado.
 KD_TOPE = 30 * 1024
+# Variante b (fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus: 1,25 MB por app y el tope de 254 recursos):
+# teselas adaptativas grandes y zonas grandes, para que una región entera (Galicia, 215 km) quepa en ~250
+# recursos. Cada tesela lleva su unidad U (1, 2 o 4 m; las de ≤ 7,9 km, 1 m como siempre) y K, el bit de V
+# donde empiezan los vértices de cada calle: así la búsqueda salta las calles lejanas sin recorrer sus tiradas,
+# que en una tesela grande dispararía el watchdog (120.000 instrucciones). Las zonas llevan su unidad ZU.
+B_UNIDADES = (1, 2, 4)
+B_LADO_U = 7900       # unidades: lado máximo de una tesela con su margen (13 bits, y la caja gruesa hasta 8.160)
+ZU = 1                # m por unidad de las coordenadas de los lugares de una zona (14 bits)
 KD_LADO_MAX = 7800     # m: las coordenadas de tirada son de 13 bits con el margen
 KD_LADO_MIN = 300      # m: más pequeña no se parte aunque pese más (no debería pasar)
 KD_PASO = 10           # m: los cortes caen en múltiplos de esto
@@ -113,6 +125,24 @@ KD_LLENADO = 0.92      # al contar cuántas teselas necesita una caja, cada una 
 # Teselas adaptativas en la variante c y en las regiones con "adaptativa" (Galicia entera, en la normal: la
 # rejilla fija de 500 m serían ≈ 190.000 celdas en el índice). Lo fija main().
 KD = False
+# Variante c5 (una app por provincia de Galicia para los de 128 KB: fēnix 5/5S y 6/6S; plan 4 de la c5, 2026-10-27).
+# Reglas de volumen de la especificación c5 (preparar_c5): en la zona urbana, todo; fuera, las vías de cada calle
+# encadenadas y sin sendas, portales ni parajes. Teselas de 1 m de unidad si tocan la zona urbana y de C5_RURAL_U m
+# si no; una caja que no cabe solo por el lado se parte por la mitad geométrica. Zonas en árbol
+# cuaternario (zonas_arbol): cada una se parte en cuatro mientras pase de C5_TOPE_ZONA, hasta C5_ZONA_MIN m; las
+# lee source-c5/Zonas.mc, que estas apps compilan en lugar de source/Zonas.mc (tools/tienda.py). Lo fija main().
+C5_URBANA = []         # [(caja, anillo)] de las parroquias de la zona urbana
+C5_URB_CELDA = 500     # m: rejilla de la zona urbana para elegir la unidad de cada tesela
+C5_URB_CELDAS = set()  # (col, fila) de las celdas que tocan la zona urbana
+C5_RURAL_U = 4
+C5_ZONA_MIN = 2500
+C5_TOPE_ZONA = 13 * 1024
+# Zonas sin margen (P33, 2026-10-28; "zona_sin_margen" en el bloque c5 de la región): cada hoja guarda solo los lugares
+# de su cuadrado, y el reloj mira además las hojas vecinas que caen a ZMARGEN m del punto (source-c5/Zonas.mc). Con el
+# margen, cada lugar salía de media en 2,5 hojas: quitarlo baja las zonas de A Coruña de 749 a 530 KB. La hoja lleva
+# un 1 detrás de su lado (z[11]).
+C5_SIN_MARGEN = False
+_C5_UNIDAD = {}
 
 
 def sufijo():
@@ -479,8 +509,7 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
     if f.exists() and not refresh:
         print(f"Overpass: caché {f.name}")
         return json.loads(f.read_text("utf-8"))
-    with tempfile.NamedTemporaryFile("w", suffix=".ql", delete=False) as tq:
-        tq.write(q)
+    vacia = None
     # Overpass da 502/504 a ratos cuando está cargado: tres vueltas por los servidores, con espera.
     servidores = servidores or SERVIDORES
     for vuelta, url in [(v, u) for v in range(vueltas) for u in servidores]:
@@ -489,7 +518,7 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
             time.sleep(60)
         print(f"Overpass: descargando de {url} …")
         r = subprocess.run(["curl", "-sS", "--fail", "--max-time", "900", "-A", UA, url,
-                            "--data-urlencode", f"data@{tq.name}", "-o", str(f) + ".part"])
+                            "--data-urlencode", "data@-", "-o", str(f) + ".part"], input=q.encode("utf-8"))
         if r.returncode == 0:
             try:
                 d = json.loads(Path(str(f) + ".part").read_text("utf-8"))
@@ -499,9 +528,18 @@ def descargar(region, q, refresh, vueltas=3, salir=True, servidores=None):
             if d.get("remark", "").lower().startswith(("runtime error", "error")):
                 print(f"  {d['remark']}; siguiente servidor")
                 continue
+            if not d.get("elements"):
+                # Una réplica atrasada o a medias puede dar 200 sin nada: se prueba otra antes de creerla.
+                print("  respuesta sin elementos; siguiente servidor")
+                vacia = d
+                continue
             Path(str(f) + ".part").replace(f)
             return d
         print(f"  curl salió con {r.returncode}; siguiente servidor")
+    if vacia is not None:
+        print("  todos los servidores dan la respuesta vacía: se toma por buena")
+        f.write_text(json.dumps(vacia), "utf-8")
+        return vacia
     if not salir:
         return None
     sys.exit("Overpass no respondió en ningún servidor; reintente más tarde.")
@@ -957,7 +995,7 @@ def extraer_portales(elems, proy, vias, overrides, cuenta, sin_pareja, por_lugar
 # «PZ FUENTERRABIA»). Sirven solo para casar cada portal con la vía de OSM, que es la que da el nombre.
 # Contraste en la Zona Vella (2026-10-24): ningún nombre de OSM estaba mal; faltaba en OSM el 14 %
 # de los números.
-CATASTRO_WFS = ("http://ovc.catastro.meh.es/INSPIRE/wfsAD.aspx?service=WFS&version=2.0.0&request=GetFeature"
+CATASTRO_WFS = ("https://ovc.catastro.meh.es/INSPIRE/wfsAD.aspx?service=WFS&version=2.0.0&request=GetFeature"
                 "&typeNames=ad:Address&srsName=EPSG::4326&bbox={s},{w},{n},{e},urn:ogc:def:crs:EPSG::4326")
 CATASTRO_PASO = (0.0025, 0.0035)   # grados (lat, lon) por petición: unas 250 direcciones en el casco
 CATASTRO_ASOC = 30    # m: el portal solo entra si pasa a esta distancia una vía de OSM de su nombre
@@ -1020,7 +1058,9 @@ def descargar_catastro(region, caja, refresh):
         for j in range(math.ceil((e - w) / dlon - 1e-9)):
             url = CATASTRO_WFS.format(s=round(s + i * dlat, 6), w=round(w + j * dlon, 6),
                                       n=round(min(n, s + (i + 1) * dlat), 6), e=round(min(e, w + (j + 1) * dlon), 6))
-            f = CACHE / f"catastro-{region}-{hashlib.sha1(url.encode()).hexdigest()[:12]}.xml"
+            # La clave de la caché, de la URL en http (la de antes de pasar a https): no hay que descargarlo todo otra vez.
+            clave = url.replace("https://", "http://", 1)
+            f = CACHE / f"catastro-{region}-{hashlib.sha1(clave.encode()).hexdigest()[:12]}.xml"
             if refresh or not f.exists():
                 if nuevas:
                     time.sleep(1)
@@ -1475,8 +1515,10 @@ def nfranjas():
     return math.ceil((ZONA + 2 * ZMARGEN) / ZFRANJA)
 
 
-def empaquetar_zona(zc, zf, G, parroquias, lugares):
-    """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada."""
+def empaquetar_zona(zc, zf, G, parroquias, lugares, sin_margen=False):
+    """Zona → lista JSON [FORMATO, S, O, F, RL, L, LN] (cabecera del módulo), o None si no tiene nada. Con
+    sin_margen (variante c5, C5_SIN_MARGEN), en L solo los lugares de la zona, sin los ZMARGEN m de alrededor; si
+    hay o no zona se sigue decidiendo con el margen, para que la rejilla de hojas no cambie de forma."""
     zx0, zy0 = zc * ZONA, zf * ZONA
     NFRANJAS = nfranjas()
     filas = [[G[zf * RN + r][zc * RN + c] for c in range(RN)] for r in range(RN)]
@@ -1491,6 +1533,8 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
                   key=lambda l: (franja(l), l["x"], l["y"]))
     if not presentes and not aqui:
         return None, None
+    if sin_margen:   # medio abierto: un lugar en el borde común de dos hojas va solo en una
+        aqui = [l for l in aqui if zx0 <= l["x"] < zx0 + ZONA and zy0 <= l["y"] < zy0 + ZONA]
     N = [parroquias[g - 1]["nombre"] for g in presentes]
     assert len(N) < 255, f"zona {zc},{zf}: {len(N)} parroquias"
     local = {g: i + 1 for i, g in enumerate(presentes)}
@@ -1511,7 +1555,9 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
             c += n
     F.append(len(RL))
     S, O = cadena_nombres(N)
-    L = [int(round(l["x"] - ox)) | int(round(l["y"] - oy)) << 14 | l["tipo"] << 28 for l in aqui]
+    # En unidades de ZU m (variante b, zonas de más de 13 km); ZU va al final de la lista si no es 1.
+    L = [int(round((l["x"] - ox) / ZU)) | int(round((l["y"] - oy) / ZU)) << 14 | l["tipo"] << 28 for l in aqui]
+    assert all(0 <= round((l[k] - o) / ZU) < 1 << 14 for l in aqui for k, o in (("x", ox), ("y", oy)))
     LN = [ids[l["nombre"]] for l in aqui]
     FZ = [0] * (NFRANJAS + 1)   # primer lugar de cada franja, y uno final
     for l in aqui:
@@ -1519,11 +1565,193 @@ def empaquetar_zona(zc, zf, G, parroquias, lugares):
     for k in range(NFRANJAS):
         FZ[k + 1] += FZ[k]
     lista = [FORMATO, S, O, pares16(F), pares16(RL), L, pares16(LN), ZFRANJA, pares16(FZ)]
+    if ZU > 1:
+        lista.append(ZU)
     nums = sum(len(x) if isinstance(x, list) else 1 for x in lista[2:])
     est = dict(parroquias=len(presentes), lugares=len(aqui), nombres=len(N), nums=nums, tramos=len(RL),
                heap=int(5 * (nums + 7) + len(S.encode()) + 20),
                con_parroquia=sum(1 for fila in filas for v in fila if v))
     return lista, est
+
+
+def encadenar_rural(vs):
+    """Variante c5: las vías de una misma calle que comparten un nodo extremo, en una sola (sin trocear: fuera de
+    la zona urbana no se dan tramos). La de tools/medir_c5.py."""
+    por_ext = defaultdict(list)
+    for i, v in enumerate(vs):
+        if v.get("nodos"):
+            por_ext[(v["nombre"], v["nodos"][0])].append(i)
+            por_ext[(v["nombre"], v["nodos"][-1])].append(i)
+    usada, salida = [False] * len(vs), []
+    for i, v in enumerate(vs):
+        if usada[i]:
+            continue
+        usada[i] = True
+        if not v.get("nodos"):
+            salida.append(dict(v))
+            continue
+        ns, pts = list(v["nodos"]), list(v["raw"])
+        for lado in (1, 0):
+            while True:
+                n = ns[-1] if lado else ns[0]
+                cand = [j for j in por_ext[(v["nombre"], n)] if not usada[j]]
+                if not cand:
+                    break
+                j = cand[0]
+                usada[j] = True
+                wn, wp = list(vs[j]["nodos"]), list(vs[j]["raw"])
+                if lado:
+                    if wn[0] != n:
+                        wn, wp = wn[::-1], wp[::-1]
+                    ns += wn[1:]
+                    pts += wp[1:]
+                else:
+                    if wn[-1] != n:
+                        wn, wp = wn[::-1], wp[::-1]
+                    ns = wn[:-1] + ns
+                    pts = wp[:-1] + pts
+        salida.append(dict(v, nodos=ns, raw=pts, pts=pts))
+    return salida
+
+
+PROVINCIAS_GALICIA = ("15", "27", "32", "36")   # A Coruña, Lugo, Ourense, Pontevedra (ref:ine)
+
+
+def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, zelems, cuenta):
+    """Variante c5: las reglas de volumen de la especificación c5 y la provincia de la app (cfg["provincia"]).
+    Zona urbana: los municipios de cfg["c5"]["urbana"] (ref:ine de las parroquias). Provincia: por celda de 1 km,
+    según el ref:ine de las parroquias (las celdas sin parroquia, la de la vecina más cercana). Devuelve
+    (trozos, portales, parroquias, lugares, pois)."""
+    c5 = cfg["c5"]
+    urbana, prov = set(c5["urbana"]), cfg["provincia"]
+    celda = 1000
+    nc, nf = math.ceil(proy.ancho / celda), math.ceil(proy.alto / celda)
+    G = [[None] * nc for _ in range(nf)]
+    C5_URBANA.clear()
+    C5_URB_CELDAS.clear()
+    _C5_UNIDAD.clear()
+    for e in zelems:
+        tags = e.get("tags", {})
+        ine = tags.get("ref:ine") or ""
+        if e["type"] != "relation" or tags.get("admin_level") != "9" or ine[:2] not in PROVINCIAS_GALICIA:
+            continue
+        tr = [[proy.xy(g["lat"], g["lon"]) for g in m["geometry"] if g]
+              for m in e.get("members", []) if m.get("type") == "way" and m.get("role") in ("outer", "")
+              and m.get("geometry")]
+        for a in unir_anillos(tr):
+            if len(a) < 4:
+                continue
+            bb = caja_de(a)
+            if ine[:5] in urbana:
+                C5_URBANA.append((bb, a))
+            for fy in range(max(0, int(bb[1] // celda)), min(nf, int(bb[3] // celda) + 1)):
+                for fx in range(max(0, int(bb[0] // celda)), min(nc, int(bb[2] // celda) + 1)):
+                    if G[fy][fx] is None and dentro((fx + .5) * celda, (fy + .5) * celda, a):
+                        G[fy][fx] = ine[:2]
+    frente = [(fx, fy) for fy in range(nf) for fx in range(nc) if G[fy][fx] is not None]
+    while frente:
+        nuevo = []
+        for fx, fy in frente:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                x, y = fx + dx, fy + dy
+                if 0 <= x < nc and 0 <= y < nf and G[y][x] is None:
+                    G[y][x] = G[fy][fx]
+                    nuevo.append((x, y))
+        frente = nuevo
+
+    # Celdas de C5_URB_CELDA m que tocan la zona urbana: las de los vértices de sus anillos y las que tienen el centro
+    # dentro (unidad_c5).
+    k = C5_URB_CELDA
+    for bb, a in C5_URBANA:
+        C5_URB_CELDAS.update((int(x // k), int(y // k)) for x, y in a)
+        for cy in range(int(bb[1] // k), int(bb[3] // k) + 1):
+            for cx_ in range(int(bb[0] // k), int(bb[2] // k) + 1):
+                if (cx_, cy) not in C5_URB_CELDAS and dentro((cx_ + .5) * k, (cy + .5) * k, a):
+                    C5_URB_CELDAS.add((cx_, cy))
+
+    def en_prov(x, y):
+        return G[min(nf - 1, max(0, int(y // celda)))][min(nc - 1, max(0, int(x // celda)))] == prov
+
+    def en_urbana(x, y):
+        return any(bb[0] <= x <= bb[2] and bb[1] <= y <= bb[3] and dentro(x, y, a) for bb, a in C5_URBANA)
+
+    def cx(v):
+        return (v["bb"][0] + v["bb"][2]) / 2, (v["bb"][1] + v["bb"][3]) / 2
+
+    assert C5_URBANA, "c5: ninguna parroquia de la zona urbana (¿ref:ine de cfg[\"c5\"][\"urbana\"]?)"
+    urb = [t for t in trozos if en_urbana(*cx(t))]
+    rur = []
+    for v in encadenar_rural([v for v in vias if not v["area"] and v["clase"] != 2 and not en_urbana(*cx(v))]):
+        pts = douglas_peucker(v["raw"], c5.get("rural_dp", 8.0))
+        rur.append(dict(nombre=v["nombre"], clase=v["clase"], area=False, pts=pts, bb=caja_de(pts),
+                        tramo=(None, None)))
+    rur_a = [t for t in trozos if t["area"] and not en_urbana(*cx(t))]
+    trozos = [t for t in urb + rur + rur_a if en_prov(*cx(t))]
+    portales = [p for p in portales if en_prov(p["x"], p["y"]) and en_urbana(p["x"], p["y"])]
+    parroquias = [p for p in parroquias if en_prov(*cx(p))]
+    lugares = [l for l in lugares if (l["tipo"] != 4 or en_urbana(l["x"], l["y"]))
+               and any(en_prov(l["x"] + dx, l["y"] + dy) for dx, dy in
+                       ((0, 0), (ZMARGEN, 0), (-ZMARGEN, 0), (0, ZMARGEN), (0, -ZMARGEN)))]
+    pois = [p for p in pois if en_prov(p[2], p[3])]
+    cuenta["c5: trozos de la zona urbana"] = sum(1 for t in trozos if t.get("tramo") != (None, None) and not t["area"])
+    cuenta["c5: vías rurales encadenadas"] = sum(1 for t in trozos if t.get("tramo") == (None, None))
+    cuenta["c5: parroquias de la zona urbana (anillos)"] = len(C5_URBANA)
+    print(f"c5 ({cfg['etiqueta']}): {len(trozos)} trozos, {len(portales)} portales, {len(parroquias)} parroquias, "
+          f"{len(lugares)} lugares, {len(pois)} hospitales y comisarías")
+    return trozos, portales, parroquias, lugares, pois
+
+
+def zonas_arbol(rdir, pref, xml, zcols, zfilas, parroquias, lugares, cuenta):
+    """Variante c5: zonas en árbol cuaternario. Una raíz por celda de ZONA m; la que pasa de C5_TOPE_ZONA (heap
+    estimado) se parte en sus cuatro, hasta C5_ZONA_MIN m. Cada hoja es un recurso z<nivel>_<col>_<fila> con su
+    lado al final de la lista (z[10]). Devuelve (zidx, zstats): por raíz, null, el nombre de la hoja o la lista de
+    sus cuatro hijos (SO, SE, NO, NE), y las estadísticas por hoja. El raster es el mismo en todos los niveles (la
+    celda es RCEL): cada nivel lo indexa con su RN."""
+    global ZONA, RN
+    raiz = ZONA
+    lados = [raiz]
+    while lados[-1] // 2 >= C5_ZONA_MIN:
+        lados.append(lados[-1] // 2)
+    assert all(l % RCEL == 0 for l in lados) and raiz + 2 * ZMARGEN < (1 << 14) * ZU and ZU > 1
+    # Zonas.mc busca las hojas vecinas con 9 puntos de muestra cada ZMARGEN m: vale si toda hoja mide más que eso.
+    assert not C5_SIN_MARGEN or C5_ZONA_MIN > ZMARGEN, (C5_ZONA_MIN, ZMARGEN)
+    G = rasterizar(parroquias, zcols, zfilas, cuenta)
+    zstats = {}
+
+    def nodo(k, zc, zf):
+        global ZONA, RN
+        ZONA, RN = lados[k], lados[k] // RCEL
+        lista, est = empaquetar_zona(zc, zf, G, parroquias, lugares, C5_SIN_MARGEN)
+        if lista is None:
+            return None
+        est["heap"] += 10 if C5_SIN_MARGEN else 5   # el lado y la marca, que van al final
+        if est["heap"] > C5_TOPE_ZONA:
+            if k + 1 < len(lados):
+                return [nodo(k + 1, 2 * zc + i, 2 * zf + j) for j in (0, 1) for i in (0, 1)]
+            sys.exit(f"c5: la zona {k}_{zc}_{zf} ({lados[k]} m) pesa {est['heap']} B > {C5_TOPE_ZONA} y no se parte más")
+        assert len(lista) == 10, "la c5 espera ZU al final"
+        lista.append(lados[k])
+        if C5_SIN_MARGEN:
+            lista.append(1)
+        clave = f"{k}_{zc}_{zf}"
+        (rdir / "z" / f"z{clave}.json").write_text(json.dumps(lista, ensure_ascii=False, separators=(",", ":")), "utf-8")
+        est.update(json=(rdir / "z" / f"z{clave}.json").stat().st_size, lado=lados[k], x0=zc * lados[k],
+                   y0=zf * lados[k], celdas=RN * RN)
+        xml.append(f'    <jsonData id="{pref}z{clave}" filename="z/z{clave}.json"/>')
+        zstats[clave] = est
+        return f"z{clave}"
+
+    zidx = [nodo(0, zc, zf) for zf in range(zfilas) for zc in range(zcols)]
+    ZONA, RN = raiz, raiz // RCEL
+    cuenta["c5: zonas (hojas del árbol)"] = len(zstats)
+    for lado in lados:
+        cuenta[f"c5: zonas de {lado} m"] = sum(1 for e in zstats.values() if e["lado"] == lado)
+    return zidx, zstats
+
+
+def hojas_zidx(zidx):
+    """Recursos de zona de un índice: las entradas no nulas y, en el árbol de la c5, sus hojas."""
+    return sum(hojas_zidx(v) if isinstance(v, list) else 1 for v in zidx if v)
 
 
 # ---------------------------------------------------------------- teselas
@@ -1615,10 +1843,26 @@ class Rejilla:
                         yield k
 
 
+def unidad_c5(caja):
+    """Variante c5: m por unidad de la tesela. 1 si la tesela, con su margen, toca la zona urbana (C5_URB_CELDAS); si
+    no, C5_RURAL_U. Con la regla del centro de la tesela, una de borde de ciudad (Pontevedra, 2026-10-27) iba en 4 m y
+    la cuantización cambiaba el tramo de una calle con portales."""
+    caja = tuple(caja)
+    if caja not in _C5_UNIDAD:
+        k = C5_URB_CELDA
+        _C5_UNIDAD[caja] = 1 if any(
+            (cx, cy) in C5_URB_CELDAS for cx in range(int((caja[0] - BUF) // k), int((caja[2] + BUF) // k) + 1)
+            for cy in range(int((caja[1] - BUF) // k), int((caja[3] + BUF) // k) + 1)) else C5_RURAL_U
+    return _C5_UNIDAD[caja]
+
+
 def teselar_kd(vias, portales, proy, tope):
     """Teselas adaptativas (variante c): se parte la región por la mitad del peso del eje largo hasta que
     cada tesela, empaquetada de verdad, cabe en tope bytes (heap estimado) y mide ≤ KD_LADO_MAX.
     Devuelve ({i: tesela}, [caja sin margen por i])."""
+    # Variante b: la tesela puede medir lo que quepa en 13 bits con la unidad mayor.
+    lado_max = (B_LADO_U * B_UNIDADES[-1] - 2 * BUF if VARIANTE == "b"
+                else B_LADO_U * C5_RURAL_U - 2 * BUF if VARIANTE == "c5" else KD_LADO_MAX)
     # Peso aproximado para elegir dónde cortar: cada tirada cuesta su cabecera y cada portal, un número.
     pesos = [((v["bb"][0] + v["bb"][2]) / 2, (v["bb"][1] + v["bb"][3]) / 2, 3.0 + 0.4 * len(v["pts"])) for v in vias]
     pesos += [(p["x"], p["y"], 1.0) for p in portales]
@@ -1647,7 +1891,11 @@ def teselar_kd(vias, portales, proy, tope):
 
     def cabe(caja, t):
         nombres = len({r[0] for r in t["runs"]} | {n for r in t["runs"] for n in r[4] if n})
-        if nombres > MAX_NOMBRES or max(caja[2] - caja[0], caja[3] - caja[1]) > KD_LADO_MAX:
+        if nombres > MAX_NOMBRES or max(caja[2] - caja[0], caja[3] - caja[1]) > lado_max:
+            return math.inf
+        # c5: la tesela de la zona urbana va en metros, así que no puede pasar de B_LADO_U con su margen.
+        if VARIANTE == "c5" and unidad_c5(caja) == 1 and math.ceil(max(caja[2] - caja[0], caja[3] - caja[1])
+                                                                   + 2 * BUF) > B_LADO_U:
             return math.inf
         return empaquetar(caja, t, {})[1]["heap"]
 
@@ -1674,6 +1922,11 @@ def teselar_kd(vias, portales, proy, tope):
             if acum >= total * frac:
                 corte = p[eje]
                 break
+        if VARIANTE == "c5" and est["heap"] == math.inf and max(ancho, alto) > (
+                lado_max if unidad_c5(caja) > 1 else B_LADO_U - 2 * BUF):
+            # No cabe por el lado: la mitad geométrica. La mediana del peso dejaba tiras rurales casi vacías
+            # (Galicia entera, 272 teselas de 27 KB por peso y 245 así; plan 3 de la c5).
+            corte = (lo + hi) / 2
         corte = round(corte / KD_PASO) * KD_PASO
         minimo = KD_LADO_MIN / 2
         corte = min(max(corte, lo + minimo), hi - minimo)
@@ -1731,8 +1984,8 @@ def teselar_kd(vias, portales, proy, tope):
     return {i: t for i, (_, t) in enumerate(hojas)}, [c for c, _ in hojas]
 
 
-def q(v, origen, lado):
-    return max(0, min(lado, int(round(v - origen))))
+def q(v, origen, lado, u=1):
+    return max(0, min(lado, int(round((v - origen) / u))))
 
 
 class Bits:
@@ -1788,7 +2041,13 @@ def empaquetar(caja, t, sufijos):
     """Tesela (caja sin margen: x0, y0, x1, y1) → lista JSON del FORMATO 4 (ver la cabecera del módulo).
     Devuelve (lista, estadísticas)."""
     ox, oy = caja[0] - BUF, caja[1] - BUF
-    lado = max(caja[2] - caja[0], caja[3] - caja[1]) + 2 * BUF
+    lado_m = max(caja[2] - caja[0], caja[3] - caja[1]) + 2 * BUF
+    # Unidad de la tesela (variante b): la menor con la que el lado cabe en 13 bits. En la c5, unidad_c5. En las
+    # demás, 1 m.
+    U = (next((u for u in B_UNIDADES if math.ceil(lado_m / u) <= B_LADO_U), None) if VARIANTE == "b"
+         else unidad_c5(caja) if VARIANTE == "c5" else 1)
+    assert U, f"tesela {caja}: {lado_m} m no caben ni con {B_UNIDADES[-1]} m de unidad"
+    lado = math.ceil(lado_m / U)
     assert lado < 1 << 13, "las coordenadas de tirada son de 13 bits"
     # Bits por coordenada de portal: 12 (salto de 5 bits) o, si la tesela pasa de 4.095 m, 13 (salto de 3).
     pb = 12 if lado <= 4095 else 13
@@ -1803,10 +2062,11 @@ def empaquetar(caja, t, sufijos):
     V = Bits()
     lados = Counter()
     nruns = nvert = 0
+    inicio_v = [None] * len(calles_runs)   # bit de V donde empiezan los vértices de cada calle (K)
     for nombre, clase, area, pts, (ta, tb) in sorted(t["runs"], key=lambda r: (ids[r[0]], r[1], r[3][0])):
         qp = []
         for x, y in pts:
-            p = (q(x, ox, lado), q(y, oy, lado))
+            p = (q(x, ox, lado, U), q(y, oy, lado, U))
             if not qp or qp[-1] != p:
                 qp.append(p)
         if area and len(qp) < 4:
@@ -1816,6 +2076,7 @@ def empaquetar(caja, t, sufijos):
             k = ids[nombre]
             if inicio_r[k] is None:
                 inicio_r[k] = len(R)
+                inicio_v[k] = V.n
             x0, y0 = tr[0]
             ext = max(max(abs(x - x0), abs(y - y0)) for x, y in tr)
             ext = -(-ext // RUN_EXT_U)
@@ -1853,8 +2114,8 @@ def empaquetar(caja, t, sufijos):
         if k != prev_calle:
             prev_calle, prev = k, 0
             inicio_p[k] = len(P)
-        x = q(p["x"], ox, lado)
-        y = q(p["y"], oy, lado)
+        x = q(p["x"], ox, lado, U)
+        y = q(p["y"], oy, lado, U)
         salto = p["num"] - prev
         sc = sufs.index(p["suf"]) + 1 if p["suf"] else 0
         if 0 <= salto < salto_esc and sc < PORTAL_SUF_ESC:
@@ -1887,10 +2148,21 @@ def empaquetar(caja, t, sufijos):
             a1, b1 = min(255, -(-cc[2] // CB_U)), min(255, -(-cc[3] // CB_U))
             CB.append(int32(a0 | b0 << 8 | a1 << 16 | b1 << 24))
     Vl = V.lista()
-    lista = [FORMATO, len(calles_runs), pb, S, O, C, CB, R, Vl, P, E]
-    nums = len(O) + len(C) + len(CB) + len(R) + len(Vl) + len(P) + len(E)
+    # PB lleva la unidad en sus bits altos (pb | U << 8) cuando no es 1: los datos de siempre no cambian.
+    lista = [FORMATO, len(calles_runs), pb | (U << 8 if U > 1 else 0), S, O, C, CB, R, Vl, P, E]
+    if VARIANTE in ("b", "c5"):
+        # K: por calle, más una final, el bit de V donde empiezan sus vértices (una sin tiradas, el de la siguiente).
+        K, fin_v = [], V.n
+        for k in range(len(calles_runs) - 1, -1, -1):
+            fin_v = inicio_v[k] if inicio_v[k] is not None else fin_v
+            K.append(fin_v)
+        K.reverse()
+        K.append(V.n)
+        assert V.n < 1 << 31
+        lista.append(K)
+    nums = len(O) + len(C) + len(CB) + len(R) + len(Vl) + len(P) + len(E) + (len(lista[11]) if len(lista) > 11 else 0)
     est = dict(runs=nruns, vert=nvert, portales=len(P), nombres=len(calles_runs), lados=lados, escapes=len(E) // 2,
-               nums=nums, bytes_nombres=len(S.encode()))
+               nums=nums, bytes_nombres=len(S.encode()), u=U)
     # Medido en el simulador del fēnix 6 (2026-10-25): 5 B por número de un array de JSON; una cadena, su
     # longitud más ~20 B. Las tablas por calle de la búsqueda (mejor, mejorRun) añaden 10 B por calle.
     est["heap"] = int(5 * (nums + 10) + len(S.encode()) + 20 + 10 * len(calles_runs))
@@ -1943,22 +2215,27 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
         idx[i] = f"t{i}"
         stats[i] = est
     mayor = max(stats, key=lambda i: stats[i]["heap"])
+    if VARIANTE == "c5" and stats[mayor]["heap"] > KD_TOPE:
+        sys.exit(f"c5: la tesela t{mayor} pesa {stats[mayor]['heap']} B > {KD_TOPE} (no se pudo partir más)")
     suf = [s for s, _ in sorted(sufijos.items(), key=lambda kv: kv[1])]
 
     zcols, zfilas = math.ceil(proy.ancho / ZONA), math.ceil(proy.alto / ZONA)
-    G = rasterizar(parroquias, zcols, zfilas, cuenta)
-    zidx, zstats = [None] * (zcols * zfilas), {}
-    for zf in range(zfilas):
-        for zc in range(zcols):
-            lista, est = empaquetar_zona(zc, zf, G, parroquias, lugares)
-            if lista is None:
-                continue
-            i = zf * zcols + zc
-            (rdir / "z" / f"z{i}.json").write_text(json.dumps(lista, ensure_ascii=False, separators=(",", ":")), "utf-8")
-            est["json"] = (rdir / "z" / f"z{i}.json").stat().st_size
-            xml.append(f'    <jsonData id="{pref}z{i}" filename="z/z{i}.json"/>')
-            zidx[i] = f"z{i}"
-            zstats[i] = est
+    if VARIANTE == "c5":
+        zidx, zstats = zonas_arbol(rdir, pref, xml, zcols, zfilas, parroquias, lugares, cuenta)
+    else:
+        G = rasterizar(parroquias, zcols, zfilas, cuenta)
+        zidx, zstats = [None] * (zcols * zfilas), {}
+        for zf in range(zfilas):
+            for zc in range(zcols):
+                lista, est = empaquetar_zona(zc, zf, G, parroquias, lugares)
+                if lista is None:
+                    continue
+                i = zf * zcols + zc
+                (rdir / "z" / f"z{i}.json").write_text(json.dumps(lista, ensure_ascii=False, separators=(",", ":")), "utf-8")
+                est["json"] = (rdir / "z" / f"z{i}.json").stat().st_size
+                xml.append(f'    <jsonData id="{pref}z{i}" filename="z/z{i}.json"/>')
+                zidx[i] = f"z{i}"
+                zstats[i] = est
     zmayor = max(zstats, key=lambda i: zstats[i]["heap"])
 
     # Hospitales y comisarías: [FORMATO, SN, ON, SD, OD, XY, T]. Nombres y direcciones en una cadena cada uno
@@ -1996,6 +2273,11 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
                 barrio_frac=BARRIO_FRAC, zbarrio=zbarrio,
                 zcols=zcols, zfilas=zfilas, zidx=zidx, z_mayor=f"z{zmayor}", npoi=len(pois), zona_propia=zona_propia,
                 control=cfg.get("control"))
+    if VARIANTE == "c5":
+        # El árbol de zonas (zidx anidado) y el centro de la hoja más pesada (ref.py --gen-tests).
+        zm = zstats[zmayor]
+        meta.update(zona_min=C5_ZONA_MIN, tope_zona=C5_TOPE_ZONA, tope_tesela=KD_TOPE,
+                    z_mayor_xy=[zm["x0"] + zm["lado"] / 2, zm["y0"] + zm["lado"] / 2])
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"meta-{region}{sufijo()}.json").write_text(json.dumps(meta, ensure_ascii=False), "utf-8")
     geom = dict(calles=[dict(n=v["nombre"], c=v["clase"], a=int(v["area"]), t=list(v["tramo"]),
@@ -2032,6 +2314,15 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
         (rdir / "cajas.json").write_text(json.dumps(cj, separators=(",", ":")), "utf-8")
         cajas_mc = f"Rez.JsonData.{pref}cajas"
 
+    def nodo_mc(v):
+        if v is None:
+            return "null"
+        if isinstance(v, list):
+            return "[" + ", ".join(nodo_mc(h) for h in v) + "] as Array"
+        return f"Rez.JsonData.{pref}{v}"
+
+    arbol_mc = ("," + chr(10)).join("            " + ", ".join(nodo_mc(zidx[f * zcols + c]) for c in range(zcols))
+                                    for f in range(zfilas)) if VARIANTE == "c5" else ""
     mod = nombre_modulo(region)
     mc = f"""import Toybox.Lang;
 
@@ -2047,10 +2338,14 @@ module {mod} {{
             {lista_idx} as Array<ResourceId or Null>,
             Rez.JsonData.{pref}t{mayor},
             {zcols}, {zfilas},
-            // Zonas de {ZONA} m: {"barrio oficial (polígono) y lugar" if zbarrio else "parroquia (polígono), lugar y barrio (nodos)"}.
+            // Zonas de {ZONA} m: {"barrio oficial (polígono) y lugar" if zbarrio else "parroquia (polígono), lugar y barrio (nodos)"}.{f"""
+            // Árbol (c5): cada raíz es null, una zona o sus cuatro hijos (SO, SE, NO, NE), hasta {C5_ZONA_MIN} m.
+            [
+{arbol_mc}
+            ] as Array,""" if VARIANTE == "c5" else f"""
             [
 {filas_de(zidx, zcols, zfilas)}
-            ] as Array<ResourceId or Null>,
+            ] as Array<ResourceId or Null>,"""}
             Rez.JsonData.{pref}z{zmayor},
             Rez.JsonData.{pref}poi,
             {"true" if zbarrio else (mc_str(cfg["zonas"]["prefijo"]) if cfg["zonas"].get("prefijo") else "false")},
@@ -2089,26 +2384,34 @@ def escribir_comun(recien=None, solo=None, salida=None):
             metas.append(json.loads(f.read_text("utf-8")))
     metas.sort(key=lambda m: m["id"])
     assert len({m["id"] for m in metas}) == len(metas), "dos regiones con el mismo id"
-    recursos = sum(sum(1 for v in m["idx"] if v) + sum(1 for v in m["zidx"] if v) + 1 + bool(m.get("cajas"))
-                   for m in metas)
+    por_region = {m["region"]: sum(1 for v in m["idx"] if v) + hojas_zidx(m["zidx"]) + 1 + bool(m.get("cajas"))
+                  for m in metas}
+    # c5: una app por región (provincia), así que el tope de recursos es de cada una, no de la suma.
+    recursos = max(por_region.values(), default=0) if VARIANTE == "c5" else sum(por_region.values())
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
-          + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c") else ""))
+          + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c", "b") else "")
+          + (f" en la mayor; por app: {por_region} de {TOPE_RECURSOS_6X} posibles" if VARIANTE == "c5" else ""))
     # Callejero.ZONA es una para todas, salvo las regiones con zona propia (Galicia), que la dan en datos().
     zonas = {(m["zona"], m["rn"]) for m in metas if not m.get("zona_propia")}
     if len(zonas) > 1:
         sys.exit(f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una.")
     propia = any(m.get("zona_propia") for m in metas)
     zona, rn = (zonas.pop() if zonas else (next(((m["zona"], m["rn"]) for m in metas), (ZONA, RN))))
+    # La celda del raster también es una (variante b: 100 m, con zonas de 20 km); los datos viejos no la guardan.
+    rceles = {m.get("rcel", 50) for m in metas}
+    if len(rceles) > 1:
+        sys.exit(f"Las regiones de la variante {VARIANTE} tienen celdas de raster distintas {rceles}: Callejero.RCEL es una.")
+    rcel = rceles.pop() if rceles else RCEL
     decl_zona = (f"""    var ZONA as Number = {zona};             // la de la región activa (activar)
-    const RCEL = {RCEL};
+    const RCEL = {rcel};
     var RN as Number = {rn};""" if propia else f"""    const ZONA = {zona};
-    const RCEL = {RCEL};
+    const RCEL = {rcel};
     const RN = {rn};""")
     act_zona = (f"""
         // Zonas propias (Galicia, 10 km); las demás regiones, las de siempre.
         ZONA = d.size() > 21 ? d[21] as Number : {zona};
         RN = d.size() > 21 ? d[22] as Number : {rn};""" if propia else "")
-    if VARIANTE in ("6x", "c") and recursos > TOPE_RECURSOS_6X:
+    if VARIANTE in ("6x", "c", "b", "c5") and recursos > TOPE_RECURSOS_6X:
         if recien:
             # Se retira lo que se acaba de escribir: con ello dentro, el 6X no compilaría.
             import shutil
@@ -2119,6 +2422,7 @@ def escribir_comun(recien=None, solo=None, salida=None):
                     f.unlink()
         sys.exit(f"La variante 6x pasa del tope: {recursos} recursos > {TOPE_RECURSOS_6X}. Agrande la tesela o la zona "
                  "de alguna región (\"compacta\" en tools/regiones.json) o quite distritos.")
+    zidx_t = "Array" if VARIANTE == "c5" else "Array<ResourceId or Null>"
     cal = f"""import Toybox.Lang;
 
 // GENERADO por tools/build_callejero.py. No editar a mano.
@@ -2132,6 +2436,9 @@ module Callejero {{
     const EXT_U = {RUN_EXT_U};
     const EXT_SIN = {RUN_EXT_SIN};
     const CB_U = {CB_U};
+    // Tope de la tesela y la zona mayores cargadas a la vez (MemoriaTest): 200 KB en los de 768 KB y en los de
+    // 128 KB (teselas y zonas pequeñas); 400 KB en la variante b (1,25 MB: pico de ~455 KB con la app).
+    const MEM_DOS = {400 if VARIANTE == "b" else 200} * 1024;
 {decl_zona}
     const ZMARGEN = {ZMARGEN};
     const LUGAR_R = {LUGAR_R};
@@ -2155,7 +2462,7 @@ module Callejero {{
     var T_MAYOR as ResourceId or Null = null;
     var ZCOLS as Number = 0;
     var ZFILAS as Number = 0;
-    var ZIDX as Array<ResourceId or Null> = [] as Array<ResourceId or Null>;
+    var ZIDX as {zidx_t} = [] as {zidx_t};{"   // árbol de zonas (source-c5/Zonas.mc)" if VARIANTE == "c5" else ""}
     var Z_MAYOR as ResourceId or Null = null;
     var POI as ResourceId or Null = null;
     var ZBARRIO as Boolean = false;       // el polígono de las zonas es el barrio (Madrid), no la parroquia
@@ -2165,7 +2472,7 @@ module Callejero {{
     // Sin región activa (los tests miden así lo que ocupan los índices de cada una).
     function soltar() as Void {{
         IDX = [] as Array<ResourceId or Null>;
-        ZIDX = [] as Array<ResourceId or Null>;
+        ZIDX = [] as {zidx_t};
         CAJAS = null;
         ID = 0;
     }}
@@ -2190,7 +2497,7 @@ module Callejero {{
         T_MAYOR = d[13] as ResourceId;
         ZCOLS = d[14] as Number;
         ZFILAS = d[15] as Number;
-        ZIDX = d[16] as Array<ResourceId or Null>;
+        ZIDX = d[16] as {zidx_t};
         Z_MAYOR = d[17] as ResourceId;
         POI = d[18] as ResourceId;
         // d[19]: true si el polígono es el barrio; o el prefijo con que se nombra (Cataluña: «término de», el
@@ -2288,7 +2595,7 @@ def informe(region, proy, vias, portales, stats, cols, filas, fecha_osm, cuenta,
     L += ["", f"Tramo de las tiradas lineales de las teselas ({tot}): completo {100 * lados[2] / tot:.1f} % · "
               f"un solo lado {100 * lados[1] / tot:.1f} % · ninguno {100 * lados[0] / tot:.1f} %"]
     zh = sorted(s["heap"] for s in zstats.values())
-    celdas = len(zstats) * RN * RN
+    celdas = sum(s.get("celdas", RN * RN) for s in zstats.values())
     L += ["", f"Zonas (datos OSM {fecha_zonas}): {len(zstats)} de {zcols * zfilas} celdas de {ZONA} m; "
               f"{len(parroquias)} parroquias, {sum(l['tipo'] & 1 for l in lugares)} lugares poblados, "
               f"{sum(l['tipo'] >> 2 & 1 for l in lugares)} parajes, {sum(l['tipo'] >> 1 & 1 for l in lugares)} barrios",
@@ -2369,11 +2676,15 @@ def main():
     ap.add_argument("--comun", action="store_true", help="solo rehace Callejero.mc, Regiones.mc y el ajuste")
     ap.add_argument("--solo", help="con --comun: solo estas regiones, separadas por comas (tools/tienda.py)")
     ap.add_argument("--salida", help="con --solo: carpeta donde escribir source/ y res/ajustes/")
-    ap.add_argument("--variante", choices=("normal", "6x", "c"), default="normal",
+    ap.add_argument("--variante", choices=("normal", "6x", "c", "b", "c5"), default="normal",
                     help="6x: datos compactos para el fēnix 6X (resources-gen-6x/, source-gen-6x/); c: teselas "
-                         "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/)")
+                         "adaptativas para los relojes de 128 KB, fēnix 5/5S y 6/6S (resources-gen-c/, source-gen-c/); b: teselas y zonas "
+                         "grandes, con unidad por tesela, para los de 1,25 MB y 254 recursos: fēnix 6 Pro y 5X/5 Plus "
+                         "(resources-gen-b/, source-gen-b/); c5: una app por provincia de Galicia para los de 128 KB "
+                         "(resources-gen-c5/, source-gen-c5/; lee las zonas source-c5/Zonas.mc)")
     a = ap.parse_args()
-    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, TEXTO_LATIN1
+    global VARIANTE, TESELA, ZONA, RN, KD_TOPE, KD, RCEL, ZU, C5_RURAL_U, C5_ZONA_MIN, C5_TOPE_ZONA, C5_SIN_MARGEN
+    global TEXTO_LATIN1
     VARIANTE = a.variante
     if a.comun:
         if bool(a.solo) != bool(a.salida):
@@ -2382,6 +2693,10 @@ def main():
         return
     regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
     cfg = dict(regiones[a.region])
+    # "datos_de" (las provincias de la c5): los datos, la proyección y las zonas de esa región; lo propio encima.
+    fuente = cfg.get("datos_de", a.region)
+    if fuente != a.region:
+        cfg = {**regiones[fuente], **cfg}
     TEXTO_LATIN1 = bool(cfg.get("texto_latin1"))
     grande = bool(cfg.get("grande"))
     overrides = json.loads((TOOLS / cfg["overrides"]).read_text("utf-8"))
@@ -2399,20 +2714,34 @@ def main():
         print(f"Variante 6x de {a.region}: teselas de {TESELA} m, zonas de {ZONA} m, caja {cfg['bbox']}")
     if VARIANTE == "c" and not cfg.get("c"):
         sys.exit(f"La región {a.region} no tiene \"c\" en tools/regiones.json: no va en los relojes de 128 KB.")
+    if VARIANTE == "c5" and not cfg.get("c5"):
+        sys.exit(f"La región {a.region} no tiene \"c5\" en tools/regiones.json: no es una app por provincia.")
+    if VARIANTE != "c5" and cfg.get("provincia"):
+        sys.exit(f"La región {a.region} es una provincia de la c5: solo va con --variante c5.")
+    if VARIANTE == "b" and not cfg.get("b"):
+        sys.exit(f"La región {a.region} no tiene \"b\" en tools/regiones.json: no va en el fēnix 6 Pro ni en el 5X/5 Plus.")
     if VARIANTE == "6x" and cfg.get("adaptativa"):
         sys.exit(f"La región {a.region} es de teselas adaptativas: en el fēnix 6X va con la variante c.")
-    vc = cfg.get("c") if VARIANTE == "c" else cfg.get("adaptativa") if VARIANTE == "normal" else None
+    vc = cfg.get(VARIANTE) if VARIANTE in ("c", "b", "c5") else cfg.get("adaptativa") if VARIANTE == "normal" else None
     if vc:
         KD = True
-        ZONA, KD_TOPE = vc["zona"], vc["tope_kb"] * 1024
+        ZONA, KD_TOPE = vc["zona"], round(vc["tope_kb"] * 1024)
+        RCEL, ZU = vc.get("rcel", RCEL), vc.get("zu", 1)
+        assert ZONA % RCEL == 0 and ZONA + 2 * ZMARGEN < (1 << 14) * ZU
         TESELA = KD_PASO    # unidad de las cajas; COLS × FILAS es la región entera
         RN = ZONA // RCEL
-        assert RN < 256 and ZONA + 2 * ZMARGEN < 1 << 14
-        print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m")
+        assert RN < 256
+        if VARIANTE == "c5":
+            C5_RURAL_U, C5_ZONA_MIN = vc["rural_u"], vc["zona_min"]
+            C5_TOPE_ZONA = round(vc["tope_zona_kb"] * 1024)
+            C5_SIN_MARGEN = bool(vc.get("zona_sin_margen"))
+            assert B_LADO_U * C5_RURAL_U < 1 << 15 and ZU > 1
+        print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m"
+              + (f" en árbol hasta {C5_ZONA_MIN} m y ≤ {vc['tope_zona_kb']} KB" if VARIANTE == "c5" else ""))
     proy = Proy(cfg["bbox"])
     area = cfg.get("area_osm")
     if cfg.get("pbf"):
-        d = leer_pbf(a.region, "calles")
+        d = leer_pbf(fuente, "calles")
     else:
         d = (descargar_por_partes(a.region, bbox_datos, cfg["partes"], a.refresh,
                                   q=(lambda caja: consulta(caja, True, area)) if area else None) if cfg.get("partes")
@@ -2423,6 +2752,7 @@ def main():
     cuenta, sin_pareja, por_lugar = Counter(), Counter(), Counter()
     vias = extraer_vias(elems, proy, overrides, cuenta)
     variantes = unificar_variantes(vias, cuenta)
+    OUT.mkdir(parents=True, exist_ok=True)   # en un worktree nuevo aún no existe
     (OUT / f"variantes-{a.region}{sufijo()}.txt").write_text(
         "Nombres unificados (vías  viejo → nuevo  en lat,lon), build_callejero.unificar_variantes\n" +
         "".join(f"{n:>4}  {v} → {c}  en {'%.5f,%.5f' % proy.latlon(*pt)}\n"
@@ -2435,7 +2765,7 @@ def main():
     del elems
     fuentes = "OSM"
     if cfg.get("catastro"):
-        dirs = descargar_catastro(a.region, cfg["catastro"], a.refresh)
+        dirs = descargar_catastro(fuente, cfg["catastro"], a.refresh)
         portales, n = completar_con_catastro(dirs, proy, lineales + [v for v in vias if v["area"]], portales, cuenta)
         if n:
             fuentes = "OSM + Catastro"
@@ -2447,20 +2777,23 @@ def main():
     # El número va en 12 bits (≤ 4095): lo que pasa de ahí son kilómetros o errores de etiquetado.
     cuenta["portal con número > 4095 (fuera)"] += sum(1 for p in portales if p["num"] > 0xFFF)
     portales = [p for p in portales if p["num"] <= 0xFFF]
-    dp = (leer_pbf(a.region, "poi") if cfg.get("pbf")
+    dp = (leer_pbf(fuente, "poi") if cfg.get("pbf")
           else descargar(a.region, consulta_poi(bbox_datos, grande, area), a.refresh))
     pois = extraer_poi(dp["elements"], proy, vias, portales, overrides, cuenta, proy.ancho, proy.alto)
     trozos = trocear(vias, cuenta)
     niveles = tuple(cfg["zonas"]["admin_level"])
     # Galicia: 3.782 parroquias con su geometría no bajan de una vez; por partes, como las calles.
     if cfg.get("pbf"):
-        dz = leer_pbf(a.region, "zonas")
+        dz = leer_pbf(fuente, "zonas")
     else:
         dz = (descargar_por_partes(a.region, bbox_datos, cfg["zonas_partes"], a.refresh,
                                    q=lambda caja: consulta_zonas(caja, niveles, True, area)) if cfg.get("zonas_partes")
               else descargar(a.region, consulta_zonas(bbox_datos, niveles, grande, area), a.refresh))
     fecha_zonas = (dz.get("osm3s", {}).get("timestamp_osm_base") or "")[:10] or date.today().isoformat()
     parroquias, lugares = extraer_zonas(dz["elements"], proy, overrides, cuenta, cfg["zonas"])
+    if VARIANTE == "c5":
+        trozos, portales, parroquias, lugares, pois = preparar_c5(cfg, proy, vias, trozos, portales, parroquias,
+                                                                  lugares, pois, dz["elements"], cuenta)
     cajas = None
     if KD:
         teselas, cajas = teselar_kd(trozos, portales, proy, KD_TOPE)

@@ -17,4 +17,20 @@ test-gen-6x/
 resources-gen-c/
 source-gen-c/
 test-gen-c/
+resources-gen-b/
+source-gen-b/
+test-gen-b/
+resources-gen-c5/
+source-gen-c5/
+test-gen-c5/
 .venv/
+# Puerta del plan c5: los genera tools/puerta_c5.py desde los datos locales
+puerta/source-gen/
+puerta/resources-gen/
+
+# Metadatos de macOS y claves: nunca al repositorio público
+.DS_Store
+*.der
+*.pem
+*.p12
+.env*

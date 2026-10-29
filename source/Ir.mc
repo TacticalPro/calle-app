@@ -87,8 +87,12 @@ module Ir {
 
     function _dxdy(lat1 as Double, lon1 as Double, lat2 as Double, lon2 as Double) as Array<Double> {
         var fi = (lat1 + lat2) / 2.0d * Math.PI / 180.0d;
-        var dx = (lon2 - lon1) * 111320.0d * Math.cos(fi);
-        var dy = (lat2 - lat1) * 110574.0d;
+        // Metros por grado a esa latitud (WGS84): el de meridiano pasa de 110.574 m en el ecuador a unos 111.090
+        // en Galicia; con el del ecuador, lo norte-sur salía un 0,45 % corto.
+        var mLat = 111132.954d - 559.822d * Math.cos(2.0d * fi) + 1.175d * Math.cos(4.0d * fi);
+        var mLon = 111412.84d * Math.cos(fi) - 93.5d * Math.cos(3.0d * fi) + 0.118d * Math.cos(5.0d * fi);
+        var dx = (lon2 - lon1) * mLon;
+        var dy = (lat2 - lat1) * mLat;
         return [dx.toDouble(), dy.toDouble()] as Array<Double>;
     }
 

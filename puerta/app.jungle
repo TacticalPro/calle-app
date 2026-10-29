@@ -1,0 +1,6 @@
+# Puerta del plan c5 en modo app (plan 2): mide la memoria con el tope real de una watch-app del fēnix 5.
+# Los tests, en monkey.jungle.
+project.manifest = manifest.xml
+base.sourcePath = source;source-gen;../source-c5
+base.resourcePath = ../resources;resources-gen
+base.excludeAnnotations = modotest

@@ -25,9 +25,9 @@ tamaño, de memoria de la c5 y de los paquetes publicados. Aquí está todo lo q
   es código). Cualquier byte de código nuevo lo come. Topes vigentes en `tools/regiones.json` → `coruna.c5`:
   tesela ≤ 22,8 KB de heap estimado, zona ≤ 13 KB (con 20 KB, 3-4 zonas seguidas en una esquina daban *Out Of
   Memory*), `rcel` 100 m, `zu` 2 m, `rural_u` 4 m, `rural_dp` 8 m, `zona_sin_margen`.
-- **Lo que nadie ha medido: el objetivo.** No se sabe cuánto espacio libre tiene el fēnix 5 ni qué lo ocupa. Su
-  `compiler.json` no declara `maxPrgFilespace` (el 7X Pro declara 64 MB). **Sin esa cifra no se decide nada**: la
-  diferencia entre «faltan 200 KB» y «falta 1 MB» cambia el plan entero (§2, T0).
+- **El objetivo (medido en T0, 2026-10-29): el fēnix 5 tiene una cuota de 2 MB para todas las apps de Connect IQ
+  juntas** (`AppSpace` 2.097.152 B en `GARMIN/GarminDevice.xml`), con 51 MB libres de disco que no sirven de nada.
+  La 3.5.3 (2.537.644 B) no cabe ni sola. **Objetivo: `.prg` ≤ 1.900.000 B (−25,1 %).** Detalle en §2, T0.
 
 ### Dónde está el peso (medición del 2026-10-28, sobre la 3.5.1; estimación 5 B por número y cadena = bytes + 3)
 
@@ -93,25 +93,34 @@ palanca conocida es la **cobertura**. Antes de aceptarlo, T2 mide las palancas q
 
 ## 2. Plan por tareas (una tarea = un commit; cifras en este documento antes de pasar a la siguiente)
 
-### T0 — Medir el reloj: el objetivo en KB (necesita el fēnix 5 por USB)
+### T0 — Medir el reloj: el objetivo en KB ✅ (2026-10-29, 18:01, fēnix 5 por USB)
 
-El fēnix 5 monta como disco (`/Volumes/GARMIN`), no por MTP como el 7X Pro.
+El fēnix 5 monta como disco (`/Volumes/GARMIN`, FAT16), no por MTP como el 7X Pro. Firmware 25.00, máquina virtual
+de Connect IQ 3.1.9 (`GARMIN/GarminDevice.xml`).
 
-- [ ] Espacio: `df -k /Volumes/GARMIN` (total, usado, libre).
-- [ ] Qué lo ocupa: `du -sk /Volumes/GARMIN/GARMIN/* | sort -n` y `ls -la /Volumes/GARMIN/GARMIN/APPS/`
-      (cada app es un `.PRG` más su `.SET`; las actividades están en `ACTIVITY/`, el registro diario en
-      `MONITOR/`, `SLEEP/`, etc.).
-- [ ] **¿Está la versión anterior de la app?** Si `APPS/` ya tiene el `.PRG` de Calles A Coruña 3.5.2, la
-      actualización necesita sitio para **la vieja y la nueva a la vez** (hipótesis, por comprobar). Si es así, el
-      objetivo cambia: puede bastar con desinstalar antes de instalar.
-- [ ] `tail -60 /Volumes/GARMIN/GARMIN/APPS/LOGS/CIQ_LOG.YML`: el motivo literal del rechazo, si quedó.
-- [ ] Escribir aquí la tabla (total · libre · APPS · actividades · otros) y **el objetivo**: el `.prg` tiene que
-      quedar por debajo de `libre − margen` (proponer 300 KB de margen para las anotaciones y lo que escribe el
-      sistema). Si el espacio se lo comen cosas que el autor puede retirar (actividades sin sincronizar, apps que
-      no usa), es **su decisión** y puede no hacer falta tocar la app.
+| Qué | Medido |
+|---|---|
+| Volumen `GARMIN` | 57,0 MB en total · 5,7 MB usados · **51,1 MB libres** |
+| `GARMIN/APPS/` | 160 KB: `GAQL4734.PRG` = Ironsight v4, **71.376 B**; `GAQL4811.PRG` = Ironsight Grid v2, **63.728 B**. Ningún `.PRG` de Calles (la hipótesis de la versión anterior, descartada) |
+| Lo demás | `TEXT` 1,9 MB (idiomas), `REMOTESW` 1,3 MB, `EDM` 1,0 MB, `SUMMARY`/`EVNTLOGS`/`DEBUG` < 250 KB cada uno; `ACTIVITY` vacía |
+| `APPS/LOGS/CIQ_LOG.YML` | no existe: ningún error de ejecución registrado |
+| **`<IQAppExt>` de `GarminDevice.xml`** | **`MaxApps` 32 · `AppSpace` 2.097.152 B** |
 
-**Criterio de hecho:** una cifra de objetivo en KB, y si la 3.5.3 (2.538 KB) cabe o no una vez retirado lo que el
-autor decida.
+**Conclusión: el disco no es el límite. Lo es la cuota de Connect IQ del fēnix 5: 2 MB (2.097.152 B) para todas
+las apps juntas.** Con las dos esferas (135.104 B) quedan **1.962.048 B**. Calles A Coruña 3.5.3 (2.537.644 B)
+**no cabe ni sola**: supera la cuota en 440.492 B; con las esferas faltan 575.596 B. Calles Pontevedra 3.5.3
+(1.636.348 B) sí cabe con las dos esferas (sobran 325.700 B). Los `compiler.json` del SDK no declaran esta cuota
+para ningún modelo de 128 KB (el 7X Pro declara `maxPrgFilespace` 64 MB): la de los fēnix 5S, 6 y 6S se lee en su
+`GarminDevice.xml` cuando haya uno a mano. Mientras tanto, la del fēnix 5 es el objetivo.
+
+**Objetivo: `.prg` del fēnix 5 ≤ 1.900.000 B** (cuota − esferas − 60 KB de margen para una esfera más o sus
+actualizaciones): **−637.644 B, un −25,1 %** respecto de la 3.5.3. Sin esferas, ≤ 2.035.000 B (−19,8 %). Las tres
+salidas ya medidas (≈ −13 %) **no llegan**: hacen falta las palancas de T2, o cobertura (T3).
+
+- [x] Espacio, ocupación, `APPS/`, log y cuota, medidos.
+- [ ] Comprobar si la cuota se aplica también por cable: copiar el `.prg` de la 3.5.3 a `GARMIN/APPS/` y ver si el
+      reloj lo lista y lo abre (si por cable la ignora, el autor puede llevar su propia compilación mientras la de
+      la tienda adelgaza). Solo con su permiso.
 
 ### T1 — Reparto reproducible del peso (`tools/peso_c5.py`)
 

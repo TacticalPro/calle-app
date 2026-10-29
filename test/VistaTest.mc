@@ -104,6 +104,7 @@ function abrevYPalabras(logger as Test.Logger) as Boolean {
     return Abrev.corta("Rúa do Franco").equals("R. do Franco") && Abrev.corta("Avenida de Lugo").equals("Av. de Lugo")
         && Abrev.corta("AP-9").equals("AP-9") && Abrev.corta("Alameda").equals("Alameda")
         && Abrev.corta("Carrer de Colón").equals("C. de Colón") && Abrev.corta("Plaça Major").equals("Pl. Major")
+        && Abrev.corta("Passatge del Crèdit").equals("Ptge. del Crèdit") && Abrev.corta("Travessera de Gràcia").equals("Trav. de Gràcia")
         && p.size() == 3 && p[0].equals("Rúa") && p[2].equals("Franco")
         && Fmt.edad(25).equals("hace 25 s") && Fmt.edad(185).equals("hace 3 min") && Fmt.hhmm(7, 5).equals("07:05")
         && Fmt.MESES.size() == 12 && Fmt.horaYFecha(0)[1].length() >= 5;

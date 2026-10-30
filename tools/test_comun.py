@@ -81,7 +81,44 @@ def c_comprobar_antes_de_generar():
     print("c: la región nueva se comprueba antes de generarla")
 
 
+def muere(f, *args, **kw):
+    """El mensaje de sys.exit de f, o AssertionError si no murió."""
+    try:
+        f(*args, **kw)
+    except SystemExit as e:
+        return str(e)
+    raise AssertionError(f"{f.__name__} no murió")
+
+
+def solo_desconocida():
+    """--solo con un nombre que no está en regiones.json (otra grafía, otra caja): antes se caía de la cuenta y
+    Regiones.mc salía vacío. Ahora muere nombrándolo, sin escribir nada."""
+    with tempfile.TemporaryDirectory() as t:
+        raiz = Path(t)
+        preparar(raiz, "normal", {"galicia": (5, 20000, 100)})
+        msg = muere(bc.escribir_comun, solo=["acoruna"], salida=raiz / "app")
+        assert "acoruna" in msg, msg
+        msg = muere(bc.escribir_comun, solo=["galicia", "acoruna"], salida=raiz / "app")
+        assert "acoruna" in msg and "galicia" not in msg, msg
+        assert not (raiz / "app").exists(), "escribió algo"
+        bc.escribir_comun(solo=["galicia"], salida=raiz / "app")   # la que existe, sí
+        assert "Galicia" in (raiz / "app" / "source" / "Regiones.mc").read_text("utf-8")
+    print("--solo: una región desconocida muere nombrándola")
+
+
+def sin_metas():
+    """--comun en un worktree sin tools/out/meta-*: antes escribía un Regiones.mc vacío que ni compilaba."""
+    with tempfile.TemporaryDirectory() as t:
+        preparar(Path(t), "normal", {})
+        msg = muere(bc.escribir_comun)
+        assert "meta" in msg, msg
+        assert not (bc.src_gen() / "Regiones.mc").exists(), "escribió Regiones.mc"
+    print("--comun sin metas muere sin escribir Regiones.mc")
+
+
 if __name__ == "__main__":
     c5_dos_provincias()
     c_sin_escribir_a_medias()
     c_comprobar_antes_de_generar()
+    solo_desconocida()
+    sin_metas()

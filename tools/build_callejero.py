@@ -2467,10 +2467,12 @@ def metas_comunes(solo=None):
         f = OUT / f"meta-{nombre}{sufijo()}.json"
         if (res_gen() / nombre / f"{nombre}.xml").exists() and f.exists():
             metas.append(json.loads(f.read_text("utf-8")))
-    if solo is not None and len(metas) < len(set(solo) & set(regiones)):
-        # Un común sin la región pedida dejaba Regiones.mc vacío (y sin compilar): mejor parar aquí.
-        sys.exit(f"--solo {','.join(sorted(solo))}: sin {OUT.name}/meta-<región>{sufijo()}.json o sin su .xml en "
-                 f"{res_gen().name}/ de alguna; genere antes la región")
+    # Un común sin la región pedida dejaba Regiones.mc vacío (y sin compilar): mejor parar aquí. Contra lo pedido, no
+    # contra lo que hay en regiones.json: un nombre que no está (otra grafía) se caía de la cuenta y pasaba.
+    faltan = sorted(set(solo or []) - {m["region"] for m in metas})
+    if faltan:
+        sys.exit(f"--solo sin {', '.join(faltan)}: no está en tools/regiones.json, o falta tools/out/meta-<región>"
+                 f"{sufijo()}.json o su .xml en {res_gen().name}/; genere antes la región")
     return sorted(metas, key=lambda m: m["id"])
 
 
@@ -2514,8 +2516,10 @@ def escribir_comun(recien=None, solo=None, salida=None):
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
           + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c", "b") else "")
           + (f" en la mayor; por app: {por_region} de {TOPE_RECURSOS_6X} posibles" if VARIANTE == "c5" else ""))
-    # Todo se comprueba antes de escribir nada: si algo falla, no queda lo común a medias.
-    error = comprobar_comun(metas)
+    # Todo se comprueba antes de escribir nada: si algo falla, no queda lo común a medias. Sin ninguna región, el
+    # Regiones.mc salía vacío y con una «}» de más que ni compilaba (un worktree sin tools/out/meta-*).
+    error = comprobar_comun(metas) if metas else (f"Ninguna región generada de la variante {VARIANTE}: falta "
+                                                  f"tools/out/meta-<región>{sufijo()}.json o su .xml en {res_gen().name}/")
     if error is None and VARIANTE in ("6x", "c", "b", "c5") and recursos > TOPE_RECURSOS_6X:
         error = (f"La variante 6x pasa del tope: {recursos} recursos > {TOPE_RECURSOS_6X}. Agrande la tesela o la zona "
                  "de alguna región (\"compacta\" en tools/regiones.json) o quite distritos.")

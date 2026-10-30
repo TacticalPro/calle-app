@@ -87,9 +87,7 @@ class VistaIr extends WatchUi.View {
     function onPosition(info as Position.Info) as Void {
         var p = info.position;
         var w = info.when;
-        // Una LAST_KNOWN sin hora no se sabe de cuándo es: no sirve para guiar.
-        if (p != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE
-                && (w != null || info.accuracy != Position.QUALITY_LAST_KNOWN)) {
+        if (p != null && Ir.sirve(info, _tFix)) {
             var d = p.toDegrees();
             _lat = d[0].toDouble();
             _lon = d[1].toDouble();

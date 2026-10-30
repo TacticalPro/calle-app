@@ -70,7 +70,10 @@ neutro() {
     [ -n "${CIQ_NEUTRO:-}" ] && return 0
     local dest="$NEUTRO/calle-${APP:-base}"
     mkdir -p "$dest"
-    rsync -a --delete --exclude .git --exclude /bin --exclude /tools/cache --exclude /tools/out --exclude /docs \
+    # De tools/out solo van las metas: tienda.py rehace el común de la app con ellas (--comun --solo) en cuanto
+    # source-gen-c5 tiene más de una provincia; sin ellas, Regiones.mc salía vacío.
+    rsync -a --delete --exclude .git --exclude /bin --exclude /tools/cache --include /tools/out/ \
+        --include '/tools/out/meta-*.json' --exclude '/tools/out/*' --exclude /docs \
         --exclude __pycache__ --exclude .venv --exclude .DS_Store ./ "$dest/"
     rm -rf "$dest/bin"
     echo "compilo en $dest" >&2

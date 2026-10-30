@@ -2467,6 +2467,10 @@ def metas_comunes(solo=None):
         f = OUT / f"meta-{nombre}{sufijo()}.json"
         if (res_gen() / nombre / f"{nombre}.xml").exists() and f.exists():
             metas.append(json.loads(f.read_text("utf-8")))
+    if solo is not None and len(metas) < len(set(solo) & set(regiones)):
+        # Un común sin la región pedida dejaba Regiones.mc vacío (y sin compilar): mejor parar aquí.
+        sys.exit(f"--solo {','.join(sorted(solo))}: sin {OUT.name}/meta-<región>{sufijo()}.json o sin su .xml en "
+                 f"{res_gen().name}/ de alguna; genere antes la región")
     return sorted(metas, key=lambda m: m["id"])
 
 

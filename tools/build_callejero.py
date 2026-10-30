@@ -2419,25 +2419,53 @@ module {mod} {{
             zstats, zcols, zfilas, zmayor, parroquias, lugares, fecha_zonas, pois)
 
 
+def metas_comunes(solo=None):
+    """Las metas de las regiones generadas de la variante (las que tienen su .xml en resources-gen*/), por id; con
+    solo, solo esas."""
+    regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
+    metas = []
+    for nombre in regiones:
+        if solo is not None and nombre not in solo:
+            continue
+        f = OUT / f"meta-{nombre}{sufijo()}.json"
+        if (res_gen() / nombre / f"{nombre}.xml").exists() and f.exists():
+            metas.append(json.loads(f.read_text("utf-8")))
+    return sorted(metas, key=lambda m: m["id"])
+
+
+def comprobar_comun(metas, nueva=None):
+    """Lo que Callejero.mc exige a las regiones que van juntas (ids distintos, una ZONA y un RCEL); el error o None.
+    nueva: la región que se va a generar, en lugar de su meta vieja (main, antes de descargar ni escribir nada).
+
+    La c5 no exige ZONA ni RCEL comunes (A Coruña, 250 m; Pontevedra, 100): cada app es una provincia (tienda.py lo
+    impone) y lleva su Callejero.mc, rehecho con --comun --solo con los de su región. El de source-gen-c5/ con
+    varias no lo compila nadie: monkey.jungle no tiene la c5 y tienda.py lo rehace si hay más zonas que las de la app."""
+    if nueva is not None:
+        metas = [m for m in metas if m["region"] != nueva["region"]] + [nueva]
+    if len({m["id"] for m in metas}) != len(metas):
+        return f"Dos regiones de la variante {VARIANTE} con el mismo id: {sorted(m['id'] for m in metas)}."
+    if VARIANTE == "c5":
+        return None
+    # Callejero.ZONA es una para todas, salvo las regiones con zona propia (Galicia), que la dan en datos().
+    zonas = {(m["zona"], m["rn"]) for m in metas if not m.get("zona_propia")}
+    if len(zonas) > 1:
+        return f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una."
+    # La celda del raster también es una (variante b: 100 m, con zonas de 20 km); los datos viejos no la guardan.
+    rceles = {m.get("rcel", 50) for m in metas}
+    if len(rceles) > 1:
+        return f"Las regiones de la variante {VARIANTE} tienen celdas de raster distintas {rceles}: Callejero.RCEL es una."
+    return None
+
+
 def escribir_comun(recien=None, solo=None, salida=None):
     """source-gen/Callejero.mc (constantes del generador y la región activa), source-gen/Regiones.mc (las
     regiones que hay en resources-gen/) y el ajuste «Zona» del teléfono (resources-gen/ajustes/).
 
     solo y salida (tools/tienda.py): solo esas regiones, escritas en salida/source y salida/res/ajustes en vez
     de source-gen*/ y resources-gen*/ajustes. Así una app de la tienda lleva sus zonas sin regenerar las teselas."""
-    regiones = json.loads((TOOLS / "regiones.json").read_text("utf-8"))
     src_dir = Path(salida) / "source" if salida else src_gen()
     ajustes_dir = Path(salida) / "res" / "ajustes" if salida else res_gen() / "ajustes"
-    src_dir.mkdir(parents=True, exist_ok=True)
-    metas = []
-    for nombre, cfg in regiones.items():
-        if solo is not None and nombre not in solo:
-            continue
-        f = OUT / f"meta-{nombre}{sufijo()}.json"
-        if (res_gen() / nombre / f"{nombre}.xml").exists() and f.exists():
-            metas.append(json.loads(f.read_text("utf-8")))
-    metas.sort(key=lambda m: m["id"])
-    assert len({m["id"] for m in metas}) == len(metas), "dos regiones con el mismo id"
+    metas = metas_comunes(solo)
     por_region = {m["region"]: sum(1 for v in m["idx"] if v) + hojas_zidx(m["zidx"]) + 1 + bool(m.get("cajas"))
                   for m in metas}
     # c5: una app por región (provincia), así que el tope de recursos es de cada una, no de la suma.
@@ -2445,17 +2473,29 @@ def escribir_comun(recien=None, solo=None, salida=None):
     print(f"Recursos de datos ({VARIANTE}): {recursos}"
           + (f" de {TOPE_RECURSOS_6X} posibles (fēnix 5 y 6)" if VARIANTE in ("6x", "c", "b") else "")
           + (f" en la mayor; por app: {por_region} de {TOPE_RECURSOS_6X} posibles" if VARIANTE == "c5" else ""))
-    # Callejero.ZONA es una para todas, salvo las regiones con zona propia (Galicia), que la dan en datos().
-    zonas = {(m["zona"], m["rn"]) for m in metas if not m.get("zona_propia")}
-    if len(zonas) > 1:
-        sys.exit(f"Las regiones de la variante {VARIANTE} tienen zonas de tamaños distintos {zonas}: Callejero.ZONA es una.")
+    # Todo se comprueba antes de escribir nada: si algo falla, no queda lo común a medias.
+    error = comprobar_comun(metas)
+    if error is None and VARIANTE in ("6x", "c", "b", "c5") and recursos > TOPE_RECURSOS_6X:
+        error = (f"La variante 6x pasa del tope: {recursos} recursos > {TOPE_RECURSOS_6X}. Agrande la tesela o la zona "
+                 "de alguna región (\"compacta\" en tools/regiones.json) o quite distritos.")
+    if error:
+        if recien:
+            # Se retira lo que se acaba de escribir: con ello dentro, la app no compilaría.
+            import shutil
+            rdir, modulo, meta = recien
+            shutil.rmtree(rdir, ignore_errors=True)
+            for f in (modulo, meta):
+                if f.exists():
+                    f.unlink()
+        sys.exit(error)
     propia = any(m.get("zona_propia") for m in metas)
-    zona, rn = (zonas.pop() if zonas else (next(((m["zona"], m["rn"]) for m in metas), (ZONA, RN))))
-    # La celda del raster también es una (variante b: 100 m, con zonas de 20 km); los datos viejos no la guardan.
-    rceles = {m.get("rcel", 50) for m in metas}
-    if len(rceles) > 1:
-        sys.exit(f"Las regiones de la variante {VARIANTE} tienen celdas de raster distintas {rceles}: Callejero.RCEL es una.")
-    rcel = rceles.pop() if rceles else RCEL
+    # Una ZONA y un RCEL (comprobar_comun); en la c5 con varias provincias, los de la primera: ese Callejero.mc no
+    # se compila, cada app lleva el suyo.
+    fijas = [m for m in metas if not m.get("zona_propia")] or metas
+    zona, rn = (fijas[0]["zona"], fijas[0]["rn"]) if fijas else (ZONA, RN)
+    # Los datos viejos no guardan la celda del raster: 50 m.
+    rcel = metas[0].get("rcel", 50) if metas else RCEL
+    src_dir.mkdir(parents=True, exist_ok=True)
     decl_zona = (f"""    var ZONA as Number = {zona};             // la de la región activa (activar)
     const RCEL = {rcel};
     var RN as Number = {rn};""" if propia else f"""    const ZONA = {zona};
@@ -2465,17 +2505,6 @@ def escribir_comun(recien=None, solo=None, salida=None):
         // Zonas propias (Galicia, 10 km); las demás regiones, las de siempre.
         ZONA = d.size() > 21 ? d[21] as Number : {zona};
         RN = d.size() > 21 ? d[22] as Number : {rn};""" if propia else "")
-    if VARIANTE in ("6x", "c", "b", "c5") and recursos > TOPE_RECURSOS_6X:
-        if recien:
-            # Se retira lo que se acaba de escribir: con ello dentro, el 6X no compilaría.
-            import shutil
-            rdir, modulo, meta = recien
-            shutil.rmtree(rdir, ignore_errors=True)
-            for f in (modulo, meta):
-                if f.exists():
-                    f.unlink()
-        sys.exit(f"La variante 6x pasa del tope: {recursos} recursos > {TOPE_RECURSOS_6X}. Agrande la tesela o la zona "
-                 "de alguna región (\"compacta\" en tools/regiones.json) o quite distritos.")
     zidx_t = "Array" if VARIANTE == "c5" else "Array<ResourceId or Null>"
     cal = f"""import Toybox.Lang;
 
@@ -2798,6 +2827,11 @@ def main():
             assert B_LADO_U * C5_RURAL_U < 1 << 15 and ZU > 1
         print(f"Variante {VARIANTE} de {a.region}: teselas adaptativas de ≤ {vc['tope_kb']} KB, zonas de {ZONA} m"
               + (f" en árbol hasta {C5_ZONA_MIN} m y ≤ {vc['tope_zona_kb']} KB" if VARIANTE == "c5" else ""))
+    # Antes de descargar y de escribir nada: que la región quepa en lo común con las ya generadas de la variante.
+    error = comprobar_comun(metas_comunes(), nueva=dict(region=a.region, id=cfg["id"], zona=ZONA, rn=RN, rcel=RCEL,
+                                                        zona_propia=KD and VARIANTE == "normal"))
+    if error:
+        sys.exit(error)
     proy = Proy(cfg["bbox"])
     area = cfg.get("area_osm")
     if cfg.get("pbf"):

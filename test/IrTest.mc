@@ -1,6 +1,7 @@
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
+import Toybox.Position;
 import Toybox.Test;
 import Toybox.Time;
 
@@ -199,4 +200,23 @@ function edadNoNegativa(logger as Test.Logger) as Boolean {
     var b = m.edad() >= 40 && m.edad() < 45;
     m.tFix = 0;
     return a && b && m.edad() == 0;
+}
+
+// La guía no vuelve atrás: una posición más vieja que la que ya tiene (la LAST_KNOWN de hace 8 min tras el fix de
+// hace 2 s con que se abrió) no sirve; una igual o más nueva, sí; una LAST_KNOWN sin hora, nunca.
+(:test)
+function irNoVuelveAtras(logger as Test.Logger) as Boolean {
+    var ahora = Time.now().value();
+    var ok = Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_GOOD, ahora), 0)
+        && Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_LAST_KNOWN, ahora - 480), 0)
+        && !Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_LAST_KNOWN, ahora - 480), ahora - 2)
+        && Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_GOOD, ahora - 2), ahora - 2)
+        && Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_GOOD, ahora), ahora - 2)
+        && !Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_LAST_KNOWN, null), 0)
+        && !Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_NOT_AVAILABLE, ahora), 0);
+    if (!ok) {
+        logger.error("LAST_KNOWN de hace 8 min sobre un fix de hace 2 s: "
+            + Ir.sirve(GpsPrueba.info(40.4d, -3.7d, Position.QUALITY_LAST_KNOWN, ahora - 480), ahora - 2));
+    }
+    return ok;
 }

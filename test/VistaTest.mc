@@ -1,6 +1,7 @@
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Test;
+import Toybox.Time;
 
 // Pinta la vista en cada estado sobre un lienzo en memoria: no mira píxeles, pero
 // cualquier excepción del dibujo (tipos, nulos, fuentes) hace fallar el test.
@@ -137,4 +138,40 @@ function trozoTurnoNegativo(logger as Test.Logger) as Boolean {
         }
     }
     return Texto.turno(4000, 3) == 2 && Texto.turno(-2000, 3) == 2;
+}
+
+// La caché de maquetación se rehace cuando el dato envejece con dos calles y barrio (Madrid): topDos() baja la
+// primera calle para la edad, y antes la clave no lo veía («HACE 20 S» encima del nombre).
+(:test)
+function claveVeElDatoViejo(logger as Test.Logger) as Boolean {
+    var m = new Modelo();
+    var v = new VistaCalle(m, new Localizador(m));
+    m.estado = EST_OK;
+    m.calle1 = "Calle de la Princesa";
+    m.calle2 = "Calle de Martín de los Heros";
+    m.barrio = "Argüelles · Moncloa-Aravaca";
+    m.tFix = Time.now().value() - 2;
+    var fresca = v.clave();
+    m.tFix = Time.now().value() - 20;
+    var vieja = v.clave();
+    if (fresca.equals(vieja)) {
+        logger.error("la misma clave con el dato fresco y viejo: " + fresca);
+    }
+    return !fresca.equals(vieja);
+}
+
+// Un nombre que no cabe en una línea pero sí en dos (el recurso de pintarCaja cuando Texto.colocar no lo coloca)
+// sale entero, sin trozos; solo lo que no cabe ni así va a trozos.
+(:test)
+function encajaEnDosLineas(logger as Test.Logger) as Boolean {
+    var dc = Lienzo.dc();
+    var f = Graphics.FONT_TINY;
+    var a = dc.getTextWidthInPixels("Rúa da Raíña", f);
+    var b = dc.getTextWidthInPixels("Vella de Abaixo", f);
+    var w = (a > b ? a : b) + 6;
+    var h = dc.getFontHeight(f) * 5 / 2;
+    var s = Texto.encaja(dc, "Rúa da Raíña Vella de Abaixo", f, w, h);
+    var largo = Texto.encaja(dc, "Rúa de Bernardo Barreiro de Vázquez-Varela e Pereira", f, w, h);
+    logger.debug("ENCAJA «" + s + "» / «" + largo + "»");
+    return s.find("…") == null && s.find("Rúa") != null && s.find("Abaixo") != null && largo.find("…") != null;
 }

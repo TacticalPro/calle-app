@@ -27,6 +27,15 @@ module Ir {
     const CUANTOS = 8;               // en la lista
     const LLEGADA_M = 30;            // más cerca que esto: «Ha llegado»
 
+    // Si una posición del GPS sirve para guiar, cuando la que ya se tiene es de tFix (segundos; 0 = ninguna).
+    // Una LAST_KNOWN sin hora no se sabe de cuándo es; una más vieja que la que se tiene haría saltar la flecha
+    // atrás (la de hace 8 min sobre el fix de hace 2 s con que se abrió la guía).
+    function sirve(info as Position.Info, tFix as Number) as Boolean {
+        var w = info.when;
+        return info.position != null && info.accuracy != Position.QUALITY_NOT_AVAILABLE
+            && (w != null ? w.value() >= tFix : info.accuracy != Position.QUALITY_LAST_KNOWN);
+    }
+
     function cargar() as Array or Null {
         var r = Callejero.POI;
         if (r == null) {

@@ -74,7 +74,11 @@ NEUTRO=/private/tmp/ciq-build
 neutro() {
     [ -n "${CIQ_NEUTRO:-}" ] && return 0
     local dest; dest="$NEUTRO/calle-${APP:-base}-$(basename "$(git rev-parse --show-toplevel)")"
-    git diff --quiet HEAD -- || echo "neutro: hay cambios sin commit; no entran en la copia, que sale de HEAD" >&2
+    local sucio; sucio="$(git status --porcelain)"
+    if [ -n "$sucio" ]; then
+        echo "neutro: esto no está en HEAD y no entra en la copia (lo generado, que git ignora, sí):" >&2
+        echo "$sucio" >&2
+    fi
     rm -rf "$dest"; mkdir -p "$dest"
     git archive HEAD | tar -x -C "$dest"
     rm -rf "$dest/docs"
@@ -160,7 +164,7 @@ simulador() {
 # solo se pasan las carpetas que existen, y un 2 de grep o de awk es fallo.
 privacidad() {
     local malo=0 rc out d dirs=() pruebas=() ng
-    ng="$(shopt -p nullglob)"; shopt -s nullglob
+    ng="$(shopt -p nullglob || true)"; shopt -s nullglob   # shopt -p sale con 1 si está apagada
     for d in source source-c5 source-gen* test test-gen*; do [ -d "$d" ] && dirs+=("$d"); done
     pruebas=(test/*.mc test-gen*/*.mc)
     $ng
@@ -205,12 +209,13 @@ privacidad() {
 guarda_test() {
     local t mal=0 v i=0
     t="$(mktemp -d)"
+    # Cada caso corre en un bash aparte con set -euo pipefail, como en una orden de verdad: dentro de un «if» bash no
+    # aplica set -e, y una línea que en uso real corta el script en silencio aquí pasaba (2026-10-30, shopt -p).
     espera() {   # espera <pasa|falla> <qué> <orden…>
         local quiero=$1 que=$2 r; shift 2
-        if "$@"; then r=pasa; else r=falla; fi
+        if bash -c "set -euo pipefail; $(declare -f rutas privacidad); \"\$@\"" _ "$@"; then r=pasa; else r=falla; fi
         if [ "$r" = "$quiero" ]; then echo "guarda-test: OK   $que: $r"; else echo "guarda-test: MAL  $que: $r, y debía $quiero"; mal=1; fi
     }
-    priv() { (cd "$t/p" && privacidad); }
     iq() { mkdir -p "$t/iq-$1"; printf '%s\n' "$2" > "$t/iq-$1/debug.xml"; (cd "$t/iq-$1" && bsdtar --format 7zip -cf "../$1.iq" debug.xml); }
 
     iq limpio 'filename="/private/tmp/ciq-build/calle/source/Calle.mc"'
@@ -235,18 +240,18 @@ guarda_test() {
     printf 'using Toybox.Position;\n' > "$t/p/source/Calle.mc"
     printf '(:test)\nfunction prueba(logger) { return true; }\n' > "$t/p/test/Prueba.mc"
     printf '<iq:uses-permission id="Positioning"/>\n' > "$t/p/manifest.xml"
-    espera pasa "privacidad limpia sin carpetas generadas" priv
+    espera pasa "privacidad limpia sin carpetas generadas" eval "cd '$t/p'; privacidad"
     printf 'Communications.makeWebRequest(u, {}, {}, m);\n' > "$t/p/source/Red.mc"
-    espera falla "privacidad con red, sin carpetas generadas" priv
+    espera falla "privacidad con red, sin carpetas generadas" eval "cd '$t/p'; privacidad"
     mv "$t/p/source/Red.mc" "$t/Red.mc"
     mkdir -p "$t/p/source-gen" "$t/p/test-gen"; printf 'module Callejero {}\n' > "$t/p/source-gen/Callejero.mc"
     printf '(:test)\nmodule PruebaGen {}\n' > "$t/p/test-gen/PruebaGen.mc"
-    espera pasa "privacidad limpia con carpetas generadas" priv
+    espera pasa "privacidad limpia con carpetas generadas" eval "cd '$t/p'; privacidad"
     printf 'Application.Storage.setValue("x", 1);\n' > "$t/p/source-gen/Guarda.mc"
-    espera falla "privacidad con Storage fuera de Notas y Ajustes" priv
+    espera falla "privacidad con Storage fuera de Notas y Ajustes" eval "cd '$t/p'; privacidad"
     mv "$t/p/source-gen/Guarda.mc" "$t/Guarda.mc"
     printf 'function suelta() {}\n' > "$t/p/test/Suelta.mc"
-    espera falla "privacidad con un test sin (:test)" priv
+    espera falla "privacidad con un test sin (:test)" eval "cd '$t/p'; privacidad"
 
     rm -rf "$t"
     [ $mal -eq 0 ] && echo "guarda-test: todo como debía"

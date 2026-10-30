@@ -44,7 +44,8 @@ version» no ha cambiado, para no subirla dos veces.
 con el mismo sha1, la firma de `manifest.sig2` verificada e `iq_limpio.py` limpio; el `manifest.xml`, idéntico). El
 portal lo acepta y lo desempaqueta bien: los tamaños por reloj son los mismos que en la 3.4.5 (4,60-7,91 MB). Es la
 prueba de que un `.iq` grande cabe en sólido: el de Galicia con 54 relojes baja de 428 MB (por encima del tope de
-400 MB del portal, «The uploaded file is bigger than 400 MB») a 17 MB. Falta comprobar la instalación en el reloj.
+400 MB del portal, «The uploaded file is bigger than 400 MB») a 17 MB. Instalada y abierta en un fēnix 7X Pro el mismo día:
+el sólido queda validado en el portal y en el reloj.
 
 **Título «Calles Madrid (offline)»** (el autor, 2026-10-26; antes «CALLE Madrid (offline)»: que no usa red es su
 punto fuerte). Se cambia con *Edit Details*, junto con la carátula «CALLES / MADRID», en cuanto Garmin apruebe la

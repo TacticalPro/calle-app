@@ -9,7 +9,8 @@
 
 Lee solo lo que lee el reloj (las teselas y sus constantes, en tools/out/meta-<region>.json)
 y, para la fuerza bruta, las calles enteras sin teselar (tools/out/geom-<region>.json).
-No importa nada de build_callejero.py: si los dos coinciden, no es por compartir un error.
+De build_callejero.py solo toma abreviar_tipo (los nombres de control y de ruta de la c5, como los datos); nada de
+la geometría ni del teselado: si los dos coinciden, no es por compartir un error.
 """
 import argparse
 import importlib.util

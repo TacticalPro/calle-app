@@ -30,6 +30,15 @@ SHA-256 en la página y asignarlo al campo real con `DataTransfer`. Servirlo des
 reloj. Antes hubo que rehacer `source-gen-c` (`REGION=madrid VARIANTE=c ./ciq.sh datos --comun`): estaba generado
 antes de `ZPREF` y el 6X Pro no compilaba.
 
+**Beta de prueba con 54 relojes (2026-10-30, P98).** «Calles Madrid (offline) (beta)», app aparte con su `beta_id`
+(`98051658…`; `APP=madrid ./ciq.sh beta` → `bin/calle-madrid-beta.iq`), id de la página en el portal
+`e8dc7afc-ea4b-43d2-8d77-1d298e1d46b7`. Versión 3.4.5 (interna 1), con los 54 relojes del catálogo y 66 piezas:
+245.034.465 B, sha1 `ad87c084cc16c832faf1e718b620a4e1ba3b4f73`, subida en 28 trozos de 9 MB (método arriba). Es la
+prueba de un paquete por encima de los 174 MB de Barcelona y entró: el portal la deja en PENDINGSCAN, con ~7,9 MB por
+reloj en la variante normal y 4,6 MB en la c. **El primer «Continue» devolvió «trouble communicating with our servers» y
+el segundo, con el mismo fichero, entró**, como con Barcelona: antes de reintentar, comprobar que la «Latest app
+version» no ha cambiado, para no subirla dos veces.
+
 **Título «Calles Madrid (offline)»** (el autor, 2026-10-26; antes «CALLE Madrid (offline)»: que no usa red es su
 punto fuerte). Se cambia con *Edit Details*, junto con la carátula «CALLES / MADRID», en cuanto Garmin apruebe la
 versión en revisión: no se toca mientras tanto. En el reloj, «Calles Madrid» llega con la próxima versión.

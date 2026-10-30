@@ -31,9 +31,28 @@ class Localizador {
         }
     }
 
-    // START o toque: recalcular ya, sin esperar al umbral de distancia o tiempo.
+    // START, toque o vuelta a la vista: recalcular ya, sin esperar al umbral de distancia o tiempo.
     function forzar() as Void {
-        procesar(Position.getInfo(), true, false);
+        forzarCon(Position.getInfo(), Time.now().value());
+    }
+
+    // La LAST_KNOWN del reloj puede ser de hace horas y de otra ciudad: nunca pisa un fix más nuevo, y sin fix de
+    // la app solo vale si tiene menos de L.SEMILLA_MAX_S, y como semilla, igual que en sembrar(). Antes entraba
+    // como fix normal de cualquier edad, y la lista de hospitales y las anotaciones salían desde allí.
+    function forzarCon(info as Position.Info, ahora as Number) as Void {
+        if (info.accuracy != Position.QUALITY_LAST_KNOWN) {
+            procesar(info, true, false);
+            return;
+        }
+        var w = info.when;
+        if (w == null || w.value() < modelo.tFix) {
+            return;
+        }
+        var semilla = modelo.estado == EST_BUSCANDO || modelo.semilla;
+        if (semilla && ahora - w.value() > L.SEMILLA_MAX_S) {
+            return;
+        }
+        procesar(info, true, semilla);
     }
 
     function procesar(info as Position.Info, forzado as Boolean, semilla as Boolean) as Void {
@@ -137,11 +156,12 @@ class Localizador {
             m.tesela = t.idx;
             return;
         }
-        // Histéresis: la calle que ya se ve se queda si la nueva no la mejora en más de HISTERESIS_M.
+        // Histéresis: la calle que ya se ve se queda si la nueva no la mejora en más de HISTERESIS_M, y mientras
+        // siga a MAXD (sin esa cota, a 52 m seguía la mostrada aunque la nueva estuviera a 49).
         var mostrada = m.calle1;
         if (mostrada != null && !t.nombre(a).equals(mostrada)) {
             var k = t.indiceDe(mostrada);
-            if (k >= 0 && t.mejor[k] <= t.mejor[a] + L.HISTERESIS_M) {
+            if (k >= 0 && t.mejor[k] <= t.mejor[a] + L.HISTERESIS_M && t.mejor[k] <= Callejero.MAXD) {
                 b = a;
                 a = k;
             }

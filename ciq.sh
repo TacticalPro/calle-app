@@ -27,6 +27,7 @@
 #   fuentes) y fallan si el producto lleva /Users/, /private/var/folders/ o el nombre del usuario dentro.
 #   ./ciq.sh guarda-test  prueba la guarda de rutas en los dos sentidos: un .iq sucio, roto o ausente falla y uno
 #                         limpio pasa; y la de privacidad, con y sin las carpetas generadas
+#                         (y la beta sin APP, y tools/iq_solido.py, que necesita iq_limpio.py en IQ_LIMPIO o en el PATH)
 #   ./ciq.sh icon         regenera el icono (Python + Pillow)
 #   ./ciq.sh fuentes      mide las fuentes de sistema de cada reloj en el simulador → tools/fonts/metricas.json
 #                         (las usa tools/mockup.py; rehacer al añadir un reloj al catálogo)
@@ -270,6 +271,55 @@ guarda_test() {
     if [ -n "$quiero" ] && [ "$sale" = "$quiero" ]; then
         echo "guarda-test: OK   beta APP=galicia: id ${sale}, el \"beta_id\" del catálogo"
     else echo "guarda-test: MAL  beta APP=galicia: id «${sale}», y el catálogo dice «${quiero}»"; mal=1; fi
+
+    # tools/iq_solido.py (2026-10-30): un .iq de mentira, firmado con una clave de prueba como lo firma monkeyc
+    # (manifest.sig2 = RSA-SHA256 de manifest.xml, dev_key.pub en DER). El bueno pasa y deja la salida; con la firma
+    # rota, sin manifest.sig2, con una ruta del Mac, con la salida ya puesta o con un empaquetado que pierde o cambia
+    # un fichero, falla y no deja salida. Necesita iq_limpio.py en IQ_LIMPIO o en el PATH, como la herramienta.
+    local s="$t/s" caso
+    mkdir -p "$s/iq/006-B0001-00" "$s/iq/006-B0002-00"
+    openssl genrsa -out "$s/k.pem" 2048 2>/dev/null
+    openssl rsa -in "$s/k.pem" -pubout -outform DER -out "$s/iq/dev_key.pub" 2>/dev/null
+    printf '<iq:manifest><iq:product partNumber="006-B0001-00"/></iq:manifest>\n' > "$s/iq/manifest.xml"
+    openssl dgst -sha256 -sign "$s/k.pem" -out "$s/iq/manifest.sig2" "$s/iq/manifest.xml"
+    head -c 300000 /dev/urandom > "$s/iq/006-B0001-00/calle.prg"; cp "$s/iq/006-B0001-00/calle.prg" "$s/iq/006-B0002-00/"
+    for caso in 006-B0001-00 006-B0002-00; do
+        printf '<debug filename="/private/tmp/ciq-build/calle/source/Calle.mc"/>\n' > "$s/iq/$caso/debug.xml"
+    done
+    sopa() {   # sopa <nombre> <carpeta>: el .iq como lo deja monkeyc (7z, un fichero tras otro)
+        (cd "$2" && bsdtar --format 7zip -cf "$s/$1.iq" ./*)
+    }
+    sopa bueno "$s/iq"
+    sin_salida() {   # sin_salida <qué> <salida>: tras un fallo, ni la salida ni la .parcial
+        if [ -e "$2" ] || [ -e "$2.parcial" ]; then echo "guarda-test: MAL  $1: dejó salida"; mal=1; fi
+    }
+    espera pasa "iq_solido: .iq bueno" $PY tools/iq_solido.py "$s/bueno.iq" "$s/bueno-solido.iq"
+    [ -s "$s/bueno-solido.iq" ] || { echo "guarda-test: MAL  iq_solido: el bueno no dejó salida"; mal=1; }
+    espera falla "iq_solido: la salida ya existe" $PY tools/iq_solido.py "$s/bueno.iq" "$s/bueno-solido.iq"
+    cp -R "$s/iq" "$s/rota"; printf '<!-- otro -->\n' >> "$s/rota/manifest.xml"; sopa rota "$s/rota"
+    espera falla "iq_solido: firma rota" $PY tools/iq_solido.py "$s/rota.iq" "$s/rota-solido.iq"
+    sin_salida "iq_solido: firma rota" "$s/rota-solido.iq"
+    cp -R "$s/iq" "$s/sinfirma"; mv "$s/sinfirma/manifest.sig2" "$s/sinfirma.sig2"; sopa sinfirma "$s/sinfirma"
+    espera falla "iq_solido: sin manifest.sig2" $PY tools/iq_solido.py "$s/sinfirma.iq" "$s/sinfirma-solido.iq"
+    sin_salida "iq_solido: sin manifest.sig2" "$s/sinfirma-solido.iq"
+    cp -R "$s/iq" "$s/ruta"; printf '<debug filename="/Users/x/calle/source/Calle.mc"/>\n' > "$s/ruta/006-B0002-00/debug.xml"
+    sopa ruta "$s/ruta"
+    espera falla "iq_solido: ruta del Mac dentro" $PY tools/iq_solido.py "$s/ruta.iq" "$s/ruta-solido.iq"
+    sin_salida "iq_solido: ruta del Mac dentro" "$s/ruta-solido.iq"
+    for caso in pierde cambia; do   # el empaquetado se estropea a propósito: la comprobación de después lo tiene que ver
+        espera falla "iq_solido: el empaquetado $caso un fichero" $PY -c '
+import sys; sys.path.insert(0, "tools"); import iq_solido as m
+bueno = m.empaquetar
+def malo(d, ficheros, dst):
+    if sys.argv[1] == "pierde":
+        ficheros = ficheros[:-1]
+    else:
+        (d / "006-B0002-00" / "calle.prg").write_bytes(b"otro")
+    bueno(d, ficheros, dst)
+m.empaquetar = malo
+sys.exit(m.main(sys.argv[2:]))' "$caso" "$s/bueno.iq" "$s/$caso-solido.iq"
+        sin_salida "iq_solido: el empaquetado $caso un fichero" "$s/$caso-solido.iq"
+    done
 
     rm -rf "$t"
     [ $mal -eq 0 ] && echo "guarda-test: todo como debía"

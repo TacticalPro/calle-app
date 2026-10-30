@@ -12,6 +12,7 @@ y, para la fuerza bruta, las calles enteras sin teselar (tools/out/geom-<region>
 No importa nada de build_callejero.py: si los dos coinciden, no es por compartir un error.
 """
 import argparse
+import importlib.util
 import json
 import math
 import random
@@ -21,11 +22,18 @@ from collections import defaultdict
 from pathlib import Path
 
 
+_build = None
+
+
 def abreviar_tipo(nombre):
-    """La de build_callejero (ref.py corre con python -I, que no pone tools/ en sys.path): se importa al usarla."""
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from build_callejero import abreviar_tipo as f
-    return f(nombre)
+    """La de build_callejero, cargado por su ruta la primera vez que se usa: ref.py corre con python -I, que no
+    pone tools/ en sys.path, y meterlo ahí lo dejaría por delante de la biblioteca estándar."""
+    global _build
+    if _build is None:
+        spec = importlib.util.spec_from_file_location("build_callejero", Path(__file__).resolve().parent / "build_callejero.py")
+        _build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_build)
+    return _build.abreviar_tipo(nombre)
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"

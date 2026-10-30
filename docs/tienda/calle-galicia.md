@@ -9,7 +9,11 @@ relojes nuevos. Subida por trozos con la extensión de Chrome (método en `calle
 `APP=galicia ./ciq.sh beta` → `bin/calle-galicia-beta.iq`), con los 54 relojes de la app (P98). **El id de antes, `19ddcb3e…`,
 está quemado:** su beta se borró en el portal y el id queda reservado para siempre (al subir con él: «The manifest app ID is
 already in use by another app»). No se reutiliza. Con 54 relojes el `.iq` pesa 428 MB, por encima del tope de 400 MB del
-portal: se sube en 7z sólido (`tools/iq_solido.py`, ~17 MB), como la 3.4.6 de la beta de Madrid.
+portal: se sube en 7z sólido (`tools/iq_solido.py`, ~17 MB), como la 3.4.6 de la beta de Madrid. **Subida el 2026-10-30 como 3.5.4**
+(interna 1, id de la página en el portal `bf12ec28-d21c-4e0c-88be-cd8f863a9e2a`, id `87d82f4b…`): 66 piezas en 11.116.714 B,
+sha1 `0d8e44d30da675be752e1bad49435f57ad37d0e9`, sacado con `tools/iq_solido.py` del `.iq` del SDK (428.295.833 B; los 201
+ficheros con el mismo sha1, la firma de `manifest.sig2` verificada e `iq_limpio.py` limpio). El portal la acepta y la deja en
+PENDINGSCAN, con 8,7 a 13,0 MB por reloj.
 
 - **Título:** «Calles Galicia (offline)», en inglés y en español (el autor, 2026-10-26; antes «CALLE Galicia (offline)»).
   Que no usa red es su punto fuerte. La beta pasa a «Calles Galicia (offline) (beta)» con *Edit Details*.

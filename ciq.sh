@@ -295,6 +295,8 @@ guarda_test() {
     }
     espera pasa "iq_solido: .iq bueno" $PY tools/iq_solido.py "$s/bueno.iq" "$s/bueno-solido.iq"
     [ -s "$s/bueno-solido.iq" ] || { echo "guarda-test: MAL  iq_solido: el bueno no dejó salida"; mal=1; }
+    espera pasa "iq_solido: con rutas relativas" eval "cd '$s' && $PY '$PWD/tools/iq_solido.py' bueno.iq relativa-solido.iq"
+    [ -s "$s/relativa-solido.iq" ] || { echo "guarda-test: MAL  iq_solido: con rutas relativas no dejó la salida donde tocaba"; mal=1; }
     espera falla "iq_solido: la salida ya existe" $PY tools/iq_solido.py "$s/bueno.iq" "$s/bueno-solido.iq"
     cp -R "$s/iq" "$s/rota"; printf '<!-- otro -->\n' >> "$s/rota/manifest.xml"; sopa rota "$s/rota"
     espera falla "iq_solido: firma rota" $PY tools/iq_solido.py "$s/rota.iq" "$s/rota-solido.iq"

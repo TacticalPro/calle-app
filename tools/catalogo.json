@@ -62,7 +62,7 @@
       "instinct3amoled45mm",
       "instinct3amoled50mm"
     ],
-    "relojes_nota": "2026-10-25: 3.1.0 solo con el fēnix 6X (parte de Madrid). 3.2.0: el 6X (ya con la variante c, Madrid entero) y la familia fēnix 7, con Madrid entero; la sube el autor a mano (52,5 MB). Pendientes: fēnix E, 8 y 9 (pantallas resueltas en el tramo 1b; faltan sus tests) y el grupo C. 2026-10-30 (P98): candidatos los 39 de Calles Barcelona fuera de la familia fēnix 7 (variante normal) y los de 1,25 MB y 254 recursos que ya lleva Calles Galicia (fēnix 6 Pro/6S Pro, 5X y 5 Plus/5S Plus/5X Plus), con la variante c, como el 6X Pro.",
+    "relojes_nota": "2026-10-25: 3.1.0 solo con el fēnix 6X (parte de Madrid). 3.2.0: el 6X (ya con la variante c, Madrid entero) y la familia fēnix 7, con Madrid entero; la sube el autor a mano (52,5 MB). Pendientes: fēnix E, 8 y 9 (pantallas resueltas en el tramo 1b; faltan sus tests) y el grupo C. 2026-10-30 (P98): los 39 de Calles Barcelona fuera de la familia fēnix 7 (variante normal, .prg de 7,9 MB) y los de 1,25 MB y 254 recursos que ya lleva Calles Galicia (fēnix 6 Pro/6S Pro, 5X y 5 Plus/5S Plus/5X Plus) con la variante c, como el 6X Pro (243 recursos de datos, .prg de 4,6 MB); 57/57 tests en una muestra de cada familia.",
     "variante": {
       "fenix6pro": "c",
       "fenix6spro": "c",
@@ -134,7 +134,7 @@
       "instinct3amoled45mm",
       "instinct3amoled50mm"
     ],
-    "relojes_nota": "2026-10-26: familia fēnix 7 (768 KB; variante normal) y, desde la 3.5.0, los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus, con la variante b (Galicia entera en 216 recursos; el 6X Pro, que en Madrid va con la c, aquí va con la b por \"variante\"). Fuera: los de 128 KB (fēnix 5/5S y 6/6S; P73) y los fēnix 8, 9 y E (faltan sus tests). 2026-10-30 (P98): candidatos los 39 de Calles Barcelona que no son de la familia fēnix 7 (fēnix 8, 9 y E, epix 2/Pro, Enduro 3/4, MARQ 2/3, Forerunner 165/255M/265/570/955/965/970, Venu 3/4, vívoactive 5/6, Instinct 3 AMOLED; 768 KB, sin tope de recursos), con la variante normal.",
+    "relojes_nota": "2026-10-26: familia fēnix 7 (768 KB; variante normal) y, desde la 3.5.0, los de 1,25 MB y 254 recursos: fēnix 6 Pro/6S Pro/6X Pro, 5X y 5 Plus/5S Plus/5X Plus, con la variante b (Galicia entera en 216 recursos; el 6X Pro, que en Madrid va con la c, aquí va con la b por \"variante\"). Fuera: los de 128 KB (fēnix 5/5S y 6/6S; P73). 2026-10-30 (P98): los 39 de Calles Barcelona fuera de la familia fēnix 7 (fēnix 8, 9 y E, epix 2/Pro, Enduro 3/4, MARQ 2/3, Forerunner 165/255M/265/570/955/965/970, Venu 3/4, vívoactive 5/6, Instinct 3 AMOLED; 768 KB, sin tope de recursos), con la variante normal: .prg de 12,96 MB y 58/58 tests en una muestra de cada familia.",
     "variante": {
       "fenix6xpro": "b"
     }

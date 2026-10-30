@@ -39,6 +39,13 @@ reloj en la variante normal y 4,6 MB en la c. **El primer «Continue» devolvió
 el segundo, con el mismo fichero, entró**, como con Barcelona: antes de reintentar, comprobar que la «Latest app
 version» no ha cambiado, para no subirla dos veces.
 
+**3.4.6 de la beta (2026-10-30): el mismo contenido en 7z sólido.** Interna 2, 66 piezas: 9.054.812 B, sha1
+`92181a79ef15d10da4a5198e0d67863401a1321c`, sacado con `tools/iq_solido.py` del `.iq` de la 3.4.5 (los 201 ficheros
+con el mismo sha1, la firma de `manifest.sig2` verificada e `iq_limpio.py` limpio; el `manifest.xml`, idéntico). El
+portal lo acepta y lo desempaqueta bien: los tamaños por reloj son los mismos que en la 3.4.5 (4,60-7,91 MB). Es la
+prueba de que un `.iq` grande cabe en sólido: el de Galicia con 54 relojes baja de 428 MB (por encima del tope de
+400 MB del portal, «The uploaded file is bigger than 400 MB») a 17 MB. Falta comprobar la instalación en el reloj.
+
 **Título «Calles Madrid (offline)»** (el autor, 2026-10-26; antes «CALLE Madrid (offline)»: que no usa red es su
 punto fuerte). Se cambia con *Edit Details*, junto con la carátula «CALLES / MADRID», en cuanto Garmin apruebe la
 versión en revisión: no se toca mientras tanto. En el reloj, «Calles Madrid» llega con la próxima versión.

@@ -135,6 +135,7 @@ KD = False
 C5_URBANA = []         # [(caja, anillo)] de las parroquias de la zona urbana
 C5_URB_CELDA = 500     # m: rejilla de la zona urbana para elegir la unidad de cada tesela
 C5_URB_CELDAS = set()  # (col, fila) de las celdas que tocan la zona urbana
+C5_SIN_ABREV = set()   # "abreviar": los nombres que se quedan largos porque su forma corta chocaría (meta → ref.py)
 C5_RURAL_U = 4
 C5_ZONA_MIN = 2500
 C5_TOPE_ZONA = 13 * 1024
@@ -608,10 +609,23 @@ ABREV = dict(zip(*[iter((
     "Passatge", "Ptge.", "Rambla", "Rbla.", "Travessera", "Trav.", "Baixada", "Bda."))] * 2))
 
 
+ABREV_CORTAS = frozenset(ABREV.values())
+
+
 def abreviar_tipo(nombre):
     """«Rúa do Franco» → «R. do Franco»: la primera palabra, si es un tipo de vía de ABREV; lo demás, igual."""
     tipo, sep, resto = nombre.partition(" ")
     return ABREV[tipo] + sep + resto if sep and tipo in ABREV else nombre
+
+
+def abreviaturas(nombres):
+    """{nombre: forma abreviada} de los nombres de la región que se pueden abreviar sin fundirse con otra calle: la
+    forma corta no puede ser la de otro nombre («Travesa do Porto» y «Travesía do Porto» darían las dos «Tr. do
+    Porto»; «Rolda» y «Ronda», «Rd.») ni un nombre que ya exista tal cual. Los que chocan se quedan largos."""
+    cortos = defaultdict(set)
+    for n in set(nombres):
+        cortos[abreviar_tipo(n)].add(n)
+    return {n: c for c, ns in cortos.items() if len(ns) == 1 for n in ns if c != n}
 
 
 def nombre_via(tags, overrides):
@@ -1636,6 +1650,22 @@ def encadenar_rural(vs):
 PROVINCIAS_GALICIA = ("15", "27", "32", "36")   # A Coruña, Lugo, Ourense, Pontevedra (ref:ine)
 
 
+def aclarar_portales(portales, cada, municipio):
+    """Uno de cada `cada` portales por calle real y acera ("portales_cada"; "portales_mitad" = 2): se agrupan por
+    nombre, municipio (municipio(x, y), el ref:ine) y paridad del número, porque las calles homónimas de dos
+    municipios son calles distintas y cada acera lleva su numeración. En cada grupo quedan el primero, el último y
+    uno de cada `cada`: el «portal más cercano» puede errar hasta cada − 1 portales de su misma acera (con la
+    numeración seguida, 2·(cada − 1) números), nunca dar uno de la acera de enfrente."""
+    grupos = defaultdict(list)
+    for p in portales:
+        grupos[(p["calle"], municipio(p["x"], p["y"]), p["num"] % 2)].append(p)
+    quedan = []
+    for ps in grupos.values():
+        ps.sort(key=lambda p: (p["num"], p["suf"], p["x"], p["y"]))
+        quedan += [p for i, p in enumerate(ps) if i % cada == 0 or i == len(ps) - 1]
+    return quedan
+
+
 def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, zelems, cuenta):
     """Variante c5: las reglas de volumen de la especificación c5 y la provincia de la app (cfg["provincia"]).
     Zona urbana: los municipios de cfg["c5"]["urbana"] (ref:ine de las parroquias). Provincia: por celda de 1 km,
@@ -1648,6 +1678,8 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
     G = [[None] * nc for _ in range(nf)]
     C5_URBANA.clear()
     C5_URB_CELDAS.clear()
+    C5_SIN_ABREV.clear()
+    munis = []   # [(ref:ine del municipio, caja, anillo)] de la zona urbana: el aclarado de portales separa homónimas
     _C5_UNIDAD.clear()
     for e in zelems:
         tags = e.get("tags", {})
@@ -1663,6 +1695,7 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
             bb = caja_de(a)
             if ine[:5] in urbana:
                 C5_URBANA.append((bb, a))
+                munis.append((ine[:5], bb, a))
             for fy in range(max(0, int(bb[1] // celda)), min(nf, int(bb[3] // celda) + 1)):
                 for fx in range(max(0, int(bb[0] // celda)), min(nc, int(bb[2] // celda) + 1)):
                     if G[fy][fx] is None and dentro((fx + .5) * celda, (fy + .5) * celda, a):
@@ -1694,6 +1727,10 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
     def en_urbana(x, y):
         return any(bb[0] <= x <= bb[2] and bb[1] <= y <= bb[3] and dentro(x, y, a) for bb, a in C5_URBANA)
 
+    def municipio(x, y):
+        return next((ine for ine, bb, a in munis if bb[0] <= x <= bb[2] and bb[1] <= y <= bb[3] and dentro(x, y, a)),
+                    None)
+
     def cx(v):
         return (v["bb"][0] + v["bb"][2]) / 2, (v["bb"][1] + v["bb"][3]) / 2
 
@@ -1721,26 +1758,25 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
     portales = [p for p in portales if en_prov(p["x"], p["y"]) and en_urbana(p["x"], p["y"])]
     cada = int(c5.get("portales_cada") or (2 if c5.get("portales_mitad") else 1))
     if cada > 1:
-        # Uno de cada `cada` por calle, el primero y el último siempre (C18; "portales_mitad" = 2): el «portal más
-        # cercano» puede errar hasta cada − 1 números. El salto entre números crece y algunos pasan a los escapes E.
-        por_calle = defaultdict(list)
-        for p in portales:
-            por_calle[p["calle"]].append(p)
-        antes, portales = len(portales), []
-        for ps in por_calle.values():
-            ps.sort(key=lambda p: (p["num"], p["suf"], p["x"], p["y"]))
-            portales += [p for i, p in enumerate(ps) if i % cada == 0 or i == len(ps) - 1]
+        # C18: el salto entre números crece y algunos pasan a los escapes E.
+        antes, portales = len(portales), aclarar_portales(portales, cada, municipio)
         cuenta[f"c5: portales fuera (uno de cada {cada})"] = antes - len(portales)
     if c5.get("abreviar"):
-        # El tipo de vía abreviado ya en los datos (abreviar_tipo): trozos, sus cruces y los portales, a la vez, para
-        # que la tesela, la referencia (geom) y los puntos de control hablen el mismo nombre.
+        # El tipo de vía abreviado ya en los datos (abreviaturas: solo si la forma corta no funde dos calles): trozos,
+        # sus cruces y los portales, a la vez, para que la tesela, la referencia (geom) y los puntos de control hablen
+        # el mismo nombre. Los que se quedan largos van a la meta (sin_abreviar) para que ref.py haga lo mismo.
+        nombres = {t["nombre"] for t in trozos} | {n for t in trozos for n in t["tramo"] if n} | \
+            {p["calle"] for p in portales}
+        ab = abreviaturas(nombres)
+        C5_SIN_ABREV.update(n for n in nombres if n not in ab and abreviar_tipo(n) != n)
         for t in trozos:
-            t["nombre"] = abreviar_tipo(t["nombre"])
-            t["tramo"] = tuple(abreviar_tipo(n) if n else n for n in t["tramo"])
+            t["nombre"] = ab.get(t["nombre"], t["nombre"])
+            t["tramo"] = tuple(ab.get(n, n) if n else n for n in t["tramo"])
         for p in portales:
-            p["calle"] = abreviar_tipo(p["calle"])
+            p["calle"] = ab.get(p["calle"], p["calle"])
         cuenta["c5: nombres con el tipo de vía abreviado"] = sum(1 for t in trozos if t["nombre"].split(" ")[0] in
-                                                               set(ABREV.values()))
+                                                               ABREV_CORTAS)
+        cuenta["c5: nombres que se quedan largos (su forma corta chocaría)"] = len(C5_SIN_ABREV)
     parroquias = [p for p in parroquias if en_prov(*cx(p))]
     lugares = [l for l in lugares if (l["tipo"] != 4 or en_urbana(l["x"], l["y"]))
                and any(en_prov(l["x"] + dx, l["y"] + dy) for dx, dy in
@@ -2331,7 +2367,8 @@ def escribir(region, cfg, proy, vias, portales, teselas, cols, filas, fecha_osm,
         zm = zstats[zmayor]
         meta.update(zona_min=C5_ZONA_MIN, tope_zona=C5_TOPE_ZONA, tope_tesela=KD_TOPE,
                     z_mayor_xy=[zm["x0"] + zm["lado"] / 2, zm["y0"] + zm["lado"] / 2],
-                    abreviar=bool(cfg["c5"].get("abreviar")))   # ref.py abrevia igual los nombres de control y ruta
+                    abreviar=bool(cfg["c5"].get("abreviar")),   # ref.py abrevia igual los nombres de control y ruta,
+                    sin_abreviar=sorted(C5_SIN_ABREV))          # salvo los que se quedaron largos
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"meta-{region}{sufijo()}.json").write_text(json.dumps(meta, ensure_ascii=False), "utf-8")
     geom = dict(calles=[dict(n=v["nombre"], c=v["clase"], a=int(v["area"]), t=list(v["tramo"]),

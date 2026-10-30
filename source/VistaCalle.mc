@@ -150,7 +150,7 @@ class VistaCalle extends WatchUi.View {
         } else {
             var m = _m;
             if (m.estado == EST_BUSCANDO) {
-                aviso(dc, "BUSCANDO GPS", Graphics.COLOR_YELLOW, "Mejor con cielo despejado");
+                aviso(dc, "BUSCANDO GPS", Graphics.COLOR_YELLOW, null);
             } else if (m.estado == EST_FUERA) {
                 aviso(dc, "FUERA DE ZONA", Graphics.COLOR_RED, "Callejero: " + Callejero.ETIQUETA
                     + (Ajustes.zona() == Ajustes.AUTO ? "" : " (fijo)"));
@@ -240,11 +240,18 @@ class VistaCalle extends WatchUi.View {
         return topNombre(viejo());
     }
 
+    // Lo que cambia la maquetación: esquina y dos calles maquetan distinto; barrio y tramo cambian la franja; el
+    // lugar es otro título. hayBarrio() y viejo() por separado: con barrio, «hayBarrio() || viejo()» vale siempre
+    // true y no veía que topDos() baja la primera de dos calles cuando el dato envejece.
+    function clave() as String {
+        var m = _m;
+        return m.estado + "|" + m.calle1 + "|" + m.calle2 + "|" + m.cruce + "|" + hayBarrio() + "|" + viejo()
+            + "|" + (m.tramoA != null) + "|" + (m.tramoB != null) + "|" + (m.num1 != null) + "|" + m.lugar + "|" + m.barrio;
+    }
+
     private function maquetar(dc as Graphics.Dc) as Void {
         var m = _m;
-        // Esquina y dos calles maquetan distinto; barrio y tramo cambian la franja; el lugar es otro título.
-        var clave = m.estado + "|" + m.calle1 + "|" + m.calle2 + "|" + m.cruce + "|" + (hayBarrio() || viejo())
-            + "|" + (m.tramoA != null) + "|" + (m.tramoB != null) + "|" + (m.num1 != null) + "|" + m.lugar + "|" + m.barrio;
+        var clave = clave();
         if (clave.equals(_clave)) {
             return;
         }
@@ -268,8 +275,7 @@ class VistaCalle extends WatchUi.View {
         var cx = dc.getWidth() / 2;
         if (caja == null) {
             var w = Texto.ancho(dc, y0, y1, 12);
-            var s = Graphics.fitTextToArea(Texto.trozo(dc, Abrev.corta(nombre), Graphics.FONT_TINY, w),
-                Graphics.FONT_TINY, w, y1 - y0, true);
+            var s = Texto.encaja(dc, Abrev.corta(nombre), Graphics.FONT_TINY, w, y1 - y0);
             dc.drawText(cx, (y0 + y1) / 2, Graphics.FONT_TINY, s, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
             return;
         }
@@ -400,11 +406,14 @@ class VistaCalle extends WatchUi.View {
         pie(dc, Utm.texto(m.lat, m.lon), Graphics.COLOR_LT_GRAY, L.y(236));
     }
 
-    private function aviso(dc as Graphics.Dc, titulo as String, color as Number, sub as String) as Void {
+    // sub: la línea de debajo, o null (BUSCANDO GPS va solo).
+    private function aviso(dc as Graphics.Dc, titulo as String, color as Number, sub as String or Null) as Void {
         var cx = dc.getWidth() / 2;
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, L.y(112), _fMedia[0] as Graphics.FontType, titulo, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        linea(dc, L.y(152), sub, Graphics.COLOR_LT_GRAY);
+        if (sub != null) {
+            linea(dc, L.y(152), sub, Graphics.COLOR_LT_GRAY);
+        }
     }
 
     // Al pie, centrado en y; si ahí la pantalla redonda lo corta (la UTM en los relojes pequeños), sube hasta caber.

@@ -85,6 +85,13 @@ module Texto {
         return (p > 0 ? "…" : "") + ls[p] + (p < n - 1 ? "…" : "");
     }
 
+    // txt en el área w × h: entero si cabe (en varias líneas), y a trozos (trozo) solo si no. Antes iba siempre a
+    // trozos lo que no cabía en una línea, aunque cupiera en dos.
+    function encaja(dc as Graphics.Dc, txt as String, f as Graphics.FontType, w as Number, h as Number) as String {
+        var s = Graphics.fitTextToArea(txt, f, w, h, true);
+        return s.find("…") == null ? s : Graphics.fitTextToArea(trozo(dc, txt, f, w), f, w, h, true);
+    }
+
     // Qué trozo de n toca en el instante t (ms de System.getTimer()), cambiando cada 2 s. El contador da la vuelta a
     // negativo a los ~24,8 días de reloj encendido y el % de Monkey C conserva el signo: sin corregirlo, el índice sale
     // negativo (Array Out Of Bounds en el 7X Pro, 3.5.1, 2026-10-27; el simulador empieza en 0 y no lo ve).

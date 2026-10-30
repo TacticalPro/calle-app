@@ -103,6 +103,7 @@ def limpio(iq):
 
 def solido(ent, sal):
     """Devuelve las líneas del informe; si algo falla, Fallo, y no queda ni SALIDA ni SALIDA.parcial."""
+    ent, sal = ent.absolute(), sal.absolute()   # bsdtar escribe desde la carpeta temporal: una ruta relativa iría allí
     parcial = sal.with_name(sal.name + ".parcial")
     if sal.exists() or parcial.exists():
         raise Fallo(f"{sal} o {parcial.name} ya existe: no se pisa")
@@ -137,11 +138,13 @@ def solido(ent, sal):
         if not hecho and parcial.exists():
             parcial.unlink()
     sha = hashlib.sha1(sal.read_bytes()).hexdigest()
-    return [f"entrada  {ent}: {ent.stat().st_size:,} B".replace(",", "."),
-            f"salida   {sal}: {sal.stat().st_size:,} B, sha1 {sha}".replace(",", "."),
+    def b(n):
+        return f"{n:,} B".replace(",", ".")
+    return [f"entrada  {ent}: {b(ent.stat().st_size)}",
+            f"salida   {sal}: {b(sal.stat().st_size)}, sha1 {sha}",
             f"ficheros {len(h)}, todos con el mismo sha1 que en la entrada",
             f"firma    manifest.sig2 con dev_key.pub: {v}",
-            f"rutas    iq_limpio.py: {l}"]
+            f"rutas    iq_limpio.py, sobre la salida antes de renombrarla: {l}"]
 
 
 def main(argv):

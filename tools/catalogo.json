@@ -196,7 +196,7 @@
     "variante": {
       "fenix6xpro": "b"
     },
-    "beta_id": "19ddcb3e1e1a4286a60a87c0f2d907d0",
+    "beta_id": "87d82f4b17404137b93dd28a19af12dd",
     "beta_relojes": [
       "fenix7",
       "fenix7s",
@@ -253,7 +253,7 @@
       "instinct3amoled45mm",
       "instinct3amoled50mm"
     ],
-    "beta_nota": "Beta privada de Calles Galicia, «Calles Galicia (offline) (beta)»: el id de siempre, que ciq.sh llevaba suelto para la beta de la raíz (solo el fēnix 7X Pro; retirada el 2026-10-30), ahora en el catálogo. 2026-10-30 (P98): con sus 54 relojes, para probar la subida de un .iq de ~430 MB, después de los 245 MB de la beta de Madrid. APP=galicia ./ciq.sh beta → bin/calle-galicia-beta.iq. El beta_id no se cambia nunca (la tienda trataría otro id como otra app)."
+    "beta_nota": "Beta privada de Calles Galicia, «Calles Galicia (offline) (beta)», con sus 54 relojes (2026-10-30, P98). beta_id nuevo el 2026-10-30: el de antes, 19ddcb3e…, está quemado (su beta se borró en el portal y el id queda reservado para siempre: «The manifest app ID is already in use by another app»), así que no se reutiliza. APP=galicia ./ciq.sh beta → bin/calle-galicia-beta.iq; para subirlo, en 7z sólido con tools/iq_solido.py (428 MB → 17 MB). El beta_id no se cambia nunca (la tienda trataría otro id como otra app)."
   },
   "cataluna": {
     "id": "eb3617983d984d05bda9fb9b9b8818ec",

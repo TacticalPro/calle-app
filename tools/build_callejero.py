@@ -974,8 +974,11 @@ def extraer_portales(elems, proy, vias, overrides, cuenta, sin_pareja, por_lugar
                 if x0 - PORTAL_ASOC > max(xs) or x1 + PORTAL_ASOC < min(xs) or \
                         y0 - PORTAL_ASOC > max(ys) or y1 + PORTAL_ASOC < min(ys):
                     continue
+                # Con la calle sin simplificar (raw; las plazas no lo tienen): la fachada de un edificio es el punto de
+                # su contorno más cercano a la calle, y con dos esquinas casi a la misma distancia la simplificación
+                # la cambiaba de esquina (a más de 5 m, el 1,4 % de los portales de Madrid; tools/test_fachada.py).
                 for p in geo:
-                    d, qx, qy = dist_polilinea(p[0], p[1], v["pts"])
+                    d, qx, qy = dist_polilinea(p[0], p[1], v.get("raw", v["pts"]))
                     if mejor is None or d < mejor[0]:
                         mejor = (d, v, p, (qx, qy))
             return mejor if mejor and mejor[0] <= PORTAL_ASOC else None

@@ -15,10 +15,8 @@
 #   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta). ZONAS=<zona,zona…> (por
 #                         defecto, REGION): las zonas que lleva; cada reloj, las que tenga generadas su variante
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
-#   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X),
-#                         con las ZONAS de package
-#                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
-#                         → bin/calle-<zona>-beta.iq
+#   ./ciq.sh beta         APP=<zona>: la beta privada de esa app del catálogo ("beta_id" y "beta_relojes" en
+#                         tools/catalogo.json) → bin/calle-<zona>-beta.iq (se sube al portal). Sin APP, falla
 #   ./ciq.sh prg6x        .prg para un fēnix 6X Pro → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
 #   ./ciq.sh instalar     release + copia a GARMIN/Apps/CALLE.PRG por MTP (reloj por USB directo
 #                         al Mac, no al dock; Garmin Express cerrado; sustituye la versión anterior)
@@ -43,10 +41,6 @@ REGION="${REGION:-santiago}"
 VARIANTE="${VARIANTE:-normal}"     # c: Madrid entero en teselas adaptativas para los de 128 KB y el 6X Pro
                                    # (resources-gen-c/, source-gen-c/); b y c5: ver tools/build_callejero.py
 KEY="${KEY:-$HOME/.garmin/developer_key.der}"
-# Beta privada de la Connect IQ Store: id propio, distinto del de manifest.xml (el de las instalaciones
-# por USB, que guarda las anotaciones). Generado el 2026-10-24; no cambiarlo o la tienda la tratará como
-# otra app. Con otro id, la beta y la instalada por cable son dos apps distintas en el reloj.
-BETA_ID="19ddcb3e1e1a4286a60a87c0f2d907d0"
 PY="${PY:-python3} -I"   # PY=/ruta/a/python3 para usar otro (Pillow, para ./ciq.sh icon)
 CFG="$HOME/Library/Application Support/Garmin/ConnectIQ/current-sdk.cfg"
 
@@ -59,6 +53,10 @@ sdk() {
     [ -f source-gen/Callejero.mc ] || { echo "Falta el callejero: ./ciq.sh datos" >&2; exit 1; }
     BIN="$s/bin"
 }
+
+# Apps del catálogo con beta propia ("beta_id"), para el mensaje de ./ciq.sh beta sin APP.
+betas() { $PY -c 'import json, sys; print(", ".join(k for k, v in json.load(open(sys.argv[1], encoding="utf-8")).items()
+                                       if isinstance(v, dict) and v.get("beta_id")))' tools/catalogo.json; }
 
 monkeyc() { "$BIN/monkeyc" -d "$DEV" -f "$(jungle)" -y "$KEY" "$@"; }
 # El jungle: el del repositorio o, con APP, el de esa app del catálogo (tools/tienda.py lo escribe en bin/tienda/).
@@ -255,6 +253,24 @@ guarda_test() {
     printf 'function suelta() {}\n' > "$t/p/test/Suelta.mc"
     espera falla "privacidad con un test sin (:test)" eval "cd '$t/p'; privacidad"
 
+    # beta (2026-10-30): sin APP falla y dice cómo seguir; con APP, el id del manifiesto es el "beta_id" de la app en el
+    # catálogo, no otro suelto en este script. Sin SDK ni datos: tienda.py en una copia mínima, con la región de mentira.
+    local out d quiero sale
+    out="$(env -u APP "$PWD/ciq.sh" beta 2>&1)" && v=pasa || v=falla
+    if [ "$v" = falla ] && grep -qF 'APP=<app> ./ciq.sh beta' <<< "$out"; then
+        echo "guarda-test: OK   beta sin APP: falla y dice cómo seguir"
+    else echo "guarda-test: MAL  beta sin APP: $v, y debía fallar con el uso"; mal=1; fi
+    mkdir -p "$t/b/tools" "$t/b/source-gen" "$t/b/source-gen-b"
+    cp tools/tienda.py tools/catalogo.json "$t/b/tools/"; cp manifest.xml monkey.jungle "$t/b/"
+    printf 'module RegionGalicia {}\n' > "$t/b/source-gen/RegionGalicia.mc"; cp "$t/b/source-gen/RegionGalicia.mc" "$t/b/source-gen-b/"
+    quiero="$($PY -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["galicia"]["beta_id"])' \
+        tools/catalogo.json)" || quiero=
+    d="$($PY "$t/b/tools/tienda.py" galicia --beta 2>/dev/null)" || d=
+    sale="$(grep -o '<iq:application id="[0-9a-f]*"' "${d:-/nada}/manifest.xml" 2>/dev/null | grep -o '[0-9a-f]\{32\}' || true)"
+    if [ -n "$quiero" ] && [ "$sale" = "$quiero" ]; then
+        echo "guarda-test: OK   beta APP=galicia: id ${sale}, el \"beta_id\" del catálogo"
+    else echo "guarda-test: MAL  beta APP=galicia: id «${sale}», y el catálogo dice «${quiero}»"; mal=1; fi
+
     rm -rf "$t"
     [ $mal -eq 0 ] && echo "guarda-test: todo como debía"
     return $mal
@@ -284,25 +300,15 @@ case "${1:-build}" in
              "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o bin/calle.iq -r -O 2 -w 2>&1 \
                  | { grep -v "is large (> 8kb)" || true; }
              rutas bin/calle.iq; ls -la bin/calle.iq ;;
-    beta)    neutro "$@"
-             if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
-                 privacidad; sdk
-                 dir="$($PY tools/tienda.py "$APP" --beta)"
-                 "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP-beta.iq" -r -O 2 -w 2>&1 \
-                     | { grep -v "is large (> 8kb)" || true; }
-                 rutas "bin/calle-$APP-beta.iq"; ls -la "bin/calle-$APP-beta.iq"; exit 0
-             fi
-             privacidad; sdk
-             # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
-             # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
-             # La beta es solo la del 7X Pro y el 6X Pro: lista blanca, para que no se cuele ningún reloj más
-             # (antes se quitaban unos pocos a mano y entraban el 6 Pro, el 6S Pro, el 5X y los 5 Plus).
-             # Con las zonas de ZONAS, por tools/tienda.py --raiz, como package (P96).
-             dir="$($PY tools/tienda.py --raiz "${ZONAS:-$REGION}" --id "$BETA_ID" --relojes fenix7xpro,fenix6xpro)"
-             grep -q "id=\"$BETA_ID\"" "$dir/manifest.xml" || { echo "No pude poner el id de beta" >&2; exit 1; }
-             "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o bin/calle-beta.iq -r -O 2 -w 2>&1 \
+    beta)    # Solo la beta de una app del catálogo, con su "beta_id" (tools/tienda.py --beta). La beta de la raíz, sin
+             # APP, se retiró el 2026-10-30: llevaba su id suelto aquí, que era el de la beta de Galicia, y con otras
+             # ZONAS subía otra región a esa app.
+             [ -n "${APP:-}" ] || { echo "beta: falta APP. Uso: APP=<app> ./ciq.sh beta, con una app de tools/catalogo.json que tenga \"beta_id\": $(betas)" >&2; exit 1; }
+             neutro "$@"; privacidad; sdk
+             dir="$($PY tools/tienda.py "$APP" --beta)"
+             "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o "bin/calle-$APP-beta.iq" -r -O 2 -w 2>&1 \
                  | { grep -v "is large (> 8kb)" || true; }
-             rutas bin/calle-beta.iq; ls -la bin/calle-beta.iq ;;
+             rutas "bin/calle-$APP-beta.iq"; ls -la "bin/calle-$APP-beta.iq" ;;
     tienda)  # App de la tienda pública: una por zona, con el id, el nombre y los relojes de tools/catalogo.json.
              neutro "$@"; privacidad; sdk
              dir="$($PY tools/tienda.py "${APP:?APP=<zona de tools/catalogo.json>}")"

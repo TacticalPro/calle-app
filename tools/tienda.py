@@ -15,8 +15,8 @@ generados de test-gen-c5/<zona>/. La lista sale de source/ cada vez: un fichero 
 Con --beta (`APP=<app> ./ciq.sh beta`): la beta privada de esa app, con su "beta_id" (otro id, que no se cambia
 nunca) y sus "beta_relojes" (por defecto, solo el fēnix 7X Pro), en bin/tienda/<app>-beta/.
 
-Con --raiz ZONAS (`ZONAS=… ./ciq.sh package` y `./ciq.sh beta` sin APP): la app de la raíz, con el id y los relojes de
-manifest.xml (o --id y --relojes) y su nombre, en bin/tienda/_raiz[-beta]/. Cada reloj lleva las zonas de ZONAS que
+Con --raiz ZONAS (`ZONAS=… ./ciq.sh package`): la app de la raíz, con el id, los relojes y el nombre de manifest.xml,
+en bin/tienda/_raiz/. Cada reloj lleva las zonas de ZONAS que
 tengan sus datos generados. Sin este filtro, el jungle de la raíz metía en cada .prg todas las regiones de
 resources-gen (cinco, 116 MB) y Java se quedaba sin memoria en el primer reloj, también con -Xmx7g (P96, 2026-10-30):
 la memoria la pide cada .prg por su tamaño, no el número de relojes del lote.
@@ -83,22 +83,21 @@ def solo_zonas(carpeta, zonas, out):
     return gen.name
 
 
-def app_raiz(zonas, ident, relojes):
-    """La app de manifest.xml como si fuera del catálogo: su id (o ident), sus relojes (o relojes) y las zonas."""
+def app_raiz(zonas):
+    """La app de manifest.xml como si fuera del catálogo: su id, sus relojes y las zonas."""
     manifiesto = (ROOT / "manifest.xml").read_text("utf-8")
-    ident = ident or re.search(r'<iq:application id="([0-9a-f]{32})"', manifiesto).group(1)
-    todos = re.findall(r'<iq:product id="([^"]+)"', manifiesto)
-    relojes = relojes.split(",") if relojes else todos
+    ident = re.search(r'<iq:application id="([0-9a-f]{32})"', manifiesto).group(1)
     zonas = [z for z in zonas.split(",") if z]
-    if not re.fullmatch(r"[0-9a-f]{32}", ident) or not zonas or not set(relojes) <= set(todos):
-        sys.exit(f"--raiz: id «{ident}», zonas {zonas} o relojes {sorted(set(relojes) - set(todos))} no válidos")
-    return {"id": ident, "nombre": "la app de la raíz", "zonas": zonas, "relojes": relojes}
+    if not zonas:
+        sys.exit("--raiz: sin zonas")
+    return {"id": ident, "nombre": "la app de la raíz", "zonas": zonas,
+            "relojes": re.findall(r'<iq:product id="([^"]+)"', manifiesto)}
 
 
 def main():
     args = sys.argv[1:]
     opc = {}
-    for o in ("--raiz", "--id", "--relojes"):
+    for o in ("--raiz",):
         if o in args:
             i = args.index(o)
             if i + 1 >= len(args):
@@ -110,10 +109,10 @@ def main():
     raiz = "--raiz" in opc
     if len(args) != (0 if raiz else 1) or (not raiz and len(opc)) or (raiz and beta):
         sys.exit("uso: tienda.py <app de tools/catalogo.json> [--beta]\n"
-                 "     tienda.py --raiz <zona,zona…> [--id <id>] [--relojes <reloj,reloj…>]")
+                 "     tienda.py --raiz <zona,zona…>")
     if raiz:
-        clave = "_raiz" + ("-beta" if "--id" in opc else "")
-        app = app_raiz(opc["--raiz"], opc.get("--id"), opc.get("--relojes"))
+        clave = "_raiz"
+        app = app_raiz(opc["--raiz"])
     else:
         clave = args[0]
         app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8")).get(clave)

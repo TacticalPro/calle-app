@@ -766,8 +766,10 @@ def derivar_control_cfg(ref, region, specs):
 
     for sp in specs:
         if m.get("abreviar") and sp.get("calle"):
-            # Los datos llevan el tipo de vía abreviado (bloque c5, "abreviar"): el punto de control, igual.
-            sp = dict(sp, calle=abreviar_tipo(sp["calle"]))
+            # Los datos llevan el tipo de vía abreviado (bloque c5, "abreviar"): el punto de control, igual, salvo
+            # los nombres que el generador dejó largos porque su forma corta chocaba (meta "sin_abreviar").
+            if sp["calle"] not in m.get("sin_abreviar", ()):
+                sp = dict(sp, calle=abreviar_tipo(sp["calle"]))
         t, id_ = sp["tipo"], sp["id"]
         if t == "portal":
             p = next((p for p in g["portales"] if p[2] == sp["calle"] and p[3] == sp["num"] and p[4] == ""), None)
@@ -989,7 +991,7 @@ def gen_tests(ref, region, n=40, semilla=3):
     # Paseo por una calle (la "ruta" de la región; en Santiago, la Rúa do Franco), un fix cada 2 m con
     # ruido lateral de ±3 m: la histéresis no debe hacer bailar el nombre (sustituye a reproducir un GPX).
     calle_ruta = cfg.get("ruta", "Rúa do Franco")
-    if ref.m.get("abreviar"):
+    if ref.m.get("abreviar") and calle_ruta not in ref.m.get("sin_abreviar", ()):
         calle_ruta = abreviar_tipo(calle_ruta)   # los datos de la c5 llevan el tipo de vía abreviado
     # "ruta_cerca" [lat, lon]: la de ese sitio, no la homónima más larga (en la c5, una rural encadenada de Pontevedra
     # era más larga que la Rúa do Príncipe de Vigo, que va en trozos de tramo).

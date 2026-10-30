@@ -253,7 +253,7 @@
       "instinct3amoled45mm",
       "instinct3amoled50mm"
     ],
-    "beta_nota": "Beta privada de Calles Galicia, «Calles Galicia (offline) (beta)»: el id de siempre (el BETA_ID de ciq.sh, que hasta ahora solo usaba la beta de la raíz, con el fēnix 7X Pro), ahora en el catálogo. 2026-10-30 (P98): con sus 54 relojes, para probar la subida de un .iq de ~430 MB, después de los 245 MB de la beta de Madrid. APP=galicia ./ciq.sh beta → bin/calle-galicia-beta.iq. El beta_id no se cambia nunca (la tienda trataría otro id como otra app)."
+    "beta_nota": "Beta privada de Calles Galicia, «Calles Galicia (offline) (beta)»: el id de siempre, que ciq.sh llevaba suelto para la beta de la raíz (solo el fēnix 7X Pro; retirada el 2026-10-30), ahora en el catálogo. 2026-10-30 (P98): con sus 54 relojes, para probar la subida de un .iq de ~430 MB, después de los 245 MB de la beta de Madrid. APP=galicia ./ciq.sh beta → bin/calle-galicia-beta.iq. El beta_id no se cambia nunca (la tienda trataría otro id como otra app)."
   },
   "cataluna": {
     "id": "eb3617983d984d05bda9fb9b9b8818ec",

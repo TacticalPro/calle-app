@@ -86,7 +86,9 @@ memoria. `Tesela` y `Zonas` comparan `Callejero.ID` con el de lo que tienen carg
 
 - Id propio (`BETA_ID` en `ciq.sh`), distinto del de las instalaciones por cable: la beta y la instalada a
   mano son dos apps distintas en el reloj, y las anotaciones de la instalada se quedan en ella.
-- `./ciq.sh beta` → `bin/calle-beta.iq` (fēnix 7X Pro, 7X Pro sin Wi-Fi y 6X). Ficha: `./ciq.sh` no la
+- `./ciq.sh beta` → `bin/calle-beta.iq` (fēnix 7X Pro, 7X Pro sin Wi-Fi y 6X). **Retirada el 2026-10-30:** el
+  `BETA_ID` suelto era el de la beta de Galicia y con otras zonas subía otra región a esa app; ahora es el
+  `beta_id` de galicia en `tools/catalogo.json`, y cada beta va con `APP=<app> ./ciq.sh beta`. Ficha: `./ciq.sh` no la
   genera; `tools/mockup.py --ficha` → `docs/tienda/`. Atribución obligatoria en la descripción:
   «© colaboradores de OpenStreetMap», «Fuente: Dirección General del Catastro», «Fuente: Ayuntamiento de
   Madrid (datos.madrid.es)».

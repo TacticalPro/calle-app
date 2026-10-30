@@ -12,9 +12,11 @@
 #                         APP=<app>: con el jungle de esa app del catálogo (tools/tienda.py; las provincias de la c5:
 #                         APP=coruna DEV=fenix5 ./ciq.sh test). También vale para build, release y sim
 #   ./ciq.sh sim          abre el simulador con la app
-#   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta)
+#   ./ciq.sh package      .iq con el id de manifest.xml (publicación; no es la beta). ZONAS=<zona,zona…> (por
+#                         defecto, REGION): las zonas que lleva; cada reloj, las que tenga generadas su variante
 #   ./ciq.sh tienda       APP=<zona> .iq de una app del catálogo (tools/catalogo.json) → bin/calle-<zona>.iq
-#   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X)
+#   ./ciq.sh beta         .iq firmado con el id de la beta → bin/calle-beta.iq (se sube al portal; 7X Pro y 6X),
+#                         con las ZONAS de package
 #                         APP=<zona>: la beta propia de esa app del catálogo ("beta_id", solo el 7X Pro)
 #                         → bin/calle-<zona>-beta.iq
 #   ./ciq.sh prg6x        .prg para un fēnix 6X Pro → bin/calle-fenix6x.prg (se copia por cable a GARMIN/APPS)
@@ -275,9 +277,13 @@ case "${1:-build}" in
              grep -q '^PASSED' bin/test.log ;;
     sim)     sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w; simulador
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
-    package) neutro "$@"; privacidad; sdk; mkdir -p bin
-             "$BIN/monkeyc" -e -f monkey.jungle -y "$KEY" -o bin/calle.iq -r -O 2 -w
-             rutas bin/calle.iq ;;
+    package) # Por tools/tienda.py --raiz, como tienda: con el jungle de la raíz, cada .prg llevaba todas las regiones
+             # de resources-gen y Java se quedaba sin memoria en el primer reloj (P96, 2026-10-30).
+             neutro "$@"; privacidad; sdk; mkdir -p bin
+             dir="$($PY tools/tienda.py --raiz "${ZONAS:-$REGION}")"
+             "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o bin/calle.iq -r -O 2 -w 2>&1 \
+                 | { grep -v "is large (> 8kb)" || true; }
+             rutas bin/calle.iq; ls -la bin/calle.iq ;;
     beta)    neutro "$@"
              if [ -n "${APP:-}" ]; then   # beta propia de una app del catálogo (tools/tienda.py --beta)
                  privacidad; sdk
@@ -286,18 +292,16 @@ case "${1:-build}" in
                      | { grep -v "is large (> 8kb)" || true; }
                  rutas "bin/calle-$APP-beta.iq"; ls -la "bin/calle-$APP-beta.iq"; exit 0
              fi
-             privacidad; sdk; mkdir -p bin/beta
+             privacidad; sdk
              # Sin el 7X Pro sin Wi-Fi: su .prg es idéntico al del 7X Pro (15 MB con Madrid) y con él el .iq pasa
              # de los 10 MB que sube el navegador automatizado (2026-10-24). La beta solo la instala el desarrollador (7X Pro).
              # La beta es solo la del 7X Pro y el 6X Pro: lista blanca, para que no se cuele ningún reloj más
              # (antes se quitaban unos pocos a mano y entraban el 6 Pro, el 6S Pro, el 5X y los 5 Plus).
-             sed -E 's/(<iq:application id=")[0-9a-f]{32}/\1'"$BETA_ID"'/; /<iq:product id="/{/id="fenix(7xpro|6xpro)"/!d;}' \
-                 manifest.xml > bin/beta/manifest.xml
-             grep -q "id=\"$BETA_ID\"" bin/beta/manifest.xml || { echo "No pude poner el id de beta" >&2; exit 1; }
-             awk -F' = ' '/^#/ || NF < 2 || $1 == "project.manifest" { print; next }
-                 { n = split($2, a, ";"); s = ""; for (i = 1; i <= n; i++) s = s (i > 1 ? ";" : "") "../../" a[i]
-                   print $1 " = " s }' monkey.jungle > bin/beta/monkey.jungle
-             "$BIN/monkeyc" -e -f bin/beta/monkey.jungle -y "$KEY" -o bin/calle-beta.iq -r -O 2 -w 2>&1 | grep -v "is large (> 8kb)"
+             # Con las zonas de ZONAS, por tools/tienda.py --raiz, como package (P96).
+             dir="$($PY tools/tienda.py --raiz "${ZONAS:-$REGION}" --id "$BETA_ID" --relojes fenix7xpro,fenix6xpro)"
+             grep -q "id=\"$BETA_ID\"" "$dir/manifest.xml" || { echo "No pude poner el id de beta" >&2; exit 1; }
+             "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o bin/calle-beta.iq -r -O 2 -w 2>&1 \
+                 | { grep -v "is large (> 8kb)" || true; }
              rutas bin/calle-beta.iq; ls -la bin/calle-beta.iq ;;
     tienda)  # App de la tienda pública: una por zona, con el id, el nombre y los relojes de tools/catalogo.json.
              neutro "$@"; privacidad; sdk

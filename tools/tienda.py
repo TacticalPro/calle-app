@@ -14,6 +14,12 @@ generados de test-gen-c5/<zona>/. La lista sale de source/ cada vez: un fichero 
 
 Con --beta (`APP=<app> ./ciq.sh beta`): la beta privada de esa app, con su "beta_id" (otro id, que no se cambia
 nunca) y sus "beta_relojes" (por defecto, solo el fēnix 7X Pro), en bin/tienda/<app>-beta/.
+
+Con --raiz ZONAS (`ZONAS=… ./ciq.sh package` y `./ciq.sh beta` sin APP): la app de la raíz, con el id y los relojes de
+manifest.xml (o --id y --relojes) y su nombre, en bin/tienda/_raiz[-beta]/. Cada reloj lleva las zonas de ZONAS que
+tengan sus datos generados. Sin este filtro, el jungle de la raíz metía en cada .prg todas las regiones de
+resources-gen (cinco, 116 MB) y Java se quedaba sin memoria en el primer reloj, también con -Xmx7g (P96, 2026-10-30):
+la memoria la pide cada .prg por su tamaño, no el número de relojes del lote.
 """
 import json
 import re
@@ -77,12 +83,40 @@ def solo_zonas(carpeta, zonas, out):
     return gen.name
 
 
+def app_raiz(zonas, ident, relojes):
+    """La app de manifest.xml como si fuera del catálogo: su id (o ident), sus relojes (o relojes) y las zonas."""
+    manifiesto = (ROOT / "manifest.xml").read_text("utf-8")
+    ident = ident or re.search(r'<iq:application id="([0-9a-f]{32})"', manifiesto).group(1)
+    todos = re.findall(r'<iq:product id="([^"]+)"', manifiesto)
+    relojes = relojes.split(",") if relojes else todos
+    zonas = [z for z in zonas.split(",") if z]
+    if not re.fullmatch(r"[0-9a-f]{32}", ident) or not zonas or not set(relojes) <= set(todos):
+        sys.exit(f"--raiz: id «{ident}», zonas {zonas} o relojes {sorted(set(relojes) - set(todos))} no válidos")
+    return {"id": ident, "nombre": "la app de la raíz", "zonas": zonas, "relojes": relojes}
+
+
 def main():
-    beta = "--beta" in sys.argv[2:]
-    if len(sys.argv) != 2 + beta:
-        sys.exit("uso: tienda.py <app de tools/catalogo.json> [--beta]")
-    clave = sys.argv[1]
-    app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8")).get(clave)
+    args = sys.argv[1:]
+    opc = {}
+    for o in ("--raiz", "--id", "--relojes"):
+        if o in args:
+            i = args.index(o)
+            if i + 1 >= len(args):
+                sys.exit(f"{o}: falta el valor")
+            opc[o] = args.pop(i + 1); args.pop(i)
+    beta = "--beta" in args
+    if beta:
+        args.remove("--beta")
+    raiz = "--raiz" in opc
+    if len(args) != (0 if raiz else 1) or (not raiz and len(opc)) or (raiz and beta):
+        sys.exit("uso: tienda.py <app de tools/catalogo.json> [--beta]\n"
+                 "     tienda.py --raiz <zona,zona…> [--id <id>] [--relojes <reloj,reloj…>]")
+    if raiz:
+        clave = "_raiz" + ("-beta" if "--id" in opc else "")
+        app = app_raiz(opc["--raiz"], opc.get("--id"), opc.get("--relojes"))
+    else:
+        clave = args[0]
+        app = json.loads((ROOT / "tools/catalogo.json").read_text("utf-8")).get(clave)
     if not isinstance(app, dict) or not re.fullmatch(r"[0-9a-f]{32}", app.get("id", "")):
         sys.exit(f"{clave}: no está en tools/catalogo.json o no tiene un id válido")
     if beta:
@@ -114,22 +148,29 @@ def main():
                           for k in ("sourcePath", "resourcePath")) + "\n"
     rutas = rutas_jungle(jungle)
     out = ROOT / "bin" / "tienda" / (clave + ("-beta" if beta else ""))
-    filtro = {}   # carpeta source-gen* con más zonas que la app → carpeta de out con solo las de la app
+    # carpeta source-gen* con más zonas que la app → (carpeta de out con solo las de la app, esas zonas)
+    filtro = {}
     for reloj in app["relojes"]:
         carpetas = rutas.get(reloj, rutas["base"])
         zonas = zonas_generadas(carpetas)
-        if not set(app["zonas"]) <= zonas:
+        # La de la raíz lleva en cada reloj las de sus zonas que tenga generadas (el 6X Pro, en la c, solo Madrid).
+        suyas = sorted(zonas & set(app["zonas"])) if raiz else app["zonas"]
+        if not suyas or not set(suyas) <= zonas:
             sys.exit(f"{reloj}: los datos generados tienen {sorted(zonas)} y «{app['nombre']}» lleva "
-                     f"{sorted(app['zonas'])}. Regenere los datos de ese reloj antes de empaquetar.")
-        if zonas != set(app["zonas"]):
+                     f"{sorted(app['zonas'])}. " + ("Póngale en ZONAS una de las suyas o regenere sus datos." if raiz else
+                                               "Regenere los datos de ese reloj antes de empaquetar."))
+        if zonas != set(suyas):
             for c in carpetas:
                 if c.startswith("source-gen") and c not in filtro:
-                    filtro[c] = solo_zonas(c, app["zonas"], out)
+                    filtro[c] = (solo_zonas(c, suyas, out), suyas)
     (out / "res" / "strings").mkdir(parents=True, exist_ok=True)
+    (out / "res" / "strings" / "strings.xml").unlink(missing_ok=True)
 
     manifiesto = (ROOT / "manifest.xml").read_text("utf-8")
     manifiesto, n_id = re.subn(r'(<iq:application id=")[0-9a-f]{32}', r"\g<1>" + app["id"], manifiesto)
-    manifiesto, n_nombre = re.subn(r'name="@Strings\.AppName"', 'name="@Strings.NombreTienda"', manifiesto)
+    n_nombre = 1
+    if not raiz:   # la de la raíz conserva su nombre, AppName
+        manifiesto, n_nombre = re.subn(r'name="@Strings\.AppName"', 'name="@Strings.NombreTienda"', manifiesto)
     productos = "".join(f'\n            <iq:product id="{r}"/>' for r in app["relojes"])
     manifiesto, n_prod = re.subn(r"(<iq:products>).*?(\n\s*</iq:products>)", r"\g<1>" + productos + r"\g<2>",
                                  manifiesto, flags=re.S)
@@ -145,9 +186,9 @@ def main():
             for c in (c.strip() for c in m.group(3).split(";")):
                 fuente = c.replace("resources-gen", "source-gen", 1)
                 if c in filtro:
-                    carpetas.append(filtro[c] + "/source")
+                    carpetas.append(filtro[c][0] + "/source")
                 elif c.startswith("resources-gen") and fuente in filtro:
-                    carpetas += [f"{SUBIR}{c}/{z}" for z in app["zonas"]] + [filtro[fuente] + "/res"]
+                    carpetas += [f"{SUBIR}{c}/{z}" for z in filtro[fuente][1]] + [filtro[fuente][0] + "/res"]
                 else:
                     carpetas.append(SUBIR + c)
             if m.group(2) == "resourcePath":
@@ -162,8 +203,9 @@ def main():
             lineas.append(f"{r}.resourcePath = $(base.resourcePath);{SUBIR}resources-{r}")
     (out / "monkey.jungle").write_text("\n".join(lineas) + "\n", "utf-8")
 
-    (out / "res" / "strings" / "strings.xml").write_text(
-        f'<resources>\n    <string id="NombreTienda">{app["nombre"]}</string>\n</resources>\n', "utf-8")
+    if not raiz:
+        (out / "res" / "strings" / "strings.xml").write_text(
+            f'<resources>\n    <string id="NombreTienda">{app["nombre"]}</string>\n</resources>\n', "utf-8")
     print(out)
 
 

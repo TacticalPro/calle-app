@@ -14,7 +14,7 @@ comprueba en local con `openssl dgst -sha256 -verify dev_key.pub -keyform DER -s
 misma app. El `.iq` pesa 52,5 MB: lo sube el autor a mano, porque el navegador automatizado no pasa de 10 MB.
 La `ficha_2.png` (Argüelles) entra ahora en las imágenes: las cinco, en orden.
 
-**3.4.0 (2026-10-25): la interfaz de Calles Galicia (P73).** Mismos relojes y mismos datos que la 3.2.0; cambian la
+**3.4.0 (2026-10-25): la interfaz de Calles Galicia.** Mismos relojes y mismos datos que la 3.2.0; cambian la
 pantalla, la carátula (el marcador ámbar sobre el callejero de Sol, `tools/caratula.py --instalar`) y el icono.
 Las cinco imágenes, regeneradas (`mockup.py --ficha`). El `.iq` (`bin/calle-madrid.iq`, 52,5 MB, firma verificada)
 se subió el mismo día con *Upload New Version* mientras la 3.2.0 seguía en revisión: el portal la verificó
@@ -30,7 +30,7 @@ SHA-256 en la página y asignarlo al campo real con `DataTransfer`. Servirlo des
 reloj. Antes hubo que rehacer `source-gen-c` (`REGION=madrid VARIANTE=c ./ciq.sh datos --comun`): estaba generado
 antes de `ZPREF` y el 6X Pro no compilaba.
 
-**Beta de prueba con 54 relojes (2026-10-30, P98).** «Calles Madrid (offline) (beta)», app aparte con su `beta_id`
+**Beta de prueba con 54 relojes (2026-10-30).** «Calles Madrid (offline) (beta)», app aparte con su `beta_id`
 (`98051658…`; `APP=madrid ./ciq.sh beta` → `bin/calle-madrid-beta.iq`), id de la página en el portal
 `e8dc7afc-ea4b-43d2-8d77-1d298e1d46b7`. Versión 3.4.5 (interna 1), con los 54 relojes del catálogo y 66 piezas:
 245.034.465 B, sha1 `ad87c084cc16c832faf1e718b620a4e1ba3b4f73`, subida en 28 trozos de 9 MB (método arriba). Es la
@@ -70,7 +70,8 @@ cada lado, sin teléfono, sin cobertura y sin datos móviles.
 
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Barrio y distrito.
-- Hospital con urgencias y comisaría más cercanos: flecha y anillo de brújula, y distancia en línea recta.
+- Hospital con urgencias más cercano, y comisaría o cuartel más cercanos: flecha y anillo de brújula, y distancia
+  en línea recta.
 - Coordenadas UTM, redondeadas como las del propio reloj.
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
@@ -115,7 +116,8 @@ on each side, with no phone, no signal and no mobile data.
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the
   corner.
 - Neighbourhood and district.
-- Nearest hospital with A&E and nearest police station: arrow, compass ring and straight-line distance.
+- Nearest hospital with A&E, and nearest police station or barracks: arrow, compass ring and straight-line
+  distance.
 - UTM coordinates, rounded like the watch's own.
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Puerta del plan c5 (docs/plans/2026-10-26-c5-plan1-puerta.md): la tesela más pesada de una región en
+"""Puerta del plan c5 (docs/specs/2026-10-26-calle-galicia-fenix5-formato5.md): la tesela más pesada de una región en
 FORMATO 5, lo que debe dar el reloj en 40 puntos y el punto más denso, para medir el watchdog.
 
     python3 -I tools/puerta_c5.py ~/code/calle-fenix/resources-gen/galicia ~/code/calle-fenix/tools/out/meta-galicia.json [modo]

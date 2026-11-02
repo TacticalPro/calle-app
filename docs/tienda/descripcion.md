@@ -11,7 +11,8 @@ La calle, el número de portal y las calles a cada lado, sin teléfono ni cobert
 
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Barrio y distrito en Madrid; barrio, lugar y parroquia en Santiago de Compostela.
-- Hospital con urgencias y comisaría más cercanos: flecha y anillo de brújula, y distancia en línea recta.
+- Hospital con urgencias más cercano, y comisaría o cuartel más cercanos: flecha y anillo de brújula, y distancia
+  en línea recta.
 - Coordenadas UTM, redondeadas como las del propio reloj.
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Zona automática por la posición, o fija desde el menú o desde Garmin Connect.
@@ -35,7 +36,8 @@ Street name, door number and the streets on each side, with no phone and no sign
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the
   corner.
 - Neighbourhood and district in Madrid; neighbourhood, place and parish in Santiago de Compostela.
-- Nearest hospital with A&E and nearest police station: arrow, compass ring and straight-line distance.
+- Nearest hospital with A&E, and nearest police station or barracks: arrow, compass ring and straight-line
+  distance.
 - UTM coordinates, rounded like the watch's own.
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Area chosen automatically from your position, or fixed from the menu or Garmin Connect.

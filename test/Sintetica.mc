@@ -180,7 +180,7 @@ module Sintetica {
         return out;
     }
 
-    // Hospitales y comisarías como el recurso <prefijo>poi: [FORMATO, SN, ON, SD, OD, XY, T].
+    // Hospitales, comisarías y cuarteles como el recurso <prefijo>poi: [FORMATO, SN, ON, SD, OD, XY, T].
     function puntos(N as Array<String>, D as Array<String>, X as Array<Number>, Y as Array<Number>,
             T as Array<Number>) as Array {
         var XY = [] as Array<Number>;

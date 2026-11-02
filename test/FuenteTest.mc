@@ -17,7 +17,7 @@ function fuenteVectorial(logger as Test.Logger) as Boolean {
     return w > 0 && s.length() == 15 && s.substring(0, 3).equals("Rúa");
 }
 
-// P73: la cara de los nombres de la v3.4 (Noto Sans) existe en el reloj y no ha caído en la Roboto; la de las cifras
+// La cara de los nombres de la v3.4 (Noto Sans) existe en el reloj y no ha caído en la Roboto; la de las cifras
 // (Bionic) se registra (si getVectorFont no tiene la cara, toma la siguiente: el ancho lo delata). Mayúsculas con tildes.
 (:test)
 function fuentesV34(logger as Test.Logger) as Boolean {

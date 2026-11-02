@@ -353,7 +353,7 @@ class Ref:
             if c < col:
                 v = t & 0xFF
                 break
-        # Lugares: los de la hoja (con su margen) o, en las hojas sin margen (z[11], P33), los de todas las hojas
+        # Lugares: los de la hoja (con su margen) o, en las hojas sin margen (z[11]), los de todas las hojas
         # que caen a ZMARGEN m del punto, en el orden en que las recorre el reloj (la suya primero).
         lugs = self._lugares(nom, ox, oy)
         if len(self._z[nom]) > 11 and self._z[nom][11] == 1:

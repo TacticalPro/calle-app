@@ -1,7 +1,7 @@
 # CALLE — Galicia en el fēnix 5: variante c5 y FORMATO 5
 
-Diseño del 2026-10-26, aprobado por el autor por partes en la misma sesión. Objetivo: Calles Galicia en los
-relojes de 128 KB y tope de 254 recursos, empezando por el **fēnix 5**, que el autor tiene para probarla sobre el
+Diseño del 2026-10-26, aprobado por el autor por partes. Objetivo: Calles Galicia en los
+relojes de 128 KB y tope de 254 recursos, empezando por el **fēnix 5**, el primero en probarse sobre el
 terreno. Madrid y el 6X **no cambian**: siguen en la variante `c` con FORMATO 4. Pasarán a `c5` solo si la
 prueba de campo sale bien (decisión del autor).
 
@@ -155,8 +155,8 @@ pasan a `c5`.
 
 - Madrid y el 6X (hasta la prueba de campo).
 - El fēnix 5S, el 6 y el 6S (después).
-- Portales del Catastro en toda Galicia (P71). Con este formato hay sitio para ellos, pero es otra fuente y otra
-  sesión.
+- Portales del Catastro en toda Galicia. Con este formato hay sitio para ellos, pero es otra fuente y otro
+  trabajo.
 - FORMATO 5 en la variante normal del fēnix 7.
 
 ## Resultado de la puerta (plan 1, 2026-10-26)

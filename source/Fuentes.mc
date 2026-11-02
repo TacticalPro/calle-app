@@ -3,7 +3,7 @@ import Toybox.Lang;
 
 // Fuentes de la pantalla. Las vectoriales (API 4.2) existen en el fēnix 7 y el 8; los fēnix 5 y 6 usan las de
 // sistema, que ya vienen a la medida de su pantalla.
-// Interfaz de la v3.4 (P73, propuesta C): nombres en Noto Sans (grotesca, con tildes y ñ) y cifras en Bionic, la de
+// Interfaz de la v3.4 (propuesta C): nombres en Noto Sans (grotesca, con tildes y ñ) y cifras en Bionic, la de
 // las esferas de Garmin. Bionic solo trae « #%+-./0123456789:°»: lo demás (la letra de «12B») va en la de nombres.
 // Si el reloj no tiene una cara, getVectorFont toma la siguiente de la lista: Roboto Condensed, la de la v3.
 module Fuentes {

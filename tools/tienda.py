@@ -18,7 +18,7 @@ nunca) y sus "beta_relojes" (por defecto, solo el fēnix 7X Pro), en bin/tienda/
 Con --raiz ZONAS (`ZONAS=… ./ciq.sh package`): la app de la raíz, con el id, los relojes y el nombre de manifest.xml,
 en bin/tienda/_raiz/. Cada reloj lleva las zonas de ZONAS que
 tengan sus datos generados. Sin este filtro, el jungle de la raíz metía en cada .prg todas las regiones de
-resources-gen (cinco, 116 MB) y Java se quedaba sin memoria en el primer reloj, también con -Xmx7g (P96, 2026-10-30):
+resources-gen (cinco, 116 MB) y Java se quedaba sin memoria en el primer reloj, también con -Xmx7g (2026-10-30):
 la memoria la pide cada .prg por su tamaño, no el número de relojes del lote.
 """
 import json

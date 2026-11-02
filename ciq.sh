@@ -128,8 +128,8 @@ rutas() {
     return $malo
 }
 
-# El simulador es uno para todas las sesiones y proyectos (Tactical Grid, Esfera…): el candado
-# /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos sesiones lo abren y
+# El simulador es uno para todos los procesos y proyectos (Tactical Grid, Esfera…): el candado
+# /tmp/calles-sim.lock (un directorio con «quien» dentro) dice quién lo usa. Sin él, dos procesos lo abren y
 # cierran a la vez y los tests salen en blanco (2026-10-26). Se toma al usarlo y se suelta al salir; si lo
 # tiene otro, se espera (SIM_ESPERA s, 1800 por defecto) y, si no lo suelta, se para.
 # Con SIM_ESPERA=0 no se espera: si está ocupado, se para enseguida.
@@ -150,7 +150,7 @@ simulador() {
     done
     echo "calle-fenix $$ $(date +%H:%M)" > "$CANDADO/quien"
     trap 'grep -q "^calle-fenix $$ " "$CANDADO/quien" 2>/dev/null && rm -r "$CANDADO"' EXIT
-    # Por el nombre del proceso, no con -f: la línea de órdenes de otras sesiones que esperan el candado contiene
+    # Por el nombre del proceso, no con -f: la línea de órdenes de otros procesos que esperan el candado contiene
     # «ConnectIQ.app» y daba el simulador por abierto sin estarlo («Unable to connect to simulator», 2026-10-26).
     pgrep -x simulator >/dev/null || { open "$BIN/ConnectIQ.app"; sleep 4; }
 }
@@ -346,7 +346,7 @@ case "${1:-build}" in
     sim)     sdk; mkdir -p bin; monkeyc -o bin/calle.prg -w; simulador
              "$BIN/monkeydo" bin/calle.prg "$DEV" ;;
     package) # Por tools/tienda.py --raiz, como tienda: con el jungle de la raíz, cada .prg llevaba todas las regiones
-             # de resources-gen y Java se quedaba sin memoria en el primer reloj (P96, 2026-10-30).
+             # de resources-gen y Java se quedaba sin memoria en el primer reloj (2026-10-30).
              neutro "$@"; privacidad; sdk; mkdir -p bin
              dir="$($PY tools/tienda.py --raiz "${ZONAS:-$REGION}")"
              "$BIN/monkeyc" -e -f "$dir/monkey.jungle" -y "$KEY" -o bin/calle.iq -r -O 2 -w 2>&1 \

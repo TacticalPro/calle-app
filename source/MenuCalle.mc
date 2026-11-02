@@ -5,13 +5,13 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-// Menú (mantener ARRIBA): ir al hospital o la comisaría más cercanos, las anotaciones (y volver a
+// Menú (mantener ARRIBA): ir al hospital, o a la comisaría o el cuartel, más cercanos; las anotaciones (y volver a
 // una de ellas), la zona del callejero y sus datos. Aquí se engancharán las funciones futuras.
 module MenuCalle {
     function abrir() as Void {
         var menu = new WatchUi.Menu2({:title => "CALLES"});
         menu.addItem(new WatchUi.MenuItem("Hospital más cercano", "flecha y distancia", :hospital, null));
-        menu.addItem(new WatchUi.MenuItem(peq() ? "Comisaría cercana" : "Comisaría más cercana", "CNP; al final, otras policías",
+        menu.addItem(new WatchUi.MenuItem(peq() ? "Comisaría cercana" : "Comisaría más cercana", "o cuartel; flecha y distancia",
             :comisaria, null));
         menu.addItem(new WatchUi.MenuItem(etiquetaNotas(), "START anota en la pantalla de calle", :notas, null));
         menu.addItem(new WatchUi.MenuItem("Zona: " + etiquetaZona(), peq() ? "del callejero" : "dónde se usa el callejero",
@@ -52,7 +52,7 @@ module MenuCalle {
     }
 
     // Lista de los más cercanos a la última posición. Sin posición, lo dice; la guía la busca sola.
-    function abrirIr(tipos as Array<Number>, titulo as String, otras as Boolean) as Void {
+    function abrirIr(tipos as Array<Number>, titulo as String) as Void {
         // Los puntos de la región no caben con la tesela cargada en un fēnix 5 o 6 (128 KB).
         (Application.getApp() as CalleApp).localizador.soltar();
         var d = Ir.cargar();
@@ -77,16 +77,15 @@ module MenuCalle {
                 : "sin posición aún";
             if (t == Ir.URGENCIAS) {
                 sub += " · urgencias";
-            } else if (t != Ir.HOSPITAL && t != Ir.CNP) {
-                sub += " · " + Ir.cuerpo(t);
+            } else if (t == Ir.COMISARIA) {
+                sub += " · comisaría";
+            } else if (t == Ir.CUARTEL) {
+                sub += " · cuartel";
             }
             menu.addItem(new WatchUi.MenuItem(Abrev.corta(e[0] as String), sub, i, null));
         }
         if (lista.size() == 0) {
             menu.addItem(new WatchUi.MenuItem("No hay ninguno", "en el callejero de " + Callejero.ETIQUETA, :nada, null));
-        }
-        if (otras) {
-            menu.addItem(new WatchUi.MenuItem("Otras policías", "CNP no comisaría, municipal, G. Civil", :otras, null));
         }
         WatchUi.pushView(menu, new DelegadoIrLista(lista, hay ? lat : null, hay ? lon : null, tFix), WatchUi.SLIDE_LEFT);
     }
@@ -157,9 +156,9 @@ class DelegadoMenu extends WatchUi.Menu2InputDelegate {
         if (id == :notas) {
             MenuCalle.abrirNotas(_menu);
         } else if (id == :hospital) {
-            MenuCalle.abrirIr(Ir.HOSPITALES, "Hospitales", false);
+            MenuCalle.abrirIr(Ir.HOSPITALES, "Hospitales");
         } else if (id == :comisaria) {
-            MenuCalle.abrirIr(Ir.COMISARIAS, "Comisarías CNP", true);
+            MenuCalle.abrirIr(Ir.COMISARIAS, "Comisarías");
         } else if (id == :zona) {
             MenuCalle.abrirZona(_menu);
         } else {
@@ -212,9 +211,7 @@ class DelegadoIrLista extends WatchUi.Menu2InputDelegate {
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId();
-        if (id == :otras) {
-            MenuCalle.abrirIr(Ir.OTRAS_POLICIAS, "Otras policías", false);
-        } else if (id instanceof Number) {
+        if (id instanceof Number) {
             var v = new VistaIr(_lista, id, _lat, _lon, _tFix);
             WatchUi.pushView(v, new DelegadoIr(v), WatchUi.SLIDE_LEFT);
         }

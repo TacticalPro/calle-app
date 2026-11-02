@@ -53,8 +53,8 @@ término municipal.
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Término municipal, pedanía, caserío o paraje más cercano, y barrio en las ciudades. Lejos de cualquier calle, dice
   dónde está igualmente.
-- Hospital con urgencias más cercano, y comisaría o cuartel de la Guardia Civil más cercanos: flecha y anillo de
-  brújula, y distancia en línea recta.
+- Hospital con urgencias más cercano, y comisaría o cuartel más cercanos: flecha y anillo de brújula, y distancia
+  en línea recta.
 - Coordenadas UTM, redondeadas como las del propio reloj.
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
@@ -90,8 +90,8 @@ municipality.
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the corner.
 - Municipality, nearest hamlet, village or rural place, and neighbourhood in towns. Far from any street, it still tells
   you where you are.
-- Nearest hospital with A&E, and nearest police station or Guardia Civil post: arrow, compass ring and
-  straight-line distance.
+- Nearest hospital with A&E, and nearest police station or barracks: arrow, compass ring and straight-line
+  distance.
 - UTM coordinates, rounded like the watch's own.
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.

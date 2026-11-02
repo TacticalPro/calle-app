@@ -18,8 +18,8 @@ de la app y la posición no sale nunca del reloj.
   da la esquina, y si duda entre dos paralelas muestra las dos («DOS CALLES»).
 - **Barrio y distrito** en Madrid; **barrio, lugar y parroquia** en Galicia. Si no hay calle a 50 m, el
   lugar más cercano.
-- **Hospital con urgencias y comisaría más cercanos.** Flecha y anillo de brújula, con el destino marcado
-  en el anillo, y distancia en línea recta. No hay ruta por calles.
+- **Hospital con urgencias, y comisaría o cuartel, más cercanos.** Flecha y anillo de brújula, con el
+  destino marcado en el anillo, y distancia en línea recta. No hay ruta por calles.
 - **Anotaciones con START:** hora, lugar y coordenadas, guardadas en el reloj. Desde el menú, «Ir aquí»
   guía de vuelta a cualquiera de ellas.
 - **Coordenadas UTM**, redondeadas como las del propio reloj.
@@ -66,7 +66,7 @@ Para **añadir una ciudad**, se describe la región en `tools/regiones.json` y s
 
   | Fuente | Qué aporta | Licencia y atribución |
   |---|---|---|
-  | OpenStreetMap, vía Overpass (Galicia: extracto de Geofabrik) | calles, plazas, portales, barrios, lugares, parroquias, hospitales y comisarías | ODbL 1.0 · «© colaboradores de OpenStreetMap» |
+  | OpenStreetMap, vía Overpass (Galicia: extracto de Geofabrik) | calles, plazas, portales, barrios, lugares, parroquias, hospitales, comisarías y cuarteles | ODbL 1.0 · «© colaboradores de OpenStreetMap» |
   | Dirección General del Catastro (WFS INSPIRE de direcciones) | números de portal que OSM no tiene, en la caja `catastro` de cada región | uso libre citando la fuente · «Fuente: Dirección General del Catastro» |
   | Ayuntamiento de Madrid, datos.madrid.es, conjunto 213605 («Relación de direcciones vigentes, con coordenadas») | números de portal de Madrid | CC BY 4.0 · «Fuente: Ayuntamiento de Madrid (datos.madrid.es)» |
 
@@ -150,6 +150,6 @@ en el repositorio.
 ## Aviso
 
 Herramienta de apoyo, sin garantía (véase `LICENSE`). Los datos de OpenStreetMap y de las fuentes
-oficiales pueden tener errores u omisiones. La guía a hospitales y comisarías es en línea recta, no por
-calles. Compruebe siempre la dirección antes de darla por buena. Calles no está afiliada a Garmin ni a
+oficiales pueden tener errores u omisiones. La guía a hospitales, comisarías y cuarteles es en línea
+recta, no por calles. Compruebe siempre la dirección antes de darla por buena. Calles no está afiliada a Garmin ni a
 ningún organismo público.

@@ -1,5 +1,5 @@
 {
-  "_que_es": "Correcciones locales al callejero de OSM de la Comunitat Valenciana. alias_calle, nombre_mostrar, excluir_vias, barrios_extra y poi: como en overrides-santiago.json. poi_abrev: [expresión regular, sustitución], en orden, sobre el nombre de cada hospital o comisaría: solo los 81 que no cabían enteros en las dos líneas de la guía en 240, 260 y 280 (medido con tools/mockup.py, 2026-10-26), con la forma más larga que cabe; el tipo (HOSPITAL, COMISARÍA CNP, GUARDIA CIVIL, POLICÍA MUNICIPAL/LOCAL) ya va en la línea de encima. nombre_termino: nombre en pantalla de cada término municipal (ver su nota).",
+  "_que_es": "Correcciones locales al callejero de OSM de la Comunitat Valenciana. alias_calle, nombre_mostrar, excluir_vias, barrios_extra y poi: como en overrides-santiago.json. poi_abrev: [expresión regular, sustitución], en orden, sobre el nombre de cada hospital o comisaría: solo los 81 que no cabían enteros en las dos líneas de la guía en 240, 260 y 280 (medido con tools/mockup.py, 2026-10-26), con la forma más larga que cabe; el tipo (HOSPITAL, COMISARÍA, CUARTEL) ya va en la línea de encima. nombre_termino: nombre en pantalla de cada término municipal (ver su nota).",
   "alias_calle": {},
   "nombre_mostrar": {},
   "excluir_vias": [],

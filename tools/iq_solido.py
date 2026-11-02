@@ -3,7 +3,7 @@
 
     tools/iq_solido.py ENTRADA.iq SALIDA.iq
 
-Por qué (P98, 2026-10-30): el 7z que escribe monkeyc comprime cada fichero por separado, y un .iq con muchos relojes
+Por qué (2026-10-30): el 7z que escribe monkeyc comprime cada fichero por separado, y un .iq con muchos relojes
 lleva el mismo callejero decenas de veces. Calles Galicia con 54 relojes pesaba 428.449.046 B (66 piezas, 11 .prg
 distintos) y el portal no admite más de 400 MB. En sólido, con las piezas iguales seguidas y el diccionario de 64 MiB
 de lzma2 nivel 9, son 17.360.177 B. La firma no se toca: la de cada .prg va dentro de manifest.xml y manifest.sig2

@@ -12,7 +12,7 @@ import Toybox.WatchUi;
 // final (z[10]). Así ninguna pasa del tope de 13 KB sin repetir los lugares del margen en zonas pequeñas donde no
 // hace falta.
 //
-// Hojas sin margen (z[11] = 1, "zona_sin_margen" en tools/regiones.json; P33, 2026-10-28): cada hoja guarda solo los
+// Hojas sin margen (z[11] = 1, "zona_sin_margen" en tools/regiones.json; 2026-10-28): cada hoja guarda solo los
 // lugares de su cuadrado. A menos de ZMARGEN m de su borde se recorren también las hojas vecinas que tocan el
 // cuadrado de ZMARGEN m alrededor del punto, de una en una y soltando cada una antes de la siguiente (el pico sigue
 // siendo el de una zona). El resultado es el mismo que con el margen (tools/ref.py lo compara con la verdad), y las

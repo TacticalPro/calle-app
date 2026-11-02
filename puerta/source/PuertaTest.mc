@@ -4,7 +4,7 @@ import Toybox.System;
 import Toybox.Test;
 import Toybox.WatchUi;
 
-// Puerta del plan c5 (docs/plans/2026-10-26-c5-plan1-puerta.md): la tesela más pesada de Galicia en FORMATO 5,
+// Puerta del plan c5 (docs/specs/2026-10-26-calle-galicia-fenix5-formato5.md): la tesela más pesada de Galicia en FORMATO 5,
 // leída en el fēnix 5. Lo esperado lo calcula tools/puerta_c5.py con la referencia Python del FORMATO 4.
 (:test)
 function puertaVectores(logger as Test.Logger) as Boolean {

@@ -52,8 +52,8 @@ el término municipal.
 - Los nombres tal como están en el mapa, en valenciano o en castellano según el municipio.
 - Término municipal, pueblo, partida o lugar más cercano, y barrio en las ciudades. Lejos de cualquier calle, dice
   dónde está igualmente.
-- Hospital con urgencias más cercano, y comisaría o cuartel de la Guardia Civil más cercanos: flecha y anillo de
-  brújula, y distancia en línea recta.
+- Hospital con urgencias más cercano, y comisaría o cuartel más cercanos: flecha y anillo de brújula, y distancia
+  en línea recta.
 - Coordenadas UTM, redondeadas como las del propio reloj.
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
@@ -91,8 +91,8 @@ municipality.
 - Street names as they are on the map, in Valencian or in Spanish depending on the town.
 - Municipality, nearest village, rural district or place, and neighbourhood in towns. Far from any street, it still
   tells you where you are.
-- Nearest hospital with A&E, and nearest police station or Guardia Civil post: arrow, compass ring and
-  straight-line distance.
+- Nearest hospital with A&E, and nearest police station or barracks: arrow, compass ring and straight-line
+  distance.
 - UTM coordinates, rounded like the watch's own.
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.

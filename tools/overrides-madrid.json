@@ -3,5 +3,9 @@
   "nombre_mostrar": {},
   "excluir_vias": [],
   "barrios_extra": [],
-  "poi": {}
+  "poi": {
+    "way/115982410": {"excluir": true},
+    "way/144989795": {"excluir": true},
+    "way/144989796": {"excluir": true}
+  }
 }

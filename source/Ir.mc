@@ -5,25 +5,26 @@ import Toybox.Math;
 import Toybox.Position;
 import Toybox.WatchUi;
 
-// Hospitales y comisarías de la región activa (recurso <prefijo>poi, tools/build_callejero.py):
+// Hospitales, comisarías y cuarteles de la región activa (recurso <prefijo>poi, tools/build_callejero.py):
 // [FORMATO, SN, ON, SD, OD, XY, T]: nombres y direcciones en una cadena cada uno, con sus inicios (como en las
-// teselas); XY = x | y << 16, en metros enteros de región; T, el tipo, 4 por número. Se carga al
+// teselas); XY = x | y << 16, en metros enteros de región; T, el número de tipo (TIPO), 4 por Number. Se carga al
 // abrir la lista y se suelta al cerrarla: no vive en memoria mientras se ve la calle.
 // La guía es en línea recta (rumbo y distancia): el reloj no lleva la red de calles para calcular rutas.
 module Ir {
-    // Tipos, como POI_* del generador.
+    // Tipos que se ven, con el número de POI_* del generador.
     const HOSPITAL = 0;
     const URGENCIAS = 1;
-    const CNP = 2;
-    const LOCAL = 3;
-    const GC = 4;
-    const POLICIA = 5;
-    const CNP_OTRA = 6;          // dependencias del CNP que no son comisaría (DNI, divisiones, unidades)
+    const COMISARIA = 2;         // comisaría o jefatura, del cuerpo que sea
+    const CUARTEL = 4;           // puesto o cuartel
     const ANOTACION = 7;         // no viene del generador: «Ir aquí» desde una anotación (deNotas)
 
+    // Del número de los datos al tipo que se ve, o -1 si no se enseña. El generador ya solo da 0, 1, 2 y 4; 3 y 5
+    // vienen de datos generados antes y se leen como COMISARIA, y 6 (una dependencia que no es comisaría ni cuartel:
+    // oficinas de documentos, unidades) se queda fuera. Así esos datos siguen valiendo sin regenerarlos.
+    const TIPO = [HOSPITAL, URGENCIAS, COMISARIA, COMISARIA, CUARTEL, COMISARIA, -1] as Array<Number>;
+
     const HOSPITALES = [HOSPITAL, URGENCIAS] as Array<Number>;
-    const COMISARIAS = [CNP] as Array<Number>;
-    const OTRAS_POLICIAS = [CNP_OTRA, LOCAL, GC, POLICIA] as Array<Number>;
+    const COMISARIAS = [COMISARIA, CUARTEL] as Array<Number>;   // un solo grupo, por distancia
     const CUANTOS = 8;               // en la lista
     const LLEGADA_M = 30;            // más cerca que esto: «Ha llegado»
 
@@ -46,7 +47,7 @@ module Ir {
     }
 
     // Los n más cercanos a (lat, lon) de los tipos pedidos, del más cercano al más lejano:
-    // [[nombre, dirección, lat, lon, tipo, metros], …].
+    // [[nombre, dirección, lat, lon, tipo, metros], …], con el tipo ya como se ve (TIPO).
     function cercanos(d as Array, lat as Double, lon as Double, tipos as Array<Number>, n as Number) as Array<Array> {
         var XY = d[5] as Array<Number>;
         var T = d[6] as Array<Number>;
@@ -54,7 +55,8 @@ module Ir {
         var out = [] as Array<Array>;
         for (var i = 0; i < XY.size(); i++) {
             var ti = (T[i >> 2] >> ((i & 3) * 8)) & 0xFF;
-            if (tipos.indexOf(ti) < 0) {
+            ti = ti < TIPO.size() ? TIPO[ti] : -1;
+            if (ti < 0 || tipos.indexOf(ti) < 0) {
                 continue;
             }
             var la = Callejero.LAT_MIN + ((XY[i] >> 16) & 0xFFFF).toDouble() * u / Callejero.KY;
@@ -136,29 +138,17 @@ module Ir {
         return nombres[k < 0 ? k + 8 : k];
     }
 
-    // Para la lista: el cuerpo, en minúsculas.
-    function cuerpo(t as Number) as String {
-        return t == LOCAL ? "municipal/local" : (t == GC ? "Guardia Civil" : (t == CNP ? "CNP"
-            : (t == CNP_OTRA ? "CNP, no comisaría" : "policía")));
-    }
-
     function etiquetaTipo(t as Number) as String {
         if (t == URGENCIAS) {
             return "HOSPITAL · URGENCIAS";
         } else if (t == HOSPITAL) {
             return "HOSPITAL";
-        } else if (t == CNP) {
-            return "COMISARÍA CNP";
-        } else if (t == CNP_OTRA) {
-            return "CNP · DEPENDENCIA";
-        } else if (t == LOCAL) {
-            return "POLICÍA MUNICIPAL/LOCAL";
-        } else if (t == GC) {
-            return "GUARDIA CIVIL";
+        } else if (t == CUARTEL) {
+            return "CUARTEL";
         } else if (t == ANOTACION) {
             return "ANOTACIÓN";
         }
-        return "POLICÍA";
+        return "COMISARÍA";
     }
 
     // Color del destino (flecha, rótulo y bola del anillo) y su tono oscuro (el círculo del anillo).

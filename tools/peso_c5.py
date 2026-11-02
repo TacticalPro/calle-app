@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reparto del peso de una app de la c5 por sección del FORMATO 4 (C18, 2026-10-29).
+"""Reparto del peso de una app de la c5 por sección del FORMATO 4 (2026-10-29).
 
 Lee resources-gen-c5/<region>/ (t/*.json, z/*.json, poi.json, cajas.json) y estima lo que pesa cada sección con la
 convención de la medición del 2026-10-28: 5 B por número y bytes + 3 por cadena. Da los totales por bloque y por sección,

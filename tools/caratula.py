@@ -45,14 +45,30 @@ def fuente(px, peso=700):
     return f
 
 
+def meta(region):
+    """meta-<región>.json; las provincias de la c5 (A Coruña, Pontevedra) solo tienen los datos de esa variante."""
+    suf = "" if (OUT / f"meta-{region}.json").exists() else "-c5"
+    return json.loads((OUT / f"meta-{region}{suf}.json").read_text("utf-8")), suf
+
+
+def titulo(region):
+    """El rótulo ámbar: la etiqueta de tools/regiones.json, con sus tildes («A CORUÑA»), salvo que TITULOS diga otra."""
+    regiones = json.loads((ROOT / "tools" / "regiones.json").read_text("utf-8"))
+    return TITULOS.get(region) or regiones.get(region, {}).get("etiqueta", region).upper()
+
+
+def espacio_titulo(d, titulo, f, ancho, maximo=12, minimo=2):
+    """El espaciado del rótulo: maximo si cabe en ancho; un rótulo largo se aprieta, hasta minimo."""
+    libre = ancho - sum(d.textlength(ch, font=f) for ch in titulo)
+    return min(maximo, max(minimo, libre // max(1, len(titulo) - 1)))
+
+
 def mapa(lado, color, ancho, centro=CENTRO, lado_m=LADO_M, esc=4, region="galicia"):
     """El callejero real alrededor de centro, lado_m metros en lado px (dibujado a esc× y reducido)."""
-    # Las provincias de la c5 (A Coruña, Pontevedra) solo tienen los datos de esa variante.
-    suf = "" if (OUT / f"meta-{region}.json").exists() else "-c5"
-    meta = json.loads((OUT / f"meta-{region}{suf}.json").read_text("utf-8"))
+    meta_, suf = meta(region)
     geom = json.loads((OUT / f"geom-{region}{suf}.json").read_text("utf-8"))
-    cx = (centro[1] - meta["lon_min"]) * meta["kx"]
-    cy = (centro[0] - meta["lat_min"]) * meta["ky"]
+    cx = (centro[1] - meta_["lon_min"]) * meta_["kx"]
+    cy = (centro[0] - meta_["lat_min"]) * meta_["ky"]
     g = lado * esc
     k = g / lado_m
     img = Image.new("RGBA", (g, g), (0, 0, 0, 0))
@@ -152,13 +168,9 @@ def caratula_b(region="galicia"):
     d.ellipse((250 - 60, 175 - 60, 250 + 60, 175 + 60), outline=AMBAR + (255,), width=3)
     marcador(d, 250, 140, 38, AMBAR + (255,), hueco=FONDO + (255,))
     texto(d, (250, 382), "CALLES", fuente(78), BLANCO, espacio=8)
-    # La etiqueta de tools/regiones.json, con sus tildes («A CORUÑA»), salvo que TITULOS diga otra cosa.
-    regiones = json.loads((ROOT / "tools" / "regiones.json").read_text("utf-8"))
-    titulo = TITULOS.get(region) or regiones.get(region, {}).get("etiqueta", region).upper()
     # Con el espaciado de siempre (12) si cabe en 440 px; un rótulo largo se aprieta.
-    f28 = fuente(28, 500)
-    espacio = min(12, max(2, (440 - sum(d.textlength(ch, font=f28) for ch in titulo)) // max(1, len(titulo) - 1)))
-    texto(d, (250, 432), titulo, f28, AMBAR, espacio=espacio)
+    rot, f28 = titulo(region), fuente(28, 500)
+    texto(d, (250, 432), rot, f28, AMBAR, espacio=espacio_titulo(d, rot, f28, 440))
     texto(d, (250, 470), "LA CALLE Y EL PORTAL, SIN COBERTURA", fuente(21, 500), GRIS, espacio=1)
     return img.convert("RGB")
 

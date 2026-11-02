@@ -48,7 +48,7 @@ RELOJES = {
 ANILLO_R, ANILLO_RI = 133, 128   # source/L.mc
 HORA_Y, HORA_PX, HORA_MAX, SUB_Y, NOMBRE_Y, NOMBRE_Y_SUB = 36, 52, 50, 66, 58, 76
 ARCO_PX, PASTILLA_H, PIE_Y, NUM_PX = 5, 38, 244, 40
-# Caras de la v3.4 (P73): las TTF del propio SDK. El reloj no dibuja cada cara al tamaño pedido: medido en el
+# Caras de la v3.4: las TTF del propio SDK. El reloj no dibuja cada cara al tamaño pedido: medido en el
 # simulador del 7X Pro (test fuentesV34), Noto Sans sale como la TTF (187 px frente a 190) y Bionic al 79 %.
 FUENTES_SDK = Path.home() / "Library/Application Support/Garmin/ConnectIQ/Fonts"
 NOTO, BIONIC = ("NotoSansSC-Medium-3.ttf", 0.99), ("Bionic_Bold_Number_Only.ttf", 0.79)
@@ -539,7 +539,7 @@ ESCENARIOS_BRUJULA = [
                                           tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,4 km", rumbo=25,
                                           destino=290, i=1, n=8))),
     ("Anillo: comisaría", dict(anillo=dict(nombre="Comisaría de Distrito Centro", dir="Calle de Leganitos 19",
-                                           tipo="COMISARÍA CNP", color=AZUL, dist="650 m", rumbo=180, destino=137,
+                                           tipo="COMISARÍA", color=AZUL, dist="650 m", rumbo=180, destino=137,
                                            i=1, n=8))),
     ("Anotación: acciones", dict(acciones=("21:15 · Rúa do Vilar 44 / Rúa Nova ~11",
                                            [("Ir aquí", "flecha y distancia"), ("Borrar", "pide confirmación")]))),
@@ -547,7 +547,7 @@ ESCENARIOS_BRUJULA = [
                                             tipo="ANOTACIÓN · 21:15", color=VERDE, dist="320 m", rumbo=90, destino=20,
                                             i=3, n=3))),
     ("Anillo: llegada", dict(anillo=dict(nombre="Comisaría de Distrito Centro", dir="Calle de Leganitos 19",
-                                         tipo="COMISARÍA CNP", color=AZUL, dist="20 m", rumbo=330, destino=0,
+                                         tipo="COMISARÍA", color=AZUL, dist="20 m", rumbo=330, destino=0,
                                          i=1, n=3, llegado=True))),
 ]
 
@@ -582,11 +582,11 @@ ESCENARIOS = [
                                       tipo="HOSPITAL · URGENCIAS", color=ROJO, dist="1,4 km", rumbo=25, destino=290,
                                       i=1, n=8))),
     ("Ir: comisaría", dict(anillo=dict(nombre="Comisaría de Distrito Centro", dir="Calle de Leganitos 19",
-                                       tipo="COMISARÍA CNP", color=AZUL, dist="650 m", rumbo=180, destino=137, i=1, n=8))),
+                                       tipo="COMISARÍA", color=AZUL, dist="650 m", rumbo=180, destino=137, i=1, n=8))),
     ("Ir: anotación", dict(anillo=dict(nombre="Rúa do Vilar 44 / Rúa Nova ~11", dir="29T 537189 4747429",
                                        tipo="ANOTACIÓN · 21:15", color=VERDE, dist="320 m", rumbo=90, destino=20,
                                        i=3, n=3))),
-    ("Ir: llegada", dict(anillo=dict(nombre="Comisaría de Distrito Centro", dir="Calle de Leganitos 19", tipo="COMISARÍA CNP",
+    ("Ir: llegada", dict(anillo=dict(nombre="Comisaría de Distrito Centro", dir="Calle de Leganitos 19", tipo="COMISARÍA",
                                      color=AZUL, dist="20 m", rumbo=330, destino=0, i=1, n=3, llegado=True))),
 ]
 

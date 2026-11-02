@@ -139,8 +139,8 @@ C5_SIN_ABREV = set()   # "abreviar": los nombres que se quedan largos porque su 
 C5_RURAL_U = 4
 C5_ZONA_MIN = 2500
 C5_TOPE_ZONA = 13 * 1024
-C5_SIN_K = False       # "k": false en el bloque c5 (C18): teselas sin K, como las de la variante normal (el lector lo admite)
-# Zonas sin margen (P33, 2026-10-28; "zona_sin_margen" en el bloque c5 de la región): cada hoja guarda solo los lugares
+C5_SIN_K = False       # "k": false en el bloque c5 (2026-10-29): teselas sin K, como las de la variante normal (el lector lo admite)
+# Zonas sin margen (2026-10-28; "zona_sin_margen" en el bloque c5 de la región): cada hoja guarda solo los lugares
 # de su cuadrado, y el reloj mira además las hojas vecinas que caen a ZMARGEN m del punto (source-c5/Zonas.mc). Con el
 # margen, cada lugar salía de media en 2,5 hojas: quitarlo baja las zonas de A Coruña de 749 a 530 KB. La hoja lleva
 # un 1 detrás de su lado (z[11]).
@@ -598,7 +598,7 @@ def descargar_por_partes(region, bbox, partes, refresh, nivel_max=2, q=None):
 # ---------------------------------------------------------------- vías
 
 # Misma tabla que source/Abrev.mc (la forma corta que el reloj usa cuando el nombre no cabe). Con "abreviar" en el
-# bloque c5 de la región (C18, 2026-10-29), los datos ya llevan el tipo de vía abreviado y la cadena S de cada tesela
+# bloque c5 de la región (2026-10-29), los datos ya llevan el tipo de vía abreviado y la cadena S de cada tesela
 # pesa menos; en pantalla sale lo mismo que Abrev.corta() habría puesto al no caber.
 ABREV = dict(zip(*[iter((
     "Rúa", "R.", "Avenida", "Av.", "Praza", "Pr.", "Praciña", "Prc.", "Travesa", "Tr.", "Travesía", "Tr.",
@@ -1318,38 +1318,43 @@ def completar_con_ayto(dirs, proy, vias, portales, cuenta, caja=None):
     return portales + nuevos, len(nuevos)
 
 
-# ---------------------------------------------------------------- hospitales y comisarías
+# ---------------------------------------------------------------- hospitales, comisarías y cuarteles
 
-# Tipo de cada punto (lo lee el reloj, Ir.mc): hospital, hospital con urgencias, y la policía por cuerpo.
-# Las comisarías del CNP van aparte de sus otras dependencias (DNI, divisiones, unidades centrales): para
-# poner una denuncia sirve la comisaría, no la oficina de pasaportes.
-POI_HOSPITAL, POI_URGENCIAS, POI_CNP, POI_LOCAL, POI_GC, POI_POLICIA, POI_CNP_OTRA = range(7)
-POI_ETIQUETA = ["hospital", "hospital (urgencias)", "comisaría CNP", "policía municipal/local", "guardia civil",
-                "policía (sin cuerpo)", "CNP (otra dependencia)"]
-CNP_OTRA = re.compile(r"\b(division|unidad|oficina|dni|pasaporte|complejo|jefatura|tedax|cientifica|presos|formacion|"
-                      r"personal|medios aereos|coordinacion|ucrif|extranjeria|general|brigada|grupo|documentacion)\b")
+# Tipo de cada punto (lo lee el reloj, Ir.mc): hospital, hospital con urgencias, comisaría (o jefatura, del cuerpo
+# que sea) y cuartel. Los números 3, 5 y 6 eran de un esquema anterior y no se vuelven a dar: el reloj los sigue
+# leyendo en los datos ya generados (Ir.TIPO), así que no se reutilizan.
+POI_HOSPITAL, POI_URGENCIAS, POI_COMISARIA, POI_CUARTEL = 0, 1, 2, 4
+POI_ETIQUETA = {POI_HOSPITAL: "hospital", POI_URGENCIAS: "hospital (urgencias)", POI_COMISARIA: "comisaría",
+                POI_CUARTEL: "cuartel"}
+# Lo que no es comisaría ni cuartel se queda fuera: oficinas de documentos, unidades y servicios centrales, centros
+# de formación, depósitos, aduanas, protección civil, guardas rurales y agentes de movilidad. Para ir en persona
+# sirve la comisaría, no la oficina de pasaportes. Salvo que el nombre diga comisaría, cuartel o puesto (y no sea una
+# «general»), o que sea la sede de distrito que en Madrid se llama «Unidad Integral de Distrito».
+# Lo que el nombre no delata se quita por su id en los overrides de la región ("poi": {"excluir": true}).
+NO_ESTACION = re.compile(r"\b(division|unidad|dni|pasaporte|documentacio|documentacion|tramitacion|complejo|"
+                         r"formacion|extranjeria|general|brigada|grupo|deposito|cavallerisses|caballerizas|"
+                         r"agents rurals|agentes forestales|"
+                         r"movilidad|aduanas?|duana|fronteira|^proteccion? civil)\b")
+ESTACION = re.compile(r"\b(comisaria|comissaria|cuartel|puesto|unidad integral de distrito)\b")
 
 
-def tipo_policia(tags):
-    """Cuerpo de un amenity=police, o None si no es una dependencia policial (oficinas de la DGT)."""
+def tipo_estacion(tags):
+    """POI_COMISARIA o POI_CUARTEL para un amenity=police, o None si no es ninguna de las dos (oficinas de la DGT,
+    las de NO_ESTACION)."""
     nom = sin_tildes(" ".join(tags.get(k, "") for k in ("name", "name:es", "short_name", "short_name:es"))).lower()
     if re.search(r"\b(dgt|dxt|direccion (general|xeral) de trafico|jefatura (provincial|local) de trafico)\b", nom):
         return None
     op = sin_tildes(" ".join(tags.get(k, "") for k in ("operator", "operator:short"))).lower()
     t = nom + " " + op + " " + sin_tildes(tags.get("official_name", "") + " " + tags.get("police", "")).lower()
-    # El nombre manda sobre el tipo de punto (Murcia, 2026-10-26).
+    if NO_ESTACION.search(nom) and not (ESTACION.search(nom) and "general" not in nom):
+        return None
+    # Un cuerpo municipal en el nombre manda sobre «cuartel»: en Murcia, los cuarteles de La Flota y La Alberca son
+    # municipales (2026-10-26).
     if re.search(r"\bpolicia (local|municipal)\b", nom):
-        return POI_LOCAL
+        return POI_COMISARIA
     if "guardia civil" in t or "garda civil" in t or "cuartel" in t:
-        return POI_GC
-    if ("municipal" in t or "local" in t or "ayuntamiento" in op or "concello" in op or "policia de barrio" in t
-            or "agentes de movilidad" in t):
-        return POI_LOCAL
-    if "nacional" in t or "cnp" in t or "comisaria" in t or "dgp" in t or "brigada" in t or "direccion general de la policia" in t:
-        if "comisaria" in nom and "general" not in nom:
-            return POI_CNP
-        return POI_CNP_OTRA if CNP_OTRA.search(nom) else POI_CNP
-    return POI_POLICIA
+        return POI_CUARTEL
+    return POI_COMISARIA
 
 
 HOSPITAL_NOMBRE = re.compile(r"\b(hospital|ciudad sanitaria|sanatorio|urgencias|complexo hospitalario)\b")
@@ -1384,9 +1389,9 @@ def extraer_poi(elems, proy, vias, portales, overrides, cuenta, ancho, alto):
         x, y = proy.xy(c["lat"], c["lon"])
         if not (0 <= x <= ancho and 0 <= y <= alto):
             continue
-        tipo = tipo_hospital(tags) if am == "hospital" else tipo_policia(tags)
+        tipo = tipo_hospital(tags) if am == "hospital" else tipo_estacion(tags)
         if tipo is None:
-            cuenta[f"punto descartado ({'no es hospital' if am == 'hospital' else 'no es dependencia policial'})"] += 1
+            cuenta[f"punto descartado ({'no es hospital' if am == 'hospital' else 'no es comisaría ni cuartel'})"] += 1
             continue
         fijo = overrides.get("poi", {}).get(f"{e['type']}/{e['id']}", {})
         if fijo.get("excluir"):
@@ -1741,13 +1746,13 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
     urb = [t for t in trozos if en_urbana(*cx(t))]
     urb_dp = c5.get("urb_dp")
     if urb_dp and urb_dp > DP_TOL:
-        # Más simplificación en la zona urbana (C18): los trozos venían a DP_TOL; extremos y cruces se conservan.
+        # Más simplificación en la zona urbana (2026-10-29): los trozos venían a DP_TOL; extremos y cruces se conservan.
         for t in urb:
             if not t["area"] and len(t["pts"]) > 2:
                 t["pts"] = douglas_peucker(t["pts"], urb_dp)
                 t["bb"] = caja_de(t["pts"])
     rur = []
-    # "rural_sin" (C18, 2026-10-29): tipos de vía OSM (highway) que no entran fuera de la zona urbana, p. ej.
+    # "rural_sin" (2026-10-29): tipos de vía OSM (highway) que no entran fuera de la zona urbana, p. ej.
     # ["track", "service"]: las pistas y los viales de servicio con nombre, que son calzada y pesaban como tal.
     rural_sin = set(c5.get("rural_sin", ()))
     fuera = [v for v in vias if not v["area"] and v["clase"] != 2 and not en_urbana(*cx(v))]
@@ -1761,7 +1766,7 @@ def preparar_c5(cfg, proy, vias, trozos, portales, parroquias, lugares, pois, ze
     portales = [p for p in portales if en_prov(p["x"], p["y"]) and en_urbana(p["x"], p["y"])]
     cada = int(c5.get("portales_cada") or (2 if c5.get("portales_mitad") else 1))
     if cada > 1:
-        # C18: el salto entre números crece y algunos pasan a los escapes E.
+        # El salto entre números crece y algunos pasan a los escapes E.
         antes, portales = len(portales), aclarar_portales(portales, cada, municipio)
         cuenta[f"c5: portales fuera (uno de cada {cada})"] = antes - len(portales)
     if c5.get("abreviar"):
@@ -2856,7 +2861,7 @@ def main():
         sys.exit(f"La región {a.region} es de teselas adaptativas: en el fēnix 6X va con la variante c.")
     vc = cfg.get(VARIANTE) if VARIANTE in ("c", "b", "c5") else cfg.get("adaptativa") if VARIANTE == "normal" else None
     if vc and VARIANTE == "c5" and os.environ.get("C5_OPTS"):
-        # Para medir sin tocar regiones.json (C18): C5_OPTS='{"rcel": 250, "rural_dp": 12}' se funde en el bloque c5.
+        # Para medir sin tocar regiones.json: C5_OPTS='{"rcel": 250, "rural_dp": 12}' se funde en el bloque c5.
         vc = cfg["c5"] = dict(vc, **json.loads(os.environ["C5_OPTS"]))
         print(f"c5: opciones de C5_OPTS fundidas en el bloque c5: {os.environ['C5_OPTS']}")
     if vc:

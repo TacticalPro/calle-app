@@ -59,11 +59,11 @@ memoria. `Tesela` y `Zonas` comparan `Callejero.ID` con el de lo que tienen carg
 ## 3. Ir al hospital o la comisaría
 
 - Datos por región (`<prefijo>poi`): nombre, dirección, posición y tipo. Hospitales: con urgencias
-  (`emergency=yes` o «Urgencias…») o que se llamen hospital; fuera centros de salud y clínicas. Policía:
-  comisaría CNP, otra dependencia del CNP (DNI, divisiones, unidades), municipal/local, Guardia Civil u
-  otra; fuera las oficinas de la DGT. Correcciones en `overrides-<región>.json` → `poi` (p. ej. un hospital con la dirección mal puesta en OSM).
-- Menú: «Hospital más cercano» y «Comisaría más cercana» (CNP; al final, «Otras policías»). Lista de los
-  8 más cercanos a la última posición, con distancia y rumbo cardinal.
+  (`emergency=yes` o «Urgencias…») o que se llamen hospital; fuera centros de salud y clínicas. Además,
+  comisaría (o jefatura, del cuerpo que sea) y cuartel; fuera lo que no es ninguna de las dos (oficinas de
+  documentos, unidades, oficinas de la DGT). Correcciones en `overrides-<región>.json` → `poi` (p. ej. un hospital con la dirección mal puesta en OSM).
+- Menú: «Hospital más cercano» y «Comisaría más cercana» (comisarías y cuarteles juntos, por distancia).
+  Lista de los 8 más cercanos a la última posición, con distancia, rumbo cardinal y el tipo de cada uno.
 - Guía (`VistaIr`): flecha hacia el sitio, relativa a la brújula del reloj (`Activity.Info.currentHeading`,
   sin pedir el permiso `Sensor`); sin brújula, norte arriba. Distancia **en línea recta**, dirección,
   «HA LLEGADO» a menos de 30 m. ARRIBA/ABAJO pasan al anterior o siguiente.

@@ -43,7 +43,8 @@ calles a cada lado, sin teléfono, sin cobertura y sin datos móviles.
 
 - En qué calle está, el portal más cercano y entre qué calles; en un cruce, la esquina.
 - Barrio y distrito.
-- Hospital con urgencias y comisaría más cercanos: flecha y anillo de brújula, y distancia en línea recta.
+- Hospital con urgencias más cercano, y comisaría o cuartel más cercanos: flecha y anillo de brújula, y distancia
+  en línea recta.
 - Coordenadas UTM, redondeadas como las del propio reloj.
 - Anotaciones con START: hora, lugar y coordenadas, guardadas en el reloj, y guía para volver a cada una.
 - Hora grande, para usarla también como reloj.
@@ -75,7 +76,8 @@ streets on each side, with no phone, no signal and no mobile data.
 
 - The street you are on, the nearest door number and the cross streets on each side; at a junction, the corner.
 - Neighbourhood and district.
-- Nearest hospital with A&E and nearest police station: arrow, compass ring and straight-line distance.
+- Nearest hospital with A&E, and nearest police station or barracks: arrow, compass ring and straight-line
+  distance.
 - UTM coordinates, rounded like the watch's own.
 - Notes with START: time, place and coordinates, kept on the watch, with guidance back to each one.
 - Large clock, so it works as a watch too.

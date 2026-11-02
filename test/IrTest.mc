@@ -5,7 +5,7 @@ import Toybox.Position;
 import Toybox.Test;
 import Toybox.Time;
 
-// Ir a hospital o comisaría: distancias, rumbos, textos, y los más cercanos en orden y por tipo.
+// Ir a hospital, comisaría o cuartel: distancias, rumbos, textos, y los más cercanos en orden y por tipo.
 (:test)
 function irCuentas(logger as Test.Logger) as Boolean {
     // Sol → Cibeles: unos 920 m al este (y un poco al norte).
@@ -57,12 +57,13 @@ function irDistanciaWgs84(logger as Test.Logger) as Boolean {
 (:test)
 function irCercanos(logger as Test.Logger) as Boolean {
     Activa.poner(Regiones.IDS[0]);
-    // Cinco puntos en metros de región: tres hospitales y dos comisarías, a distintas distancias de (1000, 1000).
-    var d = Sintetica.puntos(["H lejos", "C cerca", "H cerca", "H medio", "C lejos"] as Array<String>,
-        ["", "Calle A 1", "", "Calle B 2", ""] as Array<String>,
-        [5000, 1100, 1050, 2000, 9000] as Array<Number>,
-        [1000, 1000, 1000, 1000, 1000] as Array<Number>,
-        [Ir.HOSPITAL, Ir.CNP, Ir.URGENCIAS, Ir.HOSPITAL, Ir.CNP] as Array<Number>);
+    // Seis puntos en metros de región, a distintas distancias de (1000, 1000): tres hospitales, dos comisarías y un
+    // cuartel, este entre las dos.
+    var d = Sintetica.puntos(["H lejos", "C cerca", "H cerca", "H medio", "C lejos", "Q medio"] as Array<String>,
+        ["", "Calle A 1", "", "Calle B 2", "", ""] as Array<String>,
+        [5000, 1100, 1050, 2000, 9000, 3000] as Array<Number>,
+        [1000, 1000, 1000, 1000, 1000, 1000] as Array<Number>,
+        [Ir.HOSPITAL, Ir.COMISARIA, Ir.URGENCIAS, Ir.HOSPITAL, Ir.COMISARIA, Ir.CUARTEL] as Array<Number>);
     var lat = Callejero.LAT_MIN + 1000.0d / Callejero.KY;
     var lon = Callejero.LON_MIN + 1000.0d / Callejero.KX;
     var h = Ir.cercanos(d, lat, lon, Ir.HOSPITALES, 2);
@@ -72,8 +73,8 @@ function irCercanos(logger as Test.Logger) as Boolean {
     var esperado = Ir.distancia(lat, lon, lat, lon + 50.0d / Callejero.KX);
     var ok = h.size() == 2 && "H cerca".equals(h[0][0]) && "H medio".equals(h[1][0])
         && ((h[0][5] as Float) - esperado).abs() < 0.5 && (h[0][4] as Number) == Ir.URGENCIAS
-        && c.size() == 2 && "C cerca".equals(c[0][0]) && "Calle A 1".equals(c[0][1]) && "C lejos".equals(c[1][0])
-        && Ir.cercanos(d, lat, lon, Ir.OTRAS_POLICIAS, 8).size() == 0;
+        && c.size() == 3 && "C cerca".equals(c[0][0]) && "Calle A 1".equals(c[0][1]) && "Q medio".equals(c[1][0])
+        && (c[1][4] as Number) == Ir.CUARTEL && "C lejos".equals(c[2][0]) && (c[2][4] as Number) == Ir.COMISARIA;
     if (!ok) {
         logger.error("h " + h + " c " + c + " esperado " + esperado);
     }
@@ -81,6 +82,36 @@ function irCercanos(logger as Test.Logger) as Boolean {
     var real = Ir.cargar();
     logger.debug("IR " + Callejero.ETIQUETA + ": " + (real == null ? "sin puntos" : (real[5] as Array).size() + " puntos"));
     return ok && real != null;
+}
+
+// Datos generados con el esquema anterior (números 2 a 6): sin regenerarlos, 2, 3 y 5 salen como comisaría y 4 como
+// cuartel, todos en un solo grupo por distancia; 6 (lo que no es comisaría ni cuartel) no sale en ninguna lista, ni
+// un número que no conozca el reloj. Las etiquetas, solo las dos genéricas.
+(:test)
+function irTiposDeAntes(logger as Test.Logger) as Boolean {
+    Activa.poner(Regiones.IDS[0]);
+    var d = Sintetica.puntos(["dos", "tres", "cuatro", "cinco", "seis", "nueve", "uno"] as Array<String>,
+        ["", "", "", "", "", "", ""] as Array<String>,
+        [1500, 1400, 1100, 1300, 1050, 1020, 1200] as Array<Number>,
+        [1000, 1000, 1000, 1000, 1000, 1000, 1000] as Array<Number>,
+        [2, 3, 4, 5, 6, 9, 1] as Array<Number>);
+    var lat = Callejero.LAT_MIN + 1000.0d / Callejero.KY;
+    var lon = Callejero.LON_MIN + 1000.0d / Callejero.KX;
+    var c = Ir.cercanos(d, lat, lon, Ir.COMISARIAS, 8);
+    var h = Ir.cercanos(d, lat, lon, Ir.HOSPITALES, 8);
+    var nombres = "";
+    var ok = c.size() == 4 && h.size() == 1 && "uno".equals(h[0][0]) && (h[0][4] as Number) == Ir.URGENCIAS;
+    var esperado = [["cuatro", Ir.CUARTEL], ["cinco", Ir.COMISARIA], ["tres", Ir.COMISARIA], ["dos", Ir.COMISARIA]];
+    for (var i = 0; i < c.size(); i++) {
+        nombres += c[i][0] + "/" + c[i][4] + " ";
+        ok = ok && i < esperado.size() && (esperado[i][0] as String).equals(c[i][0]) && c[i][4] == esperado[i][1];
+    }
+    ok = ok && Ir.etiquetaTipo(Ir.COMISARIA).equals("COMISARÍA") && Ir.etiquetaTipo(Ir.CUARTEL).equals("CUARTEL")
+        && Ir.etiquetaTipo(Ir.HOSPITAL).equals("HOSPITAL") && Ir.etiquetaTipo(Ir.URGENCIAS).equals("HOSPITAL · URGENCIAS");
+    if (!ok) {
+        logger.error("cercanos " + nombres + "hospitales " + h.size());
+    }
+    return ok;
 }
 
 // La región se elige sola por la posición (automática) y se queda quieta con una zona fija.
@@ -121,7 +152,8 @@ function vistaIrPinta(logger as Test.Logger) as Boolean {
     var dc = Lienzo.dc();
     var lista = [
         ["Complexo Hospitalario Universitario de Santiago de Compostela", "Rúa da Choupana", 42.87d, -8.56d, Ir.URGENCIAS, 1200.0],
-        ["Comisaría", "Rúa do Vilar 44", 42.8785d, -8.5446d, Ir.CNP, 20.0]
+        ["Comisaría", "Rúa do Vilar 44", 42.8785d, -8.5446d, Ir.COMISARIA, 20.0],
+        ["Cuartel", "Rúa Nova 2", 42.8790d, -8.5440d, Ir.CUARTEL, 90.0]
     ] as Array<Array>;
     var ahora = Time.now().value();
     var v = new VistaIr(lista, 0, 42.88d, -8.545d, ahora);
@@ -182,8 +214,8 @@ function irDeNotas(logger as Test.Logger) as Boolean {
         && (l[0][7] as Number) == 9 && (l[1][7] as Number) == 6 && (l[1][2] as Double) == 42.8781762d
         && Ir.indiceNota(l, 6) == 1 && Ir.indiceNota(l, 8) == -1 && Ir.indiceNota(l, 9) == 0
         && Ir.deNotas([] as Array<Array>).size() == 0
-        && Ir.color(Ir.ANOTACION) != Ir.color(Ir.CNP) && Ir.color(Ir.URGENCIAS) != Ir.color(Ir.CNP)
-        && Ir.etiquetaTipo(Ir.ANOTACION).equals("ANOTACIÓN");
+        && Ir.color(Ir.ANOTACION) != Ir.color(Ir.COMISARIA) && Ir.color(Ir.URGENCIAS) != Ir.color(Ir.COMISARIA)
+        && Ir.color(Ir.CUARTEL) == Ir.color(Ir.COMISARIA) && Ir.etiquetaTipo(Ir.ANOTACION).equals("ANOTACIÓN");
     if (!ok) {
         logger.error("deNotas " + l);
     }
